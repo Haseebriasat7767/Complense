@@ -19,6 +19,15 @@ ComplyLens AI is a two-workspace TypeScript monorepo that runs as **one Node pro
 └─────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
+Two entry points create that process, and both use the identical Express app from `server/src/app.ts`:
+
+| Entry point | Used by |
+| --- | --- |
+| `server/src/index.ts` → `server/dist/index.js` | Local development, Docker, container hosts (serves API + built client) |
+| `api/index.mjs` (Vercel function, see `vercel.json`) | Serverless deployment: Vercel serves `client/dist` from its CDN and the function receives `/api/*` with the original URL |
+
+Neither entry point contains product logic, so a change to a route, the analysis engine or the PDF renderer takes effect in every deployment shape. `npm run verify:deploy` boots the serverless entry and exercises the API through it.
+
 ## Request flow (example: control detail page)
 
 ```

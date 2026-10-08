@@ -41,7 +41,7 @@ export function LandingPage() {
           <div className="mx-auto max-w-3xl text-center">
             <Badge tone="outline" className="mb-5">
               <span className="size-1.5 rounded-full bg-brand-500" aria-hidden="true" />
-              Built for compliance readiness — not certification
+              Compliance readiness analysis — not certification
             </Badge>
             <h1 className="text-[32px] leading-[1.08] font-semibold tracking-tight text-ink-900 sm:text-[46px] lg:text-[54px]">
               Know what’s missing before the auditor does.

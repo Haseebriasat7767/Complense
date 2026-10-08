@@ -86,6 +86,52 @@ describe('authentication', () => {
     expect(payload.user.isDemoUser).toBe(true);
     expect(payload.workspace.isDemo).toBe(true);
   });
+
+  it('answers a malformed session token with 401, never a server error', async () => {
+    // Regression: a non-JSON base64url header used to surface as an unhandled
+    // SyntaxError (HTTP 500). A corrupt or tampered token must be a 401 so the
+    // client signs the user in again instead of showing a failure screen.
+    for (const candidate of ['not.a.token', 'x.y.z', 'header.payload', 'a.b.c.d', '']) {
+      const response = await fetch(`${base}/api/dashboard`, {
+        headers: { authorization: `Bearer ${candidate}` },
+      });
+      expect(response.status, `token ${JSON.stringify(candidate)}`).toBe(401);
+      const payload = (await response.json()) as { error: { code: string } };
+      expect(payload.error.code).toBe('unauthorized');
+    }
+  });
+
+  it('rejects a token with a tampered signature', async () => {
+    const [header, payload] = token.split('.');
+    const response = await fetch(`${base}/api/dashboard`, {
+      headers: { authorization: `Bearer ${header}.${payload}.not-the-signature` },
+    });
+    expect(response.status).toBe(401);
+  });
+
+  it('cannot be used to enumerate accounts through password reset', async () => {
+    const request = (email: string) =>
+      fetch(`${base}/api/auth/forgot-password`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ email }),
+      }).then(async (response) => ({ status: response.status, body: await response.json() }));
+
+    const known = await request('demo@complylens.ai');
+    const unknown = await request('nobody-here@example.com');
+
+    expect(known.status).toBe(200);
+    expect(unknown.status).toBe(200);
+    // Identical responses: no field may reveal whether the address exists.
+    expect(unknown.body).toEqual(known.body);
+    // Pin the response shape so re-introducing an "accountFound" style field
+    // (or any other enumeration signal) fails this test.
+    expect(Object.keys(known.body as Record<string, unknown>).sort()).toEqual([
+      'emailDeliveryEnabled',
+      'message',
+      'ok',
+    ]);
+  });
 });
 
 describe('readiness workspace', () => {

@@ -61,7 +61,9 @@ async function generateReport(input: {
     mappings: snapshot.mappings,
     executiveSummary: narrative?.executiveSummary ?? '',
     themes: narrative?.themes ?? [],
-    analysisMode: modeLabel(),
+    // Label the report with the mode actually used. If a configured provider
+    // failed and the deterministic engine answered, the report says so.
+    analysisMode: modeLabel(narrative?.mode),
   });
 
   const base = buildReportRecord({

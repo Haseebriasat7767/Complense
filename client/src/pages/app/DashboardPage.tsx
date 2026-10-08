@@ -159,7 +159,7 @@ export function DashboardPage() {
             icon={<TriangleAlert className="size-4" aria-hidden="true" />}
           />
           <MetricTile
-            label="Critical"
+            label="Critical gaps"
             value={data.counts.missing}
             hint="No supporting evidence"
             tone="text-danger-700"
@@ -383,6 +383,39 @@ export function DashboardPage() {
                 : ''}
             </InlineAlert>
           ) : null}
+
+          {/* Evidence → control mapping: the chain the whole product is built on */}
+          <Card>
+            <CardHeader
+              title="Evidence-to-control mapping"
+              description={`${data.coverage.distinctControlsCovered} controls supported by workspace evidence`}
+              icon={<GitCompareArrows className="size-4" aria-hidden="true" />}
+              actions={
+                <ButtonLink to="/app/mappings" variant="ghost" size="sm" iconRight={<ArrowRight className="size-3.5" />}>
+                  Full mapping
+                </ButtonLink>
+              }
+            />
+            <ul className="divide-y divide-ink-200">
+              {data.recentEvidence.slice(0, 4).map((document) => (
+                <li key={document.id} className="flex items-center gap-3 px-4 py-2.5 sm:px-5">
+                  <span className="min-w-0 flex-1 truncate font-mono text-[11.5px] text-ink-600">
+                    {document.fileName}
+                  </span>
+                  <ArrowRight className="size-3.5 shrink-0 text-ink-400" aria-hidden="true" />
+                  <span className="shrink-0 text-[12px] text-ink-800">
+                    {document.mappedControlCount} {document.mappedControlCount === 1 ? 'control' : 'controls'}
+                  </span>
+                </li>
+              ))}
+            </ul>
+            {data.coverage.unmappedDocuments.length > 0 ? (
+              <p className="border-t border-ink-200 px-4 py-3 text-[12px] leading-relaxed text-ink-500 sm:px-5">
+                Not mapped yet: {data.coverage.unmappedDocuments.join(', ')}. Documents only count towards a control when
+                an expected evidence item is actually present in the text.
+              </p>
+            ) : null}
+          </Card>
 
           {/* Activity */}
           <Card>
