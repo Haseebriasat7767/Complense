@@ -1,0 +1,44 @@
+# dependencies
+node_modules/
+.pnp/
+.pnp.js
+
+# build output
+dist/
+build/
+out/
+*.tsbuildinfo
+
+# environment / secrets — never commit real values
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+logs/
+
+# coverage / test output
+coverage/
+.nyc_output/
+.vitest/
+
+# uploads (runtime, demo evidence is seeded in code — not written to disk)
+uploads/
+server/uploads/
+
+# editors / OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# caches
+.cache/
+.turbo/
+*.zip
