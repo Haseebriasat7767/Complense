@@ -16,7 +16,7 @@
     "build": "npm run build --workspace client && npm run build --workspace server",
     "start": "node server/dist/index.js",
     "typecheck": "npm run typecheck --workspace server && npm run typecheck --workspace client",
-    "test": "npm run test --workspace server",
+    "test": "npm run test --workspace server && npm run test --workspace client",
     "verify:demo": "npm run verify:demo --workspace server",
     "verify:deploy": "node scripts/verify-deploy.mjs",
     "smoke:client": "tsx --tsconfig client/tsconfig.json scripts/smoke-client.tsx"

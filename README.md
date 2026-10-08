@@ -92,7 +92,7 @@ The numbers above are the deterministic output of the engine for that exact evid
 | `npm run build` | Type-checks and builds the client into `client/dist`, compiles the server into `server/dist` |
 | `npm start` | Production server: serves the API and the built client from `server/dist/index.js` |
 | `npm run typecheck` | `tsc --noEmit` for both workspaces |
-| `npm test` | Server test suite (34 tests: deterministic engine, HTTP integration, auth hardening) |
+| `npm test` | Full test suite: server (51 tests — deterministic engine, HTTP integration, the complete login → context → dashboard auth journey, expired/malformed/tampered-token handling, and production `SESSION_SECRET` enforcement) + client (4 tests — session state: login stores/loads, logout clears, refresh restores, 401 clears) |
 | `npm run verify:demo` | Prints the readiness, counts and findings for the seeded demo workspace |
 | `npm run verify:deploy` | Checks `vercel.json`, boots the serverless entry and calls the API (incl. PDF) through it — run after `npm run build` |
 | `npm run smoke:client` | Optional: renders every route in jsdom against a running server (needs `npm i --no-save jsdom`) |
