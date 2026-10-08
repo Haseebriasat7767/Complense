@@ -25,6 +25,8 @@ function id(prefix: string): string {
 export class MemoryStore implements Store {
   readonly kind = 'memory' as const;
 
+  constructor(private readonly diagnostic?: string) {}
+
   private organizations = new Map<string, Organization>();
   private workspaces = new Map<string, Workspace>();
   private users = new Map<string, User>();
