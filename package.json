@@ -18,6 +18,7 @@
     "typecheck": "npm run typecheck --workspace server && npm run typecheck --workspace client",
     "test": "npm run test --workspace server",
     "verify:demo": "npm run verify:demo --workspace server",
+    "verify:deploy": "node scripts/verify-deploy.mjs",
     "smoke:client": "tsx --tsconfig client/tsconfig.json scripts/smoke-client.tsx"
   }
 }

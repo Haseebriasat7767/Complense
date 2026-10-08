@@ -49,7 +49,7 @@ async function main() {
   const reportId = reportList.items[0]?.id ?? '';
 
   const routes: Array<{ path: string; expect: string[] }> = [
-    { path: '/', expect: ['Know what', 'Try the Demo'] },
+    { path: '/', expect: ['Know what', 'Try the Demo', 'See How It Works', 'Compliance readiness analysis'] },
     { path: '/features', expect: ['Evidence Analysis'] },
     { path: '/how-it-works', expect: ['UPLOAD'] },
     { path: '/security', expect: ['security'] },
@@ -62,7 +62,7 @@ async function main() {
     { path: '/login', expect: ['Log in'] },
     { path: '/signup', expect: ['Create'] },
     { path: '/forgot-password', expect: ['Reset'] },
-    { path: '/app/dashboard', expect: ['Readiness', '92'] },
+    { path: '/app/dashboard', expect: ['Readiness', '92', 'Critical gaps', 'Evidence-to-control mapping'] },
     { path: '/app/evidence', expect: ['Access_Control_Policy', 'DEMO'] },
     { path: '/app/evidence/ev-demo-access-control-policy', expect: ['Access Control'] },
     { path: '/app/controls', expect: ['SOC2-CC6.1'] },

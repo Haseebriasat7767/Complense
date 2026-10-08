@@ -20,6 +20,8 @@ This document describes what the demo MVP actually implements, what it deliberat
 ### Authorisation
 
 - Every session route runs `requireAuth()`, which verifies the token **and** confirms the organisation still exists.
+- Token parsing is defensive: non-base64, non-JSON, wrongly-signed, expired, or claim-less tokens all produce a clean `401` (a malformed token can never reach a handler or surface as a `500`). Regression-tested in `server/test/api.test.ts`.
+- The password-reset endpoint returns an identical body for known and unknown addresses and records the attempt in the audit log, so it cannot be used for account enumeration.
 - All store queries are scoped by `organizationId` (`sessionOf(req)`), so a token from one organisation cannot read or mutate another organisation's evidence, controls, findings, reports or settings. `assertSameOrganization()` guards any resource that carries an organisation id.
 - Settings writes (`PATCH /api/organization`) additionally require the `owner` or `admin` role; members get `403`.
 

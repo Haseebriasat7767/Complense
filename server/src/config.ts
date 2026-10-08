@@ -49,6 +49,15 @@ function bool(name: string, fallback: boolean): boolean {
 const nodeEnv = str('NODE_ENV', 'development');
 const authRequired = bool('AUTH_REQUIRED', false);
 
+/**
+ * Serverless platforms cap the request body before it reaches the application
+ * (Vercel rejects bodies above ~4.5 MB). The default upload limit is lowered on
+ * those platforms so the user gets the app's own clear 413 message instead of a
+ * platform-level failure. An explicit MAX_UPLOAD_MB always wins.
+ */
+const isServerless = Boolean(str('VERCEL') || str('AWS_LAMBDA_FUNCTION_NAME'));
+const defaultUploadMb = isServerless ? 4 : 10;
+
 export const config = {
   nodeEnv,
   isProduction: nodeEnv === 'production',
@@ -95,7 +104,7 @@ export const config = {
   },
 
   uploads: {
-    maxBytes: num('MAX_UPLOAD_MB', 10) * 1024 * 1024,
+    maxBytes: num('MAX_UPLOAD_MB', defaultUploadMb) * 1024 * 1024,
     allowedExtensions: str('ALLOWED_UPLOAD_TYPES', 'pdf,docx,txt,csv')
       .split(',')
       .map((s) => s.trim().toLowerCase().replace(/^\./, ''))

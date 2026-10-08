@@ -92,8 +92,9 @@ The numbers above are the deterministic output of the engine for that exact evid
 | `npm run build` | Type-checks and builds the client into `client/dist`, compiles the server into `server/dist` |
 | `npm start` | Production server: serves the API and the built client from `server/dist/index.js` |
 | `npm run typecheck` | `tsc --noEmit` for both workspaces |
-| `npm test` | Server test suite (22 tests: deterministic engine + HTTP integration) |
+| `npm test` | Server test suite (25 tests: deterministic engine, HTTP integration, auth hardening) |
 | `npm run verify:demo` | Prints the readiness, counts and findings for the seeded demo workspace |
+| `npm run verify:deploy` | Checks `vercel.json`, boots the serverless entry and calls the API (incl. PDF) through it — run after `npm run build` |
 | `npm run smoke:client` | Optional: renders every route in jsdom against a running server (needs `npm i --no-save jsdom`) |
 
 Typical verification loop:
@@ -184,7 +185,9 @@ Complense/
 
 ## Deployment
 
-The default shape is **one Node service** that serves the API and the built client on the same origin (works on Railway, Render, Fly.io, a VPS, or any container host):
+Two verified shapes, both keeping the client and API on **one origin** (no CORS, one URL, no second service):
+
+**A — one Node service** (default; Railway, Render, Fly.io, a VPS, Docker, any container host):
 
 ```bash
 npm ci
@@ -192,9 +195,15 @@ npm run build          # client -> client/dist, server -> server/dist
 NODE_ENV=production SESSION_SECRET="<long-random-string>" npm start
 ```
 
+**C — Vercel** (one public URL, almost zero configuration): Vercel serves `client/dist` from its CDN and routes `/api/*` to a single function that runs the *same* Express app (`api/index.mjs`); `vercel.json` holds the build, rewrites, SPA fallback and headers. Import the repo, optionally set `SESSION_SECRET`, deploy.
+
+```bash
+npm run build && npm run verify:deploy   # verifies the Vercel shape end to end locally
+```
+
 Health check: `GET /api/health` → `{"status":"ok", ...}`.
 
-For a split deployment (static client on Vercel, API elsewhere) build the client with `VITE_API_BASE_URL=https://api.example.com` and set `CORS_ORIGINS` on the API. Step-by-step instructions, environment tables and troubleshooting are in [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
+On Vercel the default upload limit becomes 4 MB (the platform's request-body ceiling) and the in-memory store is per instance — set `MONGODB_URI` to persist. For a split deployment (static client on Vercel, API elsewhere) build with `VITE_API_BASE_URL=https://api.example.com` and set `CORS_ORIGINS` on the API. Step-by-step instructions, environment tables and troubleshooting: [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
 
 ---
 
@@ -205,7 +214,9 @@ For a split deployment (static client on Vercel, API elsewhere) build the client
 - Uploads: extension and size validated server-side, parsed in memory only, never written to disk; the extracted text is what gets stored/analysed.
 - Input: request bodies validated in helpers; errors are returned as `{ error: { code, message } }` without stack traces or internal details.
 - Frontend: no secrets in the bundle — the client only ever talks to its own `/api`.
-- Rate limiting: fixed-window limiter on `/api` (600 requests/minute per IP), plus baseline security headers.
+- Rate limiting: fixed-window limiter on `/api` (600 requests/minute per IP, 30 per 10 minutes on auth endpoints), plus baseline security headers.
+- Session tokens are validated defensively: a missing, malformed, expired or wrongly-signed token returns `401` (never a `500`) and the client clears the stored session on any `401`.
+- Password reset cannot be used to enumerate accounts: known and unknown addresses receive a byte-identical response.
 
 Full detail, including what this demo deliberately does **not** implement (SSO, MFA enforcement, encryption at rest, audit-log export), is in [`docs/SECURITY.md`](docs/SECURITY.md).
 
@@ -227,7 +238,8 @@ Full detail, including what this demo deliberately does **not** implement (SSO, 
 
 ## Known limitations
 
-- The demo store is **in-memory**: restarting the server resets uploads, generated reports and settings changes. Set `MONGODB_URI` to persist them.
+- The demo store is **in-memory**: restarting the server resets uploads, generated reports and settings changes. Set `MONGODB_URI` to persist them. On a serverless host (Vercel) each instance keeps its own copy until it is recycled, so demo figures stay deterministic but user uploads are per instance.
+- Uploads are limited to 10 MB in a container deployment and 4 MB on Vercel (platform request-body ceiling). The UI reads the effective limit from the API.
 - PDF/DOCX extraction is a lightweight in-memory scan: documents without a reliable text layer are marked **needs review** (or **failed**) instead of being guessed at. OCR is roadmap work, not present.
 - The report is a readiness assessment snapshot, not a certification, audit opinion or control-attestation report (no SOC 2 §4 opinion language, no ISO certification claims).
 - Notifications and billing are UI-only in this build: preferences are stored, no email or payment provider is connected.

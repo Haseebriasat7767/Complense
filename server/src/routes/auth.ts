@@ -205,13 +205,22 @@ authRouter.post(
     const store = getStore();
     const user = await store.getUserByEmail(email);
 
-    // Always the same response so accounts cannot be enumerated.
+    // Always the same response so accounts cannot be enumerated. Do not add
+    // any field that varies with whether the address exists.
+    await store.recordAuditEvent({
+      organizationId: user?.organizationId ?? 'unknown',
+      actor: email,
+      action: 'password.reset_requested',
+      target: user ? 'account' : 'unknown',
+      at: new Date().toISOString(),
+    });
+
     res.json({
       ok: true,
       emailDeliveryEnabled: false,
+      // Deliberately identical for known and unknown addresses.
       message:
         'If an account exists for that address, a reset link would be sent. Email delivery is not configured in this build, so no message was sent.',
-      accountFound: Boolean(user),
     });
   }),
 );

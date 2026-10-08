@@ -42,14 +42,32 @@ export function createSessionToken(
   };
 }
 
+/**
+ * Decode one base64url segment into JSON.
+ *
+ * Any malformed input (bad base64, non-UTF8 bytes, non-JSON text, arrays,
+ * primitives) is a client error, never a server error: a tampered or corrupt
+ * token must produce a 401 so the client can sign the user in again.
+ */
+function decodeSegment<T>(segment: string): T {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(Buffer.from(segment, 'base64url').toString('utf8'));
+  } catch {
+    throw ApiError.unauthorized('Malformed session token.');
+  }
+  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+    throw ApiError.unauthorized('Malformed session token.');
+  }
+  return parsed as T;
+}
+
 export function verifySessionToken(token: string): SessionClaims {
   const parts = token.split('.');
   if (parts.length !== 3) throw ApiError.unauthorized('Malformed session token.');
   const [encodedHeader, encodedPayload, signature] = parts;
 
-  const header = JSON.parse(Buffer.from(encodedHeader, 'base64url').toString('utf8')) as {
-    alg?: string;
-  };
+  const header = decodeSegment<{ alg?: string }>(encodedHeader);
   if (header.alg !== 'HS256') throw ApiError.unauthorized('Unsupported token algorithm.');
 
   const expected = sign(`${encodedHeader}.${encodedPayload}`);
@@ -59,9 +77,14 @@ export function verifySessionToken(token: string): SessionClaims {
     throw ApiError.unauthorized('Invalid session signature.');
   }
 
-  const claims = JSON.parse(Buffer.from(encodedPayload, 'base64url').toString('utf8')) as SessionClaims;
+  const claims = decodeSegment<SessionClaims>(encodedPayload);
   if (typeof claims.exp !== 'number' || claims.exp * 1000 <= Date.now()) {
     throw ApiError.unauthorized('Your session has expired. Please sign in again.');
+  }
+  // A signed token always carries these claims; validate anyway so a malformed
+  // token can never reach a handler with an unusable organisation scope.
+  if (typeof claims.sub !== 'string' || !claims.sub || typeof claims.org !== 'string' || !claims.org) {
+    throw ApiError.unauthorized('Malformed session token.');
   }
   return claims;
 }
