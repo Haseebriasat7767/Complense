@@ -166,15 +166,15 @@ export class MongoStore implements Store {
     private readonly models: MongooseModels,
   ) {}
 
-  static async connect(): Promise<MongoStore | null> {
+  static async connect(): Promise<MongoStore> {
     try {
       const { connection, models } = await loadModels();
       return new MongoStore(connection, models);
     } catch (error) {
-      logger.warn('MongoDB unavailable — continuing on the in-memory demo store', {
+      logger.warn('MongoDB connection failed', {
         reason: error instanceof Error ? error.message : 'unknown',
       });
-      return null;
+      throw error;
     }
   }
 
