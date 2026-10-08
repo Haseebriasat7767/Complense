@@ -119,6 +119,15 @@ export const config = {
       .filter(Boolean),
   },
 
+  /**
+   * Internal URL of the client service, injected by Vercel's service binding.
+   * Available only at runtime (not during builds) when the server service has
+   * a binding to the client service.  Use this to construct absolute URLs
+   * pointing at the web client (e.g. for redirects, email links, or callbacks).
+   * Empty when the variable is not set (standalone container deployment).
+   */
+  clientUrl: str('CLIENT_URL'),
+
   uploads: {
     maxBytes: num('MAX_UPLOAD_MB', defaultUploadMb) * 1024 * 1024,
     allowedExtensions: str('ALLOWED_UPLOAD_TYPES', 'pdf,docx,txt,csv')

@@ -1,12 +1,16 @@
 /**
- * Deployment verification (Vercel shape).
+ * Deployment verification (Vercel services shape).
  *
- * Checks the things that actually break a Vercel deployment of this repository:
- *   1. vercel.json exists, parses and routes /api + the SPA correctly;
- *   2. the serverless entry (`api/index.mjs`) exports a request handler;
+ * Checks the things that actually break a Vercel services deployment of this
+ * repository:
+ *   1. vercel.json exists, parses, declares a `services` block with `client`
+ *      and `server`, and routes /api + the SPA to the correct services;
+ *   2. the serverless entry (`api/index.mjs`) still exports a request handler
+ *      (kept for local testing / backward-compatible non-services deploys);
  *   3. the handler boots the Express app without `server.listen` and answers
  *      real API requests (health 200, protected route 401, demo session 200);
- *   4. the PDF report path works through the function.
+ *   4. the PDF report path works through the function;
+ *   5. the server Dockerfile exists for the container service.
  *
  * Requires a build first (the entry imports `server/dist`):
  *
@@ -32,37 +36,101 @@ function check(label, condition, detail = '') {
 }
 
 /* -------------------------------------------------------------------------- */
-/* 1. vercel.json                                                             */
+/* 1. vercel.json — services configuration                                    */
 /* -------------------------------------------------------------------------- */
-console.log('\n=== vercel.json ===');
+console.log('\n=== vercel.json (services) ===');
 const configPath = path.join(root, 'vercel.json');
 check('vercel.json exists', existsSync(configPath));
 const config = JSON.parse(readFileSync(configPath, 'utf8'));
-check('outputDirectory is client/dist', config.outputDirectory === 'client/dist', config.outputDirectory);
-check('buildCommand builds both workspaces', config.buildCommand === 'npm run build', config.buildCommand);
-const sources = (config.rewrites ?? []).map((rule) => rule.source);
-check('routes /api/* to the function', sources.some((source) => source.startsWith('/api/')), JSON.stringify(sources));
-check('has an SPA fallback to /index.html', sources.includes('/(.*)'));
+
+// Services block
+check('has a services block', Boolean(config.services), JSON.stringify(Object.keys(config)));
+const services = config.services ?? {};
+check('declares a "client" service', Boolean(services.client));
+check('declares a "server" service', Boolean(services.server));
 check(
-  'the API rewrite preserves the request path (Express routing depends on it)',
-  (config.rewrites ?? []).some((rule) => rule.source === '/api/:path*' && rule.destination === '/api/:path*'),
+  'client service uses framework: vite',
+  services.client?.framework === 'vite',
+  String(services.client?.framework),
 );
 check(
-  'api/index.mjs is configured as a function',
-  Boolean(config.functions?.['api/index.mjs']),
-  JSON.stringify(Object.keys(config.functions ?? {})),
+  'client service root is "client"',
+  services.client?.root === 'client',
+  String(services.client?.root),
 );
 check(
-  'the function ships server/dist and pdfkit font data',
-  String(config.functions?.['api/index.mjs']?.includeFiles ?? '').includes('server/dist') &&
-    String(config.functions?.['api/index.mjs']?.includeFiles ?? '').includes('pdfkit'),
+  'server service uses runtime: container',
+  services.server?.runtime === 'container',
+  String(services.server?.runtime),
 );
+check(
+  'server service root is "." (repo root, uses the root Dockerfile)',
+  services.server?.root === '.',
+  String(services.server?.root),
+);
+
+// Bindings
+const serverBindings = services.server?.bindings ?? [];
+check(
+  'server has a binding to the client service',
+  serverBindings.some(
+    (b: { type: string; service: string; format: string; env: string }) =>
+      b.type === 'service' && b.service === 'client' && b.format === 'url' && b.env === 'CLIENT_URL',
+  ),
+  JSON.stringify(serverBindings),
+);
+check(
+  'binding has all four required fields (type, service, format, env)',
+  serverBindings.every(
+    (b: { type?: string; service?: string; format?: string; env?: string }) =>
+      Boolean(b.type && b.service && b.format && b.env),
+  ),
+  JSON.stringify(serverBindings),
+);
+
+// No top-level keys that are invalid in services mode
+const invalidTopLevel = ['functions', 'buildCommand', 'installCommand', 'devCommand', 'outputDirectory', 'framework'];
+for (const key of invalidTopLevel) {
+  check(`top-level "${key}" is absent (invalid in services mode)`, config[key] === undefined, String(config[key]));
+}
+
+// Rewrites
+const rewrites = config.rewrites ?? [];
+const sources = rewrites.map((rule) => rule.source);
+check('routes /api/(.*) to the server service', rewrites.some((rule) => rule.source === '/api/(.*)' && rule.destination?.service === 'server'), JSON.stringify(rewrites));
+check('routes /(.*) to the client service (SPA fallback)', rewrites.some((rule) => rule.source === '/(.*)' && rule.destination?.service === 'client'), JSON.stringify(rewrites));
+
+// Order: /api/* must come before the catch-all
+const apiIndex = rewrites.findIndex((rule) => rule.source === '/api/(.*)');
+const catchAllIndex = rewrites.findIndex((rule) => rule.source === '/(.*)');
+check(
+  '/api/(.*) rewrite comes before the catch-all',
+  apiIndex >= 0 && catchAllIndex >= 0 && apiIndex < catchAllIndex,
+  `api=${apiIndex}, catch-all=${catchAllIndex}`,
+);
+
+// Security headers
 check('static responses carry baseline security headers', (config.headers ?? []).length >= 1);
 
 /* -------------------------------------------------------------------------- */
-/* 2. The entry point itself                                                  */
+/* 1b. Dockerfile (required for the server container service)                 */
 /* -------------------------------------------------------------------------- */
-console.log('\n=== serverless entry ===');
+console.log('\n=== Dockerfile (server container service) ===');
+const dockerfile = path.join(root, 'Dockerfile');
+check('root Dockerfile exists (used by the server container service)', existsSync(dockerfile));
+if (existsSync(dockerfile)) {
+  const dockerfileContent = readFileSync(dockerfile, 'utf8');
+  check('Dockerfile uses node:22 base', dockerfileContent.includes('node:22'));
+  check('Dockerfile compiles server TypeScript', dockerfileContent.includes('npm run build'));
+  check('Dockerfile CMD starts the server', dockerfileContent.includes('server/dist/index.js'));
+  check('Dockerfile sets NODE_ENV=production', dockerfileContent.includes('NODE_ENV=production'));
+  check('Dockerfile includes client build (server is self-contained)', dockerfileContent.includes('client/dist'));
+}
+
+/* -------------------------------------------------------------------------- */
+/* 2. The serverless entry point (backward-compatible, for local testing)     */
+/* -------------------------------------------------------------------------- */
+console.log('\n=== serverless entry (backward-compatible) ===');
 check('server/dist exists (run npm run build first)', existsSync(path.join(root, 'server/dist/app.js')));
 check('api/index.mjs exists', existsSync(path.join(root, 'api/index.mjs')));
 const entry = await import(path.join(root, 'api', '[...path].mjs'));
@@ -130,5 +198,5 @@ if (failures.length > 0) {
   for (const failure of failures) console.log(`  - ${failure}`);
   process.exitCode = 1;
 } else {
-  console.log('The Vercel deployment shape is verified: static client + one Express function.');
+  console.log('The Vercel services deployment shape is verified: client (Vite) + server (container).');
 }
