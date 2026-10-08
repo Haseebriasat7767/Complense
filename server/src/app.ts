@@ -6,6 +6,8 @@
  * server is mounted as middleware (see src/dev/vite.ts). The SPA fallback keeps
  * client-side routes working on refresh.
  */
+import { existsSync } from 'node:fs';
+import path from 'node:path';
 import express, { type Express } from 'express';
 import { config } from './config.js';
 import { errorHandler, notFoundHandler } from './http/errors.js';
@@ -59,6 +61,10 @@ export function attachErrorHandling(app: Express): void {
 
 export function serveStatic(app: Express, clientDist: string): boolean {
   if (!config.isProduction) return false;
+  // In a services deployment the client SPA is served by a separate service,
+  // so the server container has no `client/dist`.  Skip static serving (and
+  // the catch-all SPA fallback) when the build output is absent.
+  if (!existsSync(path.join(clientDist, 'index.html'))) return false;
   try {
     app.use(
       express.static(clientDist, {
