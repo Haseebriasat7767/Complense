@@ -20,7 +20,7 @@ npm run dev                              # container shape: one process, API + c
 
 ## 1. Prerequisites
 
-- Node.js **20.19+ or 22.12+** (Node 22 recommended) and npm 10+
+- Node.js **22.12+** (Node 24 LTS recommended — it's Vercel's current default Function runtime; Node 20 was deprecated on Vercel on October 1, 2026) and npm 10+
 - No database, no API keys, no third-party services required
 - For persistence: a MongoDB connection string (optional)
 
@@ -163,6 +163,7 @@ When nginx is the app's sole trusted proxy, set `TRUST_PROXY_HOPS=1`. For a chai
 
 | Symptom | Cause / fix |
 | --- | --- |
+| Vercel: every deployment fails outright (build never starts, or fails immediately with a Node.js version error) | `engines.node` in `package.json` must be a single simple range (e.g. `>=22.12.0`) — Vercel does not reliably support compound `\|\|` ranges like `^20.19.0 \|\| >=22.12.0` and rejects them with "Found invalid Node.js Version". Node 20 was also deprecated for new Vercel deployments on October 1, 2026, so any range that could resolve to 20.x will fail on a new project. Keep `engines.node` at `>=22.12.0` (resolves to the latest available major, currently 24.x) |
 | `GET /` shows "ComplyLens AI API is running" | The client has not been built: run `npm run build`, or run in development mode |
 | Everyone is signed out after a restart | `SESSION_SECRET` is not set |
 | Uploads return 415/413 | Extension is outside `ALLOWED_UPLOAD_TYPES` (415) or file exceeds `MAX_UPLOAD_MB` (413) |
