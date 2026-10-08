@@ -55,6 +55,12 @@ function bool(name: string, fallback: boolean): boolean {
 
 const nodeEnv = str('NODE_ENV', 'development');
 const authRequired = bool('AUTH_REQUIRED', false);
+const configuredSessionSecret = str('SESSION_SECRET');
+
+// A stateless session token must use the same signing secret on every
+// serverless invocation. Never silently generate a random secret in production:
+// that makes a successful login fail on the next invocation with an invalid
+// session signature.
 
 /**
  * Serverless platforms cap the request body before it reaches the application
@@ -81,8 +87,8 @@ export const config = {
   authRequired,
 
   session: {
-    secret: str('SESSION_SECRET') || crypto.randomBytes(32).toString('hex'),
-    secretIsEphemeral: !str('SESSION_SECRET'),
+    secret: configuredSessionSecret || crypto.randomBytes(32).toString('hex'),
+    secretIsEphemeral: !configuredSessionSecret,
     ttlHours: num('SESSION_TTL_HOURS', 12),
   },
 
@@ -132,6 +138,15 @@ export const config = {
 } as const;
 
 export type AppConfig = typeof config;
+
+// Production deployments must provide a persistent signing key. Vercel can
+// execute different requests on different instances, so an ephemeral key is
+// not safe for authenticated routes.
+if (config.isProduction && config.session.secretIsEphemeral) {
+  throw new Error(
+    'SESSION_SECRET is required in production. Set a long random SESSION_SECRET in the deployment environment before starting ComplyLens.',
+  );
+}
 
 /** True when an external AI provider is configured AND explicitly allowed. */
 export function isExternalAiEnabled(): boolean {
