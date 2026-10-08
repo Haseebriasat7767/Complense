@@ -160,8 +160,8 @@ export function DashboardPage() {
           />
           <MetricTile
             label="Critical gaps"
-            value={data.counts.missing}
-            hint="No supporting evidence"
+            value={data.findings.critical}
+            hint="Critical-risk findings only"
             tone="text-danger-700"
             icon={<TriangleAlert className="size-4" aria-hidden="true" />}
           />

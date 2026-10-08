@@ -20,8 +20,7 @@ export type DemoDocument = {
   content: string;
 };
 
-export const DEMO_WORKSPACE_LABEL = 'Demo Workspace';
-export const DEMO_COMPANY_LABEL = 'AcmeCloud (Demo Data)';
+export const DEMO_WORKSPACE_LABEL = 'AcmeCloud Demo Workspace';
 
 export const DEMO_DOCUMENTS: DemoDocument[] = [
   {
@@ -238,10 +237,7 @@ export const DEMO_DOCUMENTS: DemoDocument[] = [
     status: 'failed',
     summary:
       'Scanned diagram with no extractable text. Analysis failed — re-upload a text-based export or an OCR-processed copy.',
-    content: [
-      '[No extractable text: this demo file is a scanned image without an OCR layer.]',
-      'ComplyLens cannot map evidence it cannot read. Re-upload a text-based PDF, DOCX, TXT or CSV export.',
-    ].join('\n'),
+    content: '',
   },
 ];
 

@@ -12,7 +12,7 @@ This document describes what the demo MVP actually implements, what it deliberat
 | --- | --- |
 | Password storage | `scrypt` with a per-user random salt (`server/src/auth/passwords.ts`); format `scrypt$<salt>$<hash>`; constant-time comparison |
 | Session tokens | HS256 JWT signed with `SESSION_SECRET`, `sub`/`email`/`org`/`role`/`demo` claims, server-enforced expiry (`SESSION_TTL_HOURS`, default 12h) |
-| Token transport | `Authorization: Bearer <token>`; `?access_token=` is accepted **only** for report/document downloads opened in a new tab |
+| Token transport | `Authorization: Bearer <token>` only; query-string tokens are rejected to avoid leaking credentials through URLs, logs or referrers |
 | Failed login | Single generic message for unknown accounts and wrong passwords: `"Email or password is incorrect."` |
 | Demo sessions | Issued by `POST /api/auth/demo` with a real signed token — protected routes behave exactly as for a paying account |
 | Sign-out | Client clears the stored session; tokens are short-lived and server-validated on every request |
@@ -28,13 +28,13 @@ This document describes what the demo MVP actually implements, what it deliberat
 ### Input handling
 
 - Request bodies are validated by helpers in `server/src/http/validate.ts` (required strings with length limits, e-mail and password rules, enums, booleans, clamped integers, size limits for query strings).
-- Uploads: extension allowlist (`ALLOWED_UPLOAD_TYPES`) and size limit (`MAX_UPLOAD_MB`, default 10 MB) enforced server-side by multer before the handler runs; unsupported media returns `415`, oversized uploads `400`.
-- Uploads are held in memory (`multer.memoryStorage()`) and are **never written to disk**; only the extracted text and metadata are stored.
-- JSON bodies are capped at 1 MB.
+- Uploads: extension allowlist (`ALLOWED_UPLOAD_TYPES`) and size limit (`MAX_UPLOAD_MB`, default 10 MB) enforced server-side by multer before the handler runs; unsupported media returns `415`, oversized uploads return `413`.
+- Uploads are held in memory (`multer.memoryStorage()`) and are **never written to disk**; only extracted text and metadata are stored. PDF/DOCX extraction is heuristic (not OCR), and a re-analysis request cannot improve the original extraction.
+- JSON bodies are capped at 1 MB; malformed JSON returns a structured `400 invalid_json` and oversized JSON returns `413 payload_too_large`.
 
 ### Output and error handling
 
-- Errors are returned as a stable envelope: `{ error: { code, message } }`. `errorHandler` logs the internal error server-side and returns a safe message plus an `errorId` for correlation — never a stack trace, SQL/DB error or file path.
+- Errors are returned as a stable envelope: `{ error: { code, message } }` (with `details` only when present). `errorHandler` logs unexpected errors server-side and returns a safe message — never a stack trace, database error or file path.
 - Unknown API routes return a structured `404` rather than falling through to the SPA shell.
 - `X-Powered-By` is disabled.
 
@@ -54,7 +54,7 @@ Set by `securityHeaders()` on every response:
 
 ### Abuse protection
 
-- Fixed-window rate limiter on `/api`: 600 requests/minute per IP, with `X-RateLimit-*` and `Retry-After` headers (`server/src/http/security.ts`). Single-instance only — see hardening below.
+- Fixed-window limiters: 30 authentication attempts per 10 minutes and 600 requests/minute across `/api`, keyed by Express `req.ip`, with `X-RateLimit-*` and `Retry-After` headers (`server/src/http/security.ts`). `TRUST_PROXY_HOPS` defaults to `0`; set it to the exact count of trusted proxies only, or clients may spoof forwarded IP headers. Both limiters are single-instance only — see hardening below.
 
 ### Secrets
 
@@ -91,13 +91,13 @@ Set by `securityHeaders()` on every response:
 | Malicious uploads | Extension + size allowlist, in-memory parsing, no shell/file-system execution |
 | Prompt injection via evidence text (if AI enabled) | Evidence text is only ever inserted as *content* to summarise; statuses, scores and mappings are never AI-controlled |
 | DoS via large payloads | 1 MB JSON cap, 10 MB upload cap, rate limiting, per-process memory store (no unbounded disk writes) |
-| Information leakage in errors | Generic client messages, `errorId` correlation, server-side logging only |
+| Information leakage in errors | Generic client messages; unexpected details and stack traces are logged server-side only |
 | Clickjacking | `X-Frame-Options: SAMEORIGIN` in production |
 | Secret leakage in the bundle | Server-only secret handling; `.env` git-ignored |
 
 ## Privacy notes
 
-- The demo workspace is synthetic ("AcmeCloud (Demo Data)"). The real persona names are fictional.
+- The AcmeCloud organisation and "AcmeCloud Demo Workspace" are synthetic; the UI labels the sample workspace as Demo Data. The persona names are fictional.
 - Extracted evidence text lives in the store (memory by default, MongoDB if configured). Deleting a document removes its text from the store.
 - `retentionDays` is a stored preference in this build; nothing is purged automatically. A production deployment must implement the retention job.
 - If you enable an external AI provider, evidence text may leave your infrastructure. Keep `AI_ALLOW_EXTERNAL=false` (the default) unless that is acceptable, and review the provider's data-processing terms.

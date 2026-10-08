@@ -5,15 +5,9 @@ Content type is `application/json` unless stated otherwise.
 
 ## Conventions
 
-- **Authentication** — send `Authorization: Bearer <token>`. Routes marked *session* call `requireAuth()`, resolve the caller's organisation and scope every query to it. Document downloads also accept `?access_token=<token>` so a PDF can be opened in a new tab.
-- **Errors** — every failure returns the same envelope:
-
-```json
-{ "error": { "code": "not_found", "message": "Report not found.", "details": null } }
-```
-
-  Codes: `bad_request` (400), `unauthorized` (401), `forbidden` (403), `not_found` (404), `unsupported_media_type` (415), `rate_limited` (429), `server_error` (500). Messages are safe for users — no stack traces or internal details.
-- **Rate limiting** — 600 requests/minute per IP on `/api` (fixed window). `X-RateLimit-*` and `Retry-After` headers are set.
+- **Authentication** — send `Authorization: Bearer <token>`. Routes marked *session* call `requireAuth()`, resolve the caller's organisation and scope every query to it. Query-string bearer tokens are not accepted.
+- **Errors** — failures return `{ "error": { "code": "…", "message": "…" } }`; a `details` field is included only when present. Common codes: `bad_request` (400), `invalid_json` (400), `unauthorized` (401), `forbidden` (403), `not_found` (404), `payload_too_large` (413), `unsupported_media_type` (415), `rate_limited` (429), `internal_error` (500). Messages are safe for users — no stack traces or internal details.
+- **Rate limiting** — 600 requests/minute per Express `req.ip` on `/api` (fixed window); authentication attempts have an additional 30-per-10-minute limit. `X-RateLimit-*` and `Retry-After` headers are set. Forwarded addresses are ignored unless `TRUST_PROXY_HOPS` is set to the exact trusted proxy count.
 - **Workspace scoping** — session routes accept an optional `?workspaceId=`; omitted, the demo workspace (or the caller's default workspace) is used.
 - **Demo mode** — with `AUTH_REQUIRED=false` the app is fully explorable, but every session route still requires a token. `POST /api/auth/demo` issues one instantly.
 
@@ -43,13 +37,13 @@ Body: `{ name, email, password, organizationName, jobTitle?, industry?, seedDemo
 Body: `{ email, password }` → `200` with the session payload. A wrong password returns `401` `"Email or password is incorrect."` (identical message for unknown accounts).
 
 ### `POST /api/auth/demo`
-No body. Issues a session for the seeded demo owner → `200` with the session payload and `demo: true`.
+No body. Issues a signed session for the seeded demo owner → `200` with `token`, `expiresAt`, `user` (`isDemoUser: true`), `organization`, `workspace` (`isDemo: true`), `workspaces[]` and `persistence`.
 
 ### `POST /api/auth/logout`
-Stateless: returns `{ ok: true }` and the client clears its stored session.
+Stateless: returns `{ ok: true, message: 'Signed out.' }`; the client clears its stored session.
 
 ### `POST /api/auth/forgot-password`
-Body: `{ email }` → `{ ok: true, emailDeliveryEnabled: false, accountFound: boolean }`. No email is sent in the demo build; the response is deliberately generic.
+Body: `{ email }` → `{ ok: true, emailDeliveryEnabled: false, message }`. No email is sent in the demo build; the response is deliberately identical for known and unknown addresses so it cannot enumerate accounts.
 
 ### `GET /api/auth/session` *(session)*
 Re-validates the token and returns the current session payload (used on app boot).
@@ -105,19 +99,19 @@ Category options for the upload form.
 Evidence detail: the item plus `extractedText`, `mapping[]` (control code/name, confidence, matched and missing items) and `isDemoSample`.
 
 ### `GET /api/evidence/:id/text`
-Streams the extracted text as a `.txt` download (`Content-Disposition: attachment`).
+Returns a `text/plain` snapshot of the retained extracted text (`Content-Disposition: inline`). The source upload itself is not retained.
 
 ### `POST /api/evidence` *(multipart/form-data)*
-Field `file` (required) plus optional `category`. Validates extension (default `pdf,docx,txt,csv`) and size (default 10 MB) — an unsupported type returns `415`, an oversized file `400`. The file is parsed in memory; only the extracted text is retained. Returns `201 { evidence, mapping[], message }`.
+Field `file` (required), plus optional `category` and `frameworks` (`soc2`, `iso27001`, or both). Validates extension (default `pdf,docx,txt,csv`) and size (default 10 MB) — an unsupported type returns `415`, an oversized file `413`. Files are parsed in memory; only extracted text and metadata are retained. TXT/CSV text is read directly; PDF/DOCX extraction is a lightweight text-layer heuristic, not full document conversion or OCR. Unreadable files remain `failed`, and partial text is `needs_review`. Returns `201 { evidence, extraction, analysis, message }`; the evidence object includes mapped controls.
 
 ### `POST /api/evidence/:id/analyze`
-Re-runs extraction and mapping for one document → `{ evidence, mapping[], mode, message }`.
+Re-runs analysis over text already retained for the document and refreshes its summary/mappings. It does **not** re-parse the original file or run OCR, and it does not promote `failed` or `needs_review` extraction status → `{ evidence, message }`.
 
 ### `PATCH /api/evidence/:id`
-Body `{ category }` → `{ evidence }`.
+Supports metadata fields `{ category?, frameworks?, summary?, fileName? }` → `{ evidence }`. Analysis status cannot be set directly.
 
 ### `DELETE /api/evidence/:id`
-`204`. Demo samples are flagged rather than permanently removed from the seed.
+Returns `200 { ok, deletedId, message }`. The record and its retained text are removed from the active store; memory mode is reseeded on a fresh process, while MongoDB stores the deletion.
 
 ---
 
@@ -174,7 +168,7 @@ Accepts a finding id (`find-soc2-cc7-2`), control id or control code → `{ find
 Returns `{ items[], workspace, disclaimer }`. Each item: `key, name, shortName, version, description, intent, readinessLabel, status ('ready-for-demo' | 'awaiting-evidence'), readinessIndex, bandLabel, counts, components [{key, label, weight, value, weighted, description}], methodology, controls, categories[] (with per-status counts), coverage {documents, documentsMapped, distinctControlsCovered, unmappedDocuments[]}, findings`.
 
 ### `GET /api/reports?framework=…`
-`{ items[], total, frameworks[], notice }`. Item: `id, name, frameworkKey, framework, companyName, fileName, generatedAt, status, scoreIndex, requestedBy, downloadUrl`. The demo workspace is auto-seeded with one SOC 2 snapshot so the page is never empty.
+`{ items[], total, frameworks[], notice }`; each framework option includes its live `controlCount` from the control library. Item: `id, name, frameworkKey, framework, companyName, fileName, generatedAt, status, scoreIndex, requestedBy, downloadUrl`. The demo workspace is auto-seeded with one SOC 2 snapshot so the page is never empty.
 
 ### `POST /api/reports`
 Body `{ frameworkKey?, workspaceId? }` (`soc2` default) → `201 { report (with summary), message }`. Generation is synchronous and based on the current evidence.
@@ -205,7 +199,7 @@ The document contains a cover page (COMPLYLENS AI · Compliance Readiness Assess
 Every page footer repeats `ComplyLens AI · preliminary readiness assessment · not a certification, audit opinion or legal advice · Demo Data workspace` and the report disclaimer is reproduced verbatim in section 12: *"This report is an AI-generated preliminary readiness assessment. It is not a certification, audit opinion, or substitute for professional compliance advice."*
 
 ### `DELETE /api/reports/:id`
-`204`.
+Returns `200 { ok: true, deletedId }`.
 
 ---
 

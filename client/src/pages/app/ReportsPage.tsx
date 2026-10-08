@@ -16,7 +16,7 @@ import type { FrameworkKey, ReportDetail, ReportListItem } from '@/lib/types';
 type ReportsResponse = {
   items: ReportListItem[];
   total: number;
-  frameworks: Array<{ key: FrameworkKey; name: string; shortName: string }>;
+  frameworks: Array<{ key: FrameworkKey; name: string; shortName: string; controlCount: number }>;
   notice: string;
 };
 
@@ -32,6 +32,16 @@ export function ReportsPage() {
 
   const reports = useApi<ReportsResponse>(`/api/reports${framework ? `?framework=${framework}` : ''}`);
   const items = reports.data?.items ?? [];
+  const frameworkOptions = reports.data?.frameworks ?? [];
+  const selectedFramework = frameworkOptions.find((item) => item.key === framework);
+  const totalControlCount = frameworkOptions.reduce((total, item) => total + item.controlCount, 0);
+  const controlScope = selectedFramework
+    ? `${selectedFramework.shortName}: ${selectedFramework.controlCount} control${selectedFramework.controlCount === 1 ? '' : 's'}`
+    : frameworkOptions.length > 0
+      ? `${totalControlCount} controls across ${frameworkOptions.length} frameworks (${frameworkOptions
+          .map((item) => `${item.controlCount} ${item.shortName}`)
+          .join(', ')})`
+      : '';
 
   const generate = async () => {
     setGenerating(true);
@@ -80,7 +90,9 @@ export function ReportsPage() {
     <div className="space-y-6">
       <PageHeader
         title="Readiness reports"
-        subtitle="Generate a point-in-time readiness assessment from the evidence currently in the workspace, then download it as a branded PDF."
+        subtitle={`Generate a point-in-time readiness assessment from the evidence currently in the workspace, then download it as a branded PDF.${
+          controlScope ? ` Current framework coverage: ${controlScope}.` : ''
+        }`}
         actions={
           <>
             <Button
@@ -109,7 +121,9 @@ export function ReportsPage() {
       <Card>
         <CardHeader
           title="Generated reports"
-          description="Each report is stored with the score and counts from the moment it was generated."
+          description={`Each report is stored with the score and counts from the moment it was generated.${
+            controlScope ? ` Current framework coverage: ${controlScope}.` : ''
+          }`}
           actions={
             <Select
               aria-label="Filter by framework"

@@ -25,10 +25,9 @@ export default defineConfig({
     chunkSizeWarningLimit: 900,
     rollupOptions: {
       output: {
-        // Keep the initial bundle small: charts and content pages load on demand.
+        // Keep framework/runtime dependencies out of the application entry chunk.
         manualChunks: {
           react: ['react', 'react-dom', 'react-router-dom'],
-          charts: ['recharts'],
           icons: ['lucide-react'],
         },
       },

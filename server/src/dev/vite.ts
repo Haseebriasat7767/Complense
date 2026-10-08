@@ -35,7 +35,7 @@ export async function mountViteDevServer(app: Express, httpServer: Server): Prom
       alias: { '@': path.resolve(clientRoot, 'src') },
     },
     optimizeDeps: {
-      include: ['react', 'react-dom', 'react-router-dom', 'recharts', 'lucide-react'],
+      include: ['react', 'react-dom', 'react-router-dom', 'lucide-react'],
     },
   });
 

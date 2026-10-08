@@ -8,6 +8,7 @@ import { Router } from 'express';
 import { requireAuth, sessionOf } from '../auth/middleware.js';
 import { writeNarrative, modeLabel } from '../ai/index.js';
 import { FRAMEWORKS, isFrameworkKey } from '../domain/frameworks.js';
+import { controlsForFramework } from '../domain/controls.js';
 import { buildReportRecord, buildReportSummary } from '../domain/reports.js';
 import { snapshotForFramework } from '../services/readiness.js';
 import { renderReportPdf } from '../pdf/report.js';
@@ -121,6 +122,7 @@ reportsRouter.get(
         key: framework.key,
         shortName: framework.shortName,
         name: framework.name,
+        controlCount: controlsForFramework(framework.key).length,
       })),
       notice:
         'Reports are generated from the evidence currently in the workspace and are stored as snapshots. They are readiness assessments, not certifications.',

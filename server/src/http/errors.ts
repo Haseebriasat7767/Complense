@@ -59,8 +59,19 @@ export function errorHandler(err: unknown, _req: Request, res: Response, _next: 
     return;
   }
 
-  // Multer / body-parser style errors surfaced by name to stay dependency-free.
-  const anyErr = err as { name?: string; code?: string; message?: string };
+  // Multer / body-parser errors surfaced by their stable type/code rather than
+  // leaking parser internals to the client.
+  const anyErr = err as { name?: string; type?: string; code?: string; message?: string };
+  if (anyErr?.type === 'entity.parse.failed') {
+    res.status(400).json({
+      error: { code: 'invalid_json', message: 'Request body must contain valid JSON.' },
+    });
+    return;
+  }
+  if (anyErr?.type === 'entity.too.large') {
+    res.status(413).json({ error: { code: 'payload_too_large', message: 'Request body exceeds the 1 MB limit.' } });
+    return;
+  }
   if (anyErr?.code === 'LIMIT_FILE_SIZE') {
     res.status(413).json({
       error: { code: 'payload_too_large', message: `File exceeds the ${Math.round(config.uploads.maxBytes / (1024 * 1024))} MB limit.` },

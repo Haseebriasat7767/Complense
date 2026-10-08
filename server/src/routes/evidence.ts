@@ -13,11 +13,11 @@ import { analyzeEvidence, modeLabel } from '../ai/index.js';
 import { categoriesForFramework } from '../domain/controls.js';
 import { CONTROL_LIBRARY } from '../domain/controls.js';
 import { FRAMEWORK_KEYS, isFrameworkKey } from '../domain/frameworks.js';
-import { mapEvidenceToControls } from '../domain/analysis.js';
+import { mapEvidenceAcrossFrameworks } from '../domain/analysis.js';
 import { extractText } from '../services/extract.js';
 import { ApiError, asyncHandler } from '../http/errors.js';
 import { evidenceDetailDto, evidenceDto } from '../http/dto.js';
-import { optionalString, queryString, requireEnum, requireObjectBody } from '../http/validate.js';
+import { optionalString, queryString, requireObjectBody } from '../http/validate.js';
 import { getStore } from '../store/index.js';
 import { resolveWorkspace } from './workspace.js';
 import type { EvidenceRecord, FrameworkKey } from '../domain/types.js';
@@ -69,20 +69,34 @@ function parseFrameworks(value: unknown): FrameworkKey[] {
   return [...new Set(frameworks)];
 }
 
-/** Re-derive a document's analysis status from its stored text. */
+/**
+ * Re-run analysis over already-extracted text without upgrading its extraction
+ * status. This endpoint does not retain the original file or run OCR/parsing,
+ * so an analysis-only retry cannot claim that extraction improved.
+ */
 async function refreshAnalysisStatus(record: EvidenceRecord): Promise<EvidenceRecord> {
   const store = getStore();
-  const analysis = await analyzeEvidence({
-    fileName: record.fileName,
-    category: record.category,
-    content: record.content,
-  });
-  const hasText = record.content.trim().length >= 60;
-  const status: EvidenceRecord['status'] = hasText ? 'analyzed' : 'needs_review';
+  const content = record.content.trim();
+  const isExtractionFailureNote =
+    content.startsWith('[No extractable text:') ||
+    content.startsWith('No text layer was found.') ||
+    content.startsWith('The file contains no readable text.') ||
+    content.startsWith('Files of type .');
+  const status: EvidenceRecord['status'] =
+    record.status === 'analyzing' ? (content && !isExtractionFailureNote ? 'needs_review' : 'failed') : record.status;
+  const analysis =
+    status !== 'failed' && content.length > 0
+      ? await analyzeEvidence({
+          fileName: record.fileName,
+          category: record.category,
+          content: record.content,
+        })
+      : null;
+
   return (
     (await store.updateEvidence(record.id, record.organizationId, {
       status,
-      summary: hasText ? record.summary : analysis.summary,
+      ...(analysis ? { summary: analysis.summary } : {}),
     })) ?? record
   );
 }
@@ -113,8 +127,7 @@ evidenceRouter.get(
     for (const doc of stale) await refreshAnalysisStatus(doc);
     if (stale.length > 0) items = await store.listEvidence(session.org, workspace.id);
 
-    const controls = CONTROL_LIBRARY;
-    const mappings = mapEvidenceToControls(controls, items, 'soc2');
+    const mappings = mapEvidenceAcrossFrameworks(CONTROL_LIBRARY, items);
 
     if (statusFilter) items = items.filter((doc) => doc.status === statusFilter);
     if (frameworkFilter && isFrameworkKey(frameworkFilter)) {
@@ -160,7 +173,7 @@ evidenceRouter.get(
     const record = await store.getEvidence(req.params.id as string, session.org);
     if (!record) throw ApiError.notFound('Evidence not found.');
 
-    const mappings = mapEvidenceToControls(CONTROL_LIBRARY, [record], 'soc2');
+    const mappings = mapEvidenceAcrossFrameworks(CONTROL_LIBRARY, [record]);
     res.json(evidenceDetailDto(record, mappings.get(record.id) ?? []));
   }),
 );
@@ -236,7 +249,7 @@ evidenceRouter.post(
       uploadedBy: session.email,
       status,
       frameworkKeys: frameworks,
-      content: extraction.text || extraction.note,
+      content: extraction.text,
       summary: extraction.text.length > 0 ? analysis.summary : extraction.note,
     });
 
@@ -248,7 +261,7 @@ evidenceRouter.post(
       at: record.uploadedAt,
     });
 
-    const mappings = mapEvidenceToControls(CONTROL_LIBRARY, [record], 'soc2');
+    const mappings = mapEvidenceAcrossFrameworks(CONTROL_LIBRARY, [record]);
     res.status(201).json({
       evidence: evidenceDto(record, mappings.get(record.id) ?? []),
       extraction: { method: extraction.method, confidence: extraction.confidence, note: extraction.note },
@@ -271,25 +284,27 @@ evidenceRouter.post(
     const record = await store.getEvidence(req.params.id as string, session.org);
     if (!record) throw ApiError.notFound('Evidence not found.');
 
-    // Surface the transient "analyzing" state, then settle deterministically.
-    await store.updateEvidence(record.id, session.org, { status: 'analyzing' });
+    // Re-evaluate retained text only. The source file is not retained, so the
+    // extraction status must not be promoted by an analysis-only rerun.
     const refreshed = await refreshAnalysisStatus(record);
 
     await store.recordAuditEvent({
       organizationId: session.org,
       actor: session.email,
-      action: 'evidence.analyzed',
+      action: refreshed.status === 'analyzed' ? 'evidence.analyzed' : 'evidence.analysis_retried',
       target: record.fileName,
       at: new Date().toISOString(),
     });
 
-    const mappings = mapEvidenceToControls(CONTROL_LIBRARY, [refreshed], 'soc2');
+    const mappings = mapEvidenceAcrossFrameworks(CONTROL_LIBRARY, [refreshed]);
     res.json({
       evidence: evidenceDto(refreshed, mappings.get(refreshed.id) ?? []),
       message:
         refreshed.status === 'analyzed'
-          ? 'Analysis complete — evidence mapped to controls.'
-          : 'Analysis complete, but the document still needs manual review because its text could not be read reliably.',
+          ? 'Analysis refreshed using the retained text; evidence is mapped to controls.'
+          : refreshed.status === 'needs_review'
+            ? 'Analysis reran over the retained text; this document remains flagged for manual review.'
+            : 'No extractable text is available to analyze. Re-upload a text-based file or an OCR-processed copy.',
     });
   }),
 );
@@ -307,14 +322,6 @@ evidenceRouter.patch(
 
     if (body.category !== undefined) patch.category = parseCategory(body.category);
     if (body.frameworks !== undefined) patch.frameworkKeys = parseFrameworks(body.frameworks);
-    if (body.status !== undefined) {
-      patch.status = requireEnum(body.status, 'status', [
-        'analyzed',
-        'analyzing',
-        'needs_review',
-        'failed',
-      ] as const);
-    }
     if (body.summary !== undefined) {
       patch.summary = optionalString(body.summary, 'summary', 400) ?? record.summary;
     }
@@ -327,7 +334,7 @@ evidenceRouter.patch(
     const updated = await store.updateEvidence(record.id, session.org, patch);
     if (!updated) throw ApiError.notFound('Evidence not found.');
 
-    const mappings = mapEvidenceToControls(CONTROL_LIBRARY, [updated], 'soc2');
+    const mappings = mapEvidenceAcrossFrameworks(CONTROL_LIBRARY, [updated]);
     res.json({ evidence: evidenceDto(updated, mappings.get(updated.id) ?? []) });
   }),
 );

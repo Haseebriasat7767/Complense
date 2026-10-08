@@ -40,6 +40,13 @@ function num(name: string, fallback: number): number {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
+function nonNegativeInt(name: string, fallback: number): number {
+  const raw = str(name);
+  if (!raw) return fallback;
+  const parsed = Number(raw);
+  return Number.isSafeInteger(parsed) && parsed >= 0 ? parsed : fallback;
+}
+
 function bool(name: string, fallback: boolean): boolean {
   const raw = str(name).toLowerCase();
   if (!raw) return fallback;
@@ -64,7 +71,10 @@ export const config = {
   isTest: nodeEnv === 'test',
   port: num('PORT', 4000),
   host: str('HOST', '0.0.0.0'),
-  publicAppUrl: str('PUBLIC_APP_URL', `http://localhost:${num('PORT', 4000)}`),
+  // Trust forwarded client addresses only when the deployment has explicitly
+  // declared the number of proxies in front of this process. Default 0 avoids
+  // trusting user-supplied X-Forwarded-For values on direct deployments.
+  trustProxyHops: nonNegativeInt('TRUST_PROXY_HOPS', 0),
 
   /** Demo mode is the default: seeded AcmeCloud workspace, instant demo login. */
   demoMode: bool('DEMO_MODE', !authRequired),
@@ -116,7 +126,7 @@ export const config = {
     organizationId: 'org_acmecloud',
     organizationName: 'AcmeCloud',
     workspaceId: 'ws_acmecloud_demo',
-    workspaceName: 'Demo Workspace',
+    workspaceName: 'AcmeCloud Demo Workspace',
     userEmail: 'demo@complylens.ai',
   },
 } as const;

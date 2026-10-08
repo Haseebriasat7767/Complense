@@ -60,7 +60,7 @@ Only **user-mutable** records are stored. Control statuses, mappings, findings, 
 | `source` | `'demo' \| 'upload'` | Everything `demo` is labelled "Demo Data" in the UI |
 | `sourceRef` | string? | Demo document key |
 | `uploadedAt`, `uploadedBy` | ISO string | |
-| `status` | `'analyzed' \| 'analyzing' \| 'needs_review' \| 'failed'` | Re-derived if a record is stuck in `analyzing` for more than 2 minutes |
+| `status` | `'analyzed' \| 'analyzing' \| 'needs_review' \| 'failed'` | Legacy `analyzing` records are conservatively settled after 2 minutes: non-empty retained text becomes `needs_review`, empty/failure-note text becomes `failed`. Re-analysis never promotes an extraction status. |
 | `frameworkKeys` | string[] | Which frameworks the document can evidence |
 | `content` | string | Extracted text — uploads are parsed in memory and only the text is retained |
 | `summary` | string | Deterministic summary (or AI-assisted wording when configured) |
@@ -116,7 +116,7 @@ There are no cross-organisation references: every query includes `organizationId
 
 `store/seed.ts` calls `buildDemoEvidence()` and inserts:
 
-- 1 organisation (`org_acmecloud`, AcmeCloud — labelled "Demo Data"), 1 workspace (`ws_acmecloud_demo`, "Demo Workspace")
+- 1 organisation (`org_acmecloud`, AcmeCloud — labelled "Demo Data"), 1 workspace (`ws_acmecloud_demo`, "AcmeCloud Demo Workspace")
 - 2 users: `demo@complylens.ai` / `DemoPass123!` (owner) and `analyst@complylens.ai` / `AnalystPass123!` (member)
 - 10 evidence documents: the eight named samples, `Vendor_Security_Questionnaire_Q3.pdf` (*needs review*), `Legacy_Data_Flow_Diagram.pdf` (*failed* — no extractable text)
 - 2 audit events, and one SOC 2 report snapshot so the reports page is never empty

@@ -14,9 +14,7 @@ import { verifySessionToken, type SessionClaims } from './tokens.js';
 function readToken(req: Request): string | null {
   const header = req.header('authorization');
   if (header?.toLowerCase().startsWith('bearer ')) return header.slice(7).trim();
-  // Used only for direct document downloads opened in a new browser tab.
-  const queryToken = typeof req.query.access_token === 'string' ? req.query.access_token : null;
-  return queryToken;
+  return null;
 }
 
 export function requireAuth(): RequestHandler {

@@ -74,7 +74,7 @@ export function SecurityPage() {
             'Set SESSION_SECRET to a long random value so sessions survive restarts and cannot be forged.',
             'Set AUTH_REQUIRED=true and DEMO_MODE=false to disable passwordless demo entry.',
             'Point MONGODB_URI at a database with authentication, TLS and backups enabled.',
-            'Terminate TLS in front of the app and set PUBLIC_APP_URL so links are correct.',
+            'Terminate TLS at a trusted reverse proxy; set TRUST_PROXY_HOPS to the exact trusted proxy count (default 0).',
             'Leave AI_ALLOW_EXTERNAL=false unless you have a data-processing agreement covering evidence text.',
             'Review the upload limits and allowed file types for your evidence types.',
           ].map((item) => (
