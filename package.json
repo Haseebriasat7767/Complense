@@ -1,0 +1,23 @@
+{
+  "name": "complylens-ai",
+  "version": "0.1.0",
+  "private": true,
+  "description": "ComplyLens AI \u2014 AI-assisted compliance readiness and gap analysis for SOC 2 and ISO 27001.",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=20.11.0"
+  },
+  "workspaces": [
+    "client",
+    "server"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace server",
+    "build": "npm run build --workspace client && npm run build --workspace server",
+    "start": "node server/dist/index.js",
+    "typecheck": "npm run typecheck --workspace server && npm run typecheck --workspace client",
+    "test": "npm run test --workspace server",
+    "verify:demo": "npm run verify:demo --workspace server",
+    "smoke:client": "tsx --tsconfig client/tsconfig.json scripts/smoke-client.tsx"
+  }
+}
