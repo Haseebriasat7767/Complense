@@ -23,7 +23,7 @@ export function createApp(): Express {
   const app = express();
 
   app.disable('x-powered-by');
-  app.set('trust proxy', true);
+  app.set('trust proxy', config.trustProxyHops);
   app.use(securityHeaders());
   app.use(corsHeaders());
   app.use(express.json({ limit: '1mb' }));

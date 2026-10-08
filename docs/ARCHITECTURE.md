@@ -65,7 +65,7 @@ The client never re-computes product logic. Scores, statuses, findings and recom
 | `services/` | `extract.ts` (in-memory text extraction) and `readiness.ts` (`snapshotForFramework` — the single source of assessments, mappings, findings and score) |
 | `routes/` | HTTP layer only: validate input, call the store/engine, map to DTOs. `auth`, `workspace`, `evidence`, `controls`, `gaps`, `reports`, `frameworks`, `meta` |
 | `ai/` | Provider abstraction (`analyzeEvidence`, `writeNarrative`) with a deterministic default and an optional OpenAI-compatible provider |
-| `pdf/report.ts` | pdfkit A4 renderer: cover page + 15 sections + footer disclaimer |
+| `pdf/report.ts` | pdfkit A4 renderer: cover page + 12 numbered sections + footer disclaimer |
 | `http/` | `errors.ts` (`ApiError`, `errorHandler`, `notFoundHandler`), `security.ts` (headers, CORS, rate limit), `validate.ts` (body/query helpers), `dto.ts` (API shapes) |
 | `store/` | `store.ts` (interface), `memory.ts` (default), `mongo.ts` (optional), `seed.ts` (demo seed), `index.ts` (factory with automatic fallback) |
 | `auth/` | `tokens.ts` (HS256 sign/verify), `passwords.ts` (scrypt hash/verify), `middleware.ts` (`requireAuth`, `sessionOf`, `assertSameOrganization`) |

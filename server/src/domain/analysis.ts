@@ -16,6 +16,7 @@
  * 4. Documents marked `failed` are excluded from matching entirely.
  */
 import { getControl, RISK_ORDER } from './controls.js';
+import { FRAMEWORK_KEYS } from './frameworks.js';
 import type {
   ControlAssessment,
   ControlDefinition,
@@ -241,6 +242,8 @@ export function mapEvidenceToControls(
     const entries: MappingEntry[] = [];
 
     for (const control of controls) {
+      if (control.frameworkKey !== frameworkKey) continue;
+
       const matchedItems: string[] = [];
       const missingItems: string[] = [];
       let signalHits = 0;
@@ -279,6 +282,23 @@ export function mapEvidenceToControls(
     entries.sort((a, b) => b.confidence - a.confidence || a.controlCode.localeCompare(b.controlCode));
     result.set(doc.evidence.id, entries);
   }
+  return result;
+}
+
+/** Map each document only to controls in the frameworks selected for it. */
+export function mapEvidenceAcrossFrameworks(
+  controls: ControlDefinition[],
+  evidence: EvidenceRecord[],
+): Map<string, MappingEntry[]> {
+  const result = new Map<string, MappingEntry[]>();
+
+  for (const frameworkKey of FRAMEWORK_KEYS) {
+    const frameworkMappings = mapEvidenceToControls(controls, evidence, frameworkKey);
+    for (const [evidenceId, entries] of frameworkMappings) {
+      result.set(evidenceId, [...(result.get(evidenceId) ?? []), ...entries]);
+    }
+  }
+
   return result;
 }
 

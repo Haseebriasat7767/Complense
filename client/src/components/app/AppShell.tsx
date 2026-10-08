@@ -207,7 +207,7 @@ export function AppShell() {
                   {context?.organization.name ?? 'AcmeCloud'}
                 </span>
                 <span className="block truncate text-[11px] text-ink-500">
-                  {context?.workspace.name ?? 'Demo Workspace'}
+                  {context?.workspace.name ?? 'AcmeCloud Demo Workspace'}
                 </span>
               </span>
               <ChevronDown className="size-3.5 shrink-0 text-ink-400" aria-hidden="true" />

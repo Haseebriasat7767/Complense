@@ -54,7 +54,7 @@ export function DashboardPreview({ className }: { className?: string }) {
           </div>
           <div className="mx-3 mb-3 rounded-lg border border-ink-200 bg-ink-50 px-2.5 py-1.5">
             <p className="text-[11px] font-medium text-ink-800">AcmeCloud</p>
-            <p className="text-[10px] text-ink-500">Demo Workspace</p>
+            <p className="text-[10px] text-ink-500">AcmeCloud Demo Workspace</p>
           </div>
           <ul className="space-y-0.5 px-2">
             {[

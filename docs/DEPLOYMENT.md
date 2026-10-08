@@ -1,11 +1,11 @@
 # Deployment
 
-ComplyLens AI is a full-stack TypeScript app (Express API + React client). Two deployment shapes are supported out of the box, and both were verified locally before being documented:
+ComplyLens AI is a full-stack TypeScript app (Express API + React client). The single Node service is the recommended no-database demo shape. A Vercel serverless adapter is also included and its entrypoint is exercised locally by `npm run verify:deploy`; no hosted deployment has been performed:
 
 | | Shape | Best for | State |
 | --- | --- | --- | --- |
-| **A** | One Node service: Express serves the API **and** the built client on one port (§2, Docker §4) | Long-running demos, container hosts, uploads up to 10 MB, MongoDB | In-memory state survives for the life of the process |
-| **C** | Vercel: static client on the CDN + one serverless function running the **same** Express app (§4) | A public demo URL with almost no configuration | State is per instance; set `MONGODB_URI` to persist |
+| **A** | One Node service: Express serves the API **and** the built client on one port (§2, Docker §4) | Long-running demos and container hosts; in-memory mode needs no paid AI or database | In-memory state survives for the life of the process |
+| **B** | Vercel: static client on the CDN + one serverless function running the **same** Express app (§4) | Short-lived previews or deployments already using shared persistence | State is per instance; use `MONGODB_URI` for dependable persistence |
 
 Both keep the client and API on **one origin**, which is why neither needs CORS configuration. The code is identical in both shapes: `vercel.json` and `api/index.mjs` only describe *how* the existing Express app is reached, never a second implementation of it. A split deployment (client on Vercel, API on a container host) is also documented in §4 and needs `VITE_API_BASE_URL` + `CORS_ORIGINS`.
 
@@ -20,7 +20,7 @@ npm run dev                              # container shape: one process, API + c
 
 ## 1. Prerequisites
 
-- Node.js **20.11 or newer** (Node 22 recommended) and npm 10+
+- Node.js **20.19+ or 22.12+** (Node 22 recommended) and npm 10+
 - No database, no API keys, no third-party services required
 - For persistence: a MongoDB connection string (optional)
 
@@ -51,7 +51,7 @@ Verify: `GET /api/health` → `{"status":"ok", …}` and `GET /` → the app HTM
 | `SESSION_SECRET` | **yes** | Long random string. Without it sessions are signed with a per-boot secret and every restart logs everyone out |
 | `PORT` | no | Default `4000`; most platforms inject it |
 | `HOST` | no | Default `0.0.0.0` |
-| `PUBLIC_APP_URL` | no | Public URL of the deployment |
+| `TRUST_PROXY_HOPS` | no | Default `0`: trust no forwarded client IPs. Set only to the exact number of trusted proxies in front of the app; never use an unbounded trust setting |
 | `MONGODB_URI`, `MONGODB_DB` | no | Set to persist data across restarts |
 | `DEMO_MODE` | no | Default `true`: seeds the labelled AcmeCloud sample workspace and enables instant demo sessions. Set `false` for a private deployment |
 | `AUTH_REQUIRED` | no | Set `true` to require a real sign-in for all `/api/*` routes |
@@ -80,9 +80,9 @@ docker run -p 4000:4000 -e SESSION_SECRET="<long-random-string>" complylens-ai
 
 The image builds the client and server in a first stage and ships only `server/dist`, `client/dist` and production `node_modules`. Set `MONGODB_URI` to persist data in a volume-backed database, and `-e DEMO_MODE=false` for a private deployment.
 
-### Vercel (one URL, no extra configuration)
+### Vercel (serverless preview; shared persistence recommended)
 
-The repository ships a Vercel configuration that deploys the **whole product as one URL**: Vercel serves the prebuilt web client from its CDN and routes every `/api/*` request to a single Node function that runs the existing Express app unchanged (`api/index.mjs` → `server/dist`).
+The repository includes a Vercel configuration intended to serve the client and route `/api/*` to a single Node function running the existing Express app (`api/index.mjs` → `server/dist`). The entrypoint and PDF path were exercised locally by `npm run verify:deploy`; this does not verify or claim a hosted Vercel deployment. Since function instances are ephemeral and do not share the in-memory store, use the recommended single Node service for a persistent no-database demo, or configure MongoDB before relying on Vercel for stateful usage.
 
 ```
 https://your-app.vercel.app
@@ -103,10 +103,10 @@ Why this shape: the API and the client stay on **one origin**, so there is no CO
    - function: `api/index.mjs` (+ `api/[...path].mjs`) with `server/dist` and the pdfkit font data included
    - rewrites: `/api/:path*` → the function (path preserved, because Express routes on the original URL), everything else → `/index.html` (SPA history fallback)
    - headers: baseline security headers on all responses, immutable caching for `/assets/*`, `no-store` for `index.html`
-3. Set environment variables (Project → Settings → Environment Variables). For a public demo you can deploy with **none at all**; the recommended minimum is:
+3. Set environment variables (Project → Settings → Environment Variables) before any user-facing deployment:
    - `SESSION_SECRET` — long random string, so sessions survive a redeploy
    - `DEMO_MODE=true` (default) and `AUTH_REQUIRED=false` (default) for an open demo
-   - `MONGODB_URI` — optional; without it the in-memory demo store is used and every cold start re-seeds the deterministic sample workspace
+   - `MONGODB_URI` — required if evidence, reports and other user changes must persist reliably across function instances; without it each instance has its own temporary in-memory demo store
 4. Deploy, then verify: `/api/health` returns `{"status":"ok",…}` and `/` renders the landing page.
 
 #### Vercel-specific behaviour
@@ -114,12 +114,12 @@ Why this shape: the API and the client stay on **one origin**, so there is no CO
 | Topic | Behaviour |
 | --- | --- |
 | Upload size | Vercel rejects request bodies above ~4.5 MB before the app sees them, so the default upload limit becomes **4 MB** on Vercel (`MAX_UPLOAD_MB` overrides it). The UI reads the limit from `/api/meta`, so the message always matches reality |
-| Cold starts | Each instance seeds the demo workspace once (~200 ms). If you upload evidence without `MONGODB_URI`, it lives only in that instance until it is recycled |
-| PDF reports | Rendered in the function by pdfkit; serverless instances are temporarily writable, so nothing is persisted to disk |
+| Cold starts | Each function instance seeds its own demo workspace. Without `MONGODB_URI`, uploads and reports are temporary and are not shared across instances |
+| PDF reports | Rendered in the function by pdfkit; the report is streamed and is not persisted to disk |
 | Rate limiting | Per instance (fixed window). Use a shared store for a multi-instance production deployment |
-| Timeouts | `maxDuration: 30s` is configured; PDF generation takes well under a second for the sample workspace |
+| Timeouts | `maxDuration: 30s` is configured; verify actual limits and cold-start behaviour in the target Vercel project |
 
-Prefer this when you want a public demo URL with the least infrastructure. Prefer the single Node service (§2) when you want long-lived in-memory state, uploads above 4 MB, or a persistent process for background work.
+Use this shape for a preview or when shared persistence is already configured. Prefer the single Node service (§2) for a reliable no-database demo, uploads above 4 MB, or long-lived in-memory state.
 
 #### Alternative: client on Vercel + API elsewhere
 
@@ -137,6 +137,8 @@ location / {
 }
 ```
 
+When nginx is the app's sole trusted proxy, set `TRUST_PROXY_HOPS=1`. For a chain of trusted proxies, set the exact hop count only after verifying each proxy appends or overwrites forwarded headers. The default is `0` (ignore forwarded client IPs), which is safer for direct connections.
+
 ## 5. Split deployment notes
 
 - Build the client with `VITE_API_BASE_URL` pointing at the API origin.
@@ -150,7 +152,7 @@ location / {
 | --- | --- | --- |
 | Persistence | In-memory store | Set `MONGODB_URI`, enable auth + TLS on the cluster, back up `evidence` and `reports` |
 | Sessions | HS256 JWT with `SESSION_SECRET` | Store the secret in the platform's secret manager; rotate with a short overlap window |
-| Rate limiting | Per-process fixed window (600/min/IP) | Replace with a shared store (Redis) when running more than one instance |
+| Rate limiting | Per-process fixed windows (30 auth attempts/10 min; 600 API requests/min) | Replace with a shared store (Redis) when running more than one instance |
 | Logging | Structured JSON lines to stdout | Ship stdout to your log platform; add request ids if you need tracing |
 | Uploads | Parsed in memory, only the extracted text retained | Add object storage + antivirus scanning before accepting customer files at scale |
 | Serverless | On Vercel the store is per instance and uploads are capped at 4 MB | Set `MONGODB_URI` for persistence and use `MAX_UPLOAD_MB` deliberately |
@@ -163,11 +165,11 @@ location / {
 | --- | --- |
 | `GET /` shows "ComplyLens AI API is running" | The client has not been built: run `npm run build`, or run in development mode |
 | Everyone is signed out after a restart | `SESSION_SECRET` is not set |
-| Uploads return 415/400 | Extension or size outside `ALLOWED_UPLOAD_TYPES` / `MAX_UPLOAD_MB` |
+| Uploads return 415/413 | Extension is outside `ALLOWED_UPLOAD_TYPES` (415) or file exceeds `MAX_UPLOAD_MB` (413) |
 | Browser console shows CORS errors | The API origin is missing from `CORS_ORIGINS`, or the client was built with the wrong `VITE_API_BASE_URL` |
 | Data disappears after redeploy | In-memory store: set `MONGODB_URI` |
 | 429 responses under load | Rate limiter; raise the limit in `app.ts` or front the API with a CDN for static assets |
-| PDF download returns 401 in a new tab | Use the app's download button (it sends the token) or append `?access_token=` |
+| PDF download returns 401 | Use the in-app download action, which sends the `Authorization` header, and confirm the session is still valid; query-string tokens are not accepted |
 | Vercel: every `/api/*` request 404s | The build did not run: check that `npm run build` succeeded and that `server/dist` is included by `functions."api/index.mjs".includeFiles` |
 | Vercel: uploads over ~4 MB fail with a platform error | Vercel's request-body limit; keep `MAX_UPLOAD_MB` at or below 4, or move the API to a container host (§2) |
 | Vercel: a "Cannot find module" error names an Express/pdfkit file | Add the missing path to `functions.*.includeFiles` in `vercel.json` and redeploy |

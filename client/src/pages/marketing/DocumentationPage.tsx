@@ -107,8 +107,8 @@ server/   Express (TypeScript, ESM) — API, analysis engine, PDF, store
                 <Doc title="API overview">
                   <P>
                     All endpoints are JSON under <CodeInline>/api</CodeInline>. Authenticated routes expect{' '}
-                    <CodeInline>Authorization: Bearer &lt;session token&gt;</CodeInline>; the report PDF endpoint also
-                    accepts <CodeInline>?access_token=</CodeInline> so it can be opened directly.
+                    <CodeInline>Authorization: Bearer &lt;session token&gt;</CodeInline>. Query-string bearer tokens are
+                    rejected so credentials do not leak through URLs, logs or referrers.
                   </P>
                   <Table
                     rows={[
@@ -119,7 +119,7 @@ server/   Express (TypeScript, ESM) — API, analysis engine, PDF, store
                       ['GET', '/api/dashboard', 'Aggregate metrics, priority findings, recent evidence, activity'],
                       ['GET/POST', '/api/evidence', 'List (filter by status, framework, category, search) and upload'],
                       ['GET/PATCH/DELETE', '/api/evidence/:id', 'Inspect, update or delete a document'],
-                      ['POST', '/api/evidence/:id/analyze', 'Re-run the analysis pipeline for one document'],
+                      ['POST', '/api/evidence/:id/analyze', 'Re-run analysis over retained text; does not re-parse the original file'],
                       ['GET', '/api/controls', 'Control library with assessment, filters and sorting'],
                       ['GET', '/api/controls/:idOrCode', 'Control detail, requirements, evidence, recommendation'],
                       ['GET', '/api/mappings', 'Evidence → controls → findings relationship'],
@@ -194,8 +194,9 @@ Readiness index (weighted, published in the UI)
                   <P>
                     Implemented in this build: scrypt password hashing, HS256 session tokens with expiry, protected
                     routes, organisation-scoped queries, server-side validation of every request body, upload type and
-                    size enforcement, in-memory file parsing, security headers, per-IP rate limiting on authentication
-                    and a 600 request/minute ceiling on the API.
+                    size enforcement, in-memory file parsing, security headers, a 30-attempt/10-minute authentication
+                    limiter and a 600-request/minute API ceiling. Forwarded IP headers are ignored unless
+                    <CodeInline>TRUST_PROXY_HOPS</CodeInline> is set to the exact trusted proxy count.
                   </P>
                   <P>
                     Secrets come from environment variables only. No provider key, database credential or signing secret

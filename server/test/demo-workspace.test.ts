@@ -8,6 +8,8 @@
  */
 import { beforeAll, describe, expect, it } from 'vitest';
 import { buildDemoEvidence } from '../src/domain/evidence-seed.js';
+import { CONTROL_LIBRARY } from '../src/domain/controls.js';
+import { mapEvidenceAcrossFrameworks, mapEvidenceToControls } from '../src/domain/analysis.js';
 import { evidenceCoverageSummary, snapshotForFramework, type FrameworkSnapshot } from '../src/services/readiness.js';
 import type { EvidenceRecord } from '../src/domain/types.js';
 
@@ -74,6 +76,24 @@ describe('seeded demo workspace', () => {
     expect(control?.riskLevel).toBe('high');
     expect(control?.missingItems.length ?? 0).toBeGreaterThan(0);
     expect(control?.evidenceIds.length ?? 0).toBeGreaterThan(0);
+  });
+
+  it('never maps evidence to controls outside its selected framework', () => {
+    const soc2Only = {
+      ...evidence[0]!,
+      frameworkKeys: ['soc2'] as EvidenceRecord['frameworkKeys'],
+      content: 'Access control policy. Quarterly access review and access provisioning records.',
+    };
+    const mappingSets = [
+      mapEvidenceToControls(CONTROL_LIBRARY, [soc2Only], 'soc2'),
+      mapEvidenceAcrossFrameworks(CONTROL_LIBRARY, [soc2Only]),
+    ];
+
+    for (const mappings of mappingSets) {
+      const entries = mappings.get(soc2Only.id) ?? [];
+      expect(entries.length).toBeGreaterThan(0);
+      expect(entries.every((entry) => entry.frameworkKey === 'soc2')).toBe(true);
+    }
   });
 
   it('maps incident-response evidence to the incident-response controls', () => {

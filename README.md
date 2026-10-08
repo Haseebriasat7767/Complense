@@ -15,7 +15,7 @@ It runs end to end with **zero API keys, zero paid services and zero configurati
 | | |
 | --- | --- |
 | Stage | Demo MVP, single workspace, single organisation |
-| Real customers | **0** — the only workspace is the fictional, clearly labelled "AcmeCloud (Demo Data)" sample |
+| Real customers | **0** — the only workspace is the fictional AcmeCloud sample, clearly labelled Demo Data in the UI |
 | Revenue | **$0** — pricing is illustrative "Demo pricing" and no payment provider is connected |
 | Testimonials / logos | none — no customer logos, no invented quotes anywhere in the UI |
 | Users | **0** real users; two seeded demo personas exist for the guided tour |
@@ -54,7 +54,7 @@ Every sample figure in the product (documents, controls, findings, scores, activ
 ## Quick start
 
 ```bash
-# 1. install (Node 20.11+)
+# 1. install (Node 20.19+ or 22.12+; Node 22 recommended)
 npm install
 
 # 2. run the app — API + web client on one port
@@ -73,7 +73,7 @@ No `.env` file is required. Copy `.env.example` to `.env` only if you want to ch
 
 | | |
 | --- | --- |
-| Organisation / workspace | AcmeCloud (Demo Data) · Demo Workspace |
+| Organisation / workspace | AcmeCloud (fictional, labelled Demo Data) · AcmeCloud Demo Workspace |
 | Evidence | 10 documents — 8 analysed samples, 1 *needs review*, 1 *failed* (unreadable scan) |
 | Controls | 28 SOC 2 Trust Services Criteria · 22 ISO/IEC 27001:2022 Annex A · 14 categories |
 | SOC 2 readiness | **92%** (Strong) — 28 controls: 18 passed, 4 need attention, 2 missing, 4 awaiting review |
@@ -92,7 +92,7 @@ The numbers above are the deterministic output of the engine for that exact evid
 | `npm run build` | Type-checks and builds the client into `client/dist`, compiles the server into `server/dist` |
 | `npm start` | Production server: serves the API and the built client from `server/dist/index.js` |
 | `npm run typecheck` | `tsc --noEmit` for both workspaces |
-| `npm test` | Server test suite (25 tests: deterministic engine, HTTP integration, auth hardening) |
+| `npm test` | Server test suite (34 tests: deterministic engine, HTTP integration, auth hardening) |
 | `npm run verify:demo` | Prints the readiness, counts and findings for the seeded demo workspace |
 | `npm run verify:deploy` | Checks `vercel.json`, boots the serverless entry and calls the API (incl. PDF) through it — run after `npm run build` |
 | `npm run smoke:client` | Optional: renders every route in jsdom against a running server (needs `npm i --no-save jsdom`) |
@@ -115,13 +115,13 @@ Everything is optional — see `.env.example` for the annotated version.
 | --- | --- | --- |
 | `NODE_ENV` | `development` | `production` switches to serving `client/dist` and enables stricter framing headers |
 | `PORT` / `HOST` | `4000` / `0.0.0.0` | Single port for API + client |
-| `PUBLIC_APP_URL` | `http://localhost:<port>` | Shown in emails/logs |
+| `TRUST_PROXY_HOPS` | `0` | Exact count of trusted reverse-proxy hops; only set when running behind known proxies |
 | `DEMO_MODE` | `true` | Seeds the AcmeCloud sample workspace and enables instant demo sessions |
 | `AUTH_REQUIRED` | `false` | `true` requires a real sign-in for `/api/*` app routes |
 | `SESSION_SECRET` | random per boot | HS256 signing secret — **set this in production** |
 | `SESSION_TTL_HOURS` | `12` | Session lifetime |
 | `MONGODB_URI` / `MONGODB_DB` | empty / `complylens` | Optional persistence; empty uses the in-memory demo store |
-| `AI_PROVIDER`, `AI_API_KEY`, `AI_BASE_URL`, `AI_MODEL`, `AI_ALLOW_EXTERNAL` | `none` | Optional narrative provider. External calls happen only when the provider is `openai-compatible`, a key exists **and** `AI_ALLOW_EXTERNAL=true` |
+| `AI_PROVIDER`, `AI_API_KEY`, `AI_BASE_URL`, `AI_MODEL`, `AI_ALLOW_EXTERNAL`, `AI_TIMEOUT_MS` | `none` | Optional narrative provider. External calls happen only when the provider is `openai-compatible`, a key exists **and** `AI_ALLOW_EXTERNAL=true` |
 | `MAX_UPLOAD_MB` | `10` | Upload size limit (enforced server-side) |
 | `ALLOWED_UPLOAD_TYPES` | `pdf,docx,txt,csv` | Allowed extensions (enforced server-side) |
 | `CORS_ORIGINS` | empty | Comma-separated allowlist for a separately hosted client; empty = same-origin only |
