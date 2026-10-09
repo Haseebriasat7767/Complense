@@ -92,9 +92,33 @@ export const config = {
     ttlHours: num('SESSION_TTL_HOURS', 12),
   },
 
-  database: {
-    uri: str('MONGODB_URI'),
-    dbName: str('MONGODB_DB', 'complylens'),
+  /**
+   * Persistent storage. ComplyLens uses Supabase PostgreSQL through the
+   * Supabase Data API with a **server-only** secret (service role) key. The key
+   * is never exposed to the browser: there is no VITE_/NEXT_PUBLIC_ variant and
+   * the client never talks to Supabase directly.
+   */
+  supabase: {
+    url: str('SUPABASE_URL'),
+    // `SUPABASE_SECRET_KEY` is the current key name (sb_secret_…). The legacy
+    // `SUPABASE_SERVICE_ROLE_KEY` name is still accepted so existing
+    // deployments keep working.
+    secretKey: str('SUPABASE_SECRET_KEY') || str('SUPABASE_SERVICE_ROLE_KEY'),
+    schema: str('SUPABASE_DB_SCHEMA', 'public'),
+    evidenceBucket: str('SUPABASE_EVIDENCE_BUCKET', 'evidence'),
+    timeoutMs: num('SUPABASE_TIMEOUT_MS', 10_000),
+    /** Retain the original uploaded bytes in the private Storage bucket. */
+    retainOriginalFiles: bool('EVIDENCE_RETAIN_ORIGINAL_FILES', true),
+  },
+
+  store: {
+    /**
+     * `auto`     — Supabase when SUPABASE_URL + SUPABASE_SECRET_KEY are set,
+     *              otherwise the in-memory demo store (non-production only).
+     * `supabase` — require Supabase; fail fast when it is missing/unreachable.
+     * `memory`   — explicit in-memory store. Refused in production.
+     */
+    driver: str('STORE_DRIVER', 'auto').toLowerCase(),
   },
 
   ai: {
@@ -155,6 +179,64 @@ if (config.isProduction && config.session.secretIsEphemeral) {
   throw new Error(
     'SESSION_SECRET is required in production. Set a long random SESSION_SECRET in the deployment environment before starting ComplyLens.',
   );
+}
+
+/** Supabase environment variable keys, in the exact names used everywhere. */
+export const SUPABASE_ENV_KEYS = ['SUPABASE_URL', 'SUPABASE_SECRET_KEY'] as const;
+
+/**
+ * Names of the required Supabase variables that are missing.
+ * Returns keys only — never values, so this is safe to log and to return in a
+ * startup error message.
+ */
+export function missingSupabaseEnv(): string[] {
+  const missing: string[] = [];
+  if (!config.supabase.url) missing.push('SUPABASE_URL');
+  if (!config.supabase.secretKey) missing.push('SUPABASE_SECRET_KEY');
+  return missing;
+}
+
+/** True when both Supabase variables are present. */
+export function isSupabaseConfigured(): boolean {
+  return missingSupabaseEnv().length === 0;
+}
+
+/**
+ * Which store the process should use, given STORE_DRIVER and the environment.
+ * Pure function so startup behaviour is testable without booting a server.
+ */
+export function resolveStoreDriver(): 'supabase' | 'memory' {
+  const driver = config.store.driver;
+
+  if (driver === 'supabase') return 'supabase';
+
+  if (driver === 'memory') {
+    if (config.isProduction) {
+      throw new Error(
+        'STORE_DRIVER=memory is not allowed in production. The in-memory store loses every ' +
+          'upload, report and account when the instance restarts. Configure Supabase ' +
+          `(${SUPABASE_ENV_KEYS.join(', ')}) or run with NODE_ENV!=production.`,
+      );
+    }
+    return 'memory';
+  }
+
+  if (driver !== 'auto') {
+    throw new Error(`STORE_DRIVER must be one of: auto, supabase, memory (received "${driver}").`);
+  }
+
+  if (isSupabaseConfigured()) return 'supabase';
+
+  if (config.isProduction) {
+    throw new Error(
+      `Missing required Supabase configuration in production: ${missingSupabaseEnv().join(', ')}. ` +
+        'Add these variables to the deployment environment (Vercel → Project → Settings → ' +
+        'Environment Variables). ComplyLens never falls back to the in-memory store in ' +
+        'production because that silently discards customer data.',
+    );
+  }
+
+  return 'memory';
 }
 
 /** True when an external AI provider is configured AND explicitly allowed. */

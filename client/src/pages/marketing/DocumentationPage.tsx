@@ -29,13 +29,13 @@ export function DocumentationPage() {
           <h1 className="mt-3 text-3xl tracking-tight sm:text-4xl">Build, run and deploy ComplyLens</h1>
           <p className="mt-4 text-[15.5px] leading-relaxed text-ink-500">
             A single Node/TypeScript process serves the API and the React application. Everything works with no
-            configuration; optional MongoDB and AI provider settings are additive.
+            configuration; Supabase persistence and AI provider settings are additive.
           </p>
           <div className="mt-5 flex flex-wrap gap-2">
             <Badge tone="neutral">Node 20+</Badge>
             <Badge tone="neutral">React + TypeScript + Vite</Badge>
             <Badge tone="neutral">Express</Badge>
-            <Badge tone="neutral">MongoDB (optional)</Badge>
+            <Badge tone="neutral">Supabase PostgreSQL</Badge>
             <Badge tone="neutral">PDFKit</Badge>
             <Badge tone="brand">Zero paid APIs required</Badge>
           </div>
@@ -92,7 +92,7 @@ server/   Express (TypeScript, ESM) — API, analysis engine, PDF, store
   ├─ services/   readiness snapshots + text extraction
   ├─ pdf/        readiness report renderer (PDFKit)
   ├─ ai/         provider abstraction (deterministic default)
-  ├─ store/      memory + MongoDB behind one interface
+  ├─ store/      memory + Supabase behind one interface
   └─ routes/     /api surface
 /docs/    architecture, API, data model, analysis, deployment, security, roadmap`}</Code>
                   <P>
@@ -153,7 +153,7 @@ Derived at request time
   Finding            risk, priority, recommendation(owner, timeline, fix)
   ReadinessScore     weighted index + component breakdown`}</Code>
                   <P>
-                    Add MongoDB by setting <CodeInline>MONGODB_URI</CodeInline>. The same interface backs both stores
+                    Add persistence by setting <CodeInline>SUPABASE_URL</CodeInline> and <CodeInline>SUPABASE_SECRET_KEY</CodeInline>. The same interface backs both stores
                     (<CodeInline>server/src/store/store.ts</CodeInline>), so swapping in Postgres later is a
                     single-file change.
                   </P>
@@ -224,7 +224,7 @@ npm start                   # serves API + built client on :4000`}</Code>
                     <strong>Railway / Render / any Node host:</strong> build command{' '}
                     <CodeInline>npm run build</CodeInline>, start command <CodeInline>npm start</CodeInline>, health
                     check path <CodeInline>/api/health</CodeInline>. Set <CodeInline>SESSION_SECRET</CodeInline> and,
-                    if you want persistence, <CodeInline>MONGODB_URI</CodeInline>.
+                    if you want persistence, <CodeInline>SUPABASE_URL</CodeInline> and <CodeInline>SUPABASE_SECRET_KEY</CodeInline>.
                   </P>
                   <P>
                     <strong>Vercel:</strong> the client deploys as a static build from{' '}

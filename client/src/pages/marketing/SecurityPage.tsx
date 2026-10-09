@@ -13,7 +13,7 @@ const DATA_HANDLING = [
   },
   {
     title: 'Where it lives',
-    body: 'Without configuration, everything lives in the server process memory and disappears on restart. Set MONGODB_URI to persist to your own MongoDB deployment.',
+    body: 'Without configuration, everything lives in the server process memory and disappears on restart. Set SUPABASE_URL and SUPABASE_SECRET_KEY to persist to your own Supabase PostgreSQL project. Production refuses to start on the in-memory store.',
   },
   {
     title: 'Who can read it',
@@ -73,7 +73,7 @@ export function SecurityPage() {
           {[
             'Set SESSION_SECRET to a long random value so sessions survive restarts and cannot be forged.',
             'Set AUTH_REQUIRED=true and DEMO_MODE=false to disable passwordless demo entry.',
-            'Point MONGODB_URI at a database with authentication, TLS and backups enabled.',
+            'Point SUPABASE_URL at a project with Row Level Security enabled, keep SUPABASE_SECRET_KEY server-side only, and enable backups.',
             'Terminate TLS at a trusted reverse proxy; set TRUST_PROXY_HOPS to the exact trusted proxy count (default 0).',
             'Leave AI_ALLOW_EXTERNAL=false unless you have a data-processing agreement covering evidence text.',
             'Review the upload limits and allowed file types for your evidence types.',

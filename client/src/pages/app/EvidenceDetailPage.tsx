@@ -110,6 +110,15 @@ export function EvidenceDetailPage() {
             >
               Extracted text
             </Button>
+            {document.originalFileAvailable ? (
+              <Button
+                variant="secondary"
+                onClick={() => void downloadFile(`/api/evidence/${document.id}/file`, document.fileName)}
+                iconLeft={<Download className="size-4" aria-hidden="true" />}
+              >
+                Original file
+              </Button>
+            ) : null}
             <Button
               variant="danger"
               onClick={() => setConfirmDelete(true)}
@@ -204,7 +213,11 @@ export function EvidenceDetailPage() {
           <Card>
             <CardHeader
               title="Extracted text"
-              description="This is the text retained for analysis — the original file is not stored."
+              description={
+                document.originalFileAvailable
+                  ? 'This is the text retained for analysis. The original file is kept in private storage and can be downloaded above.'
+                  : 'This is the text retained for analysis — the original file is not stored.'
+              }
             />
             <pre className="max-h-[420px] overflow-auto scroll-area px-4 py-4 font-mono text-[11.5px] leading-relaxed whitespace-pre-wrap text-ink-700 sm:px-5">
               {document.extractedText || 'No text could be extracted from this document.'}

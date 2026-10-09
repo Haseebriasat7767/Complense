@@ -74,7 +74,7 @@ const serverBindings = services.server?.bindings ?? [];
 check(
   'server has a binding to the client service',
   serverBindings.some(
-    (b: { type: string; service: string; format: string; env: string }) =>
+    (b) =>
       b.type === 'service' && b.service === 'client' && b.format === 'url' && b.env === 'CLIENT_URL',
   ),
   JSON.stringify(serverBindings),
@@ -82,7 +82,7 @@ check(
 check(
   'binding has all four required fields (type, service, format, env)',
   serverBindings.every(
-    (b: { type?: string; service?: string; format?: string; env?: string }) =>
+    (b) =>
       Boolean(b.type && b.service && b.format && b.env),
   ),
   JSON.stringify(serverBindings),

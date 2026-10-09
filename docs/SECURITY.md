@@ -71,7 +71,7 @@ Set by `securityHeaders()` on every response:
 | Real MFA enforcement | `mfaRequired` is a stored preference only | TOTP or WebAuthn enrolment + enforcement on login |
 | SSO / SAML / OIDC | Not present | Add an identity provider integration (roadmap) |
 | Refresh-token rotation & revocation list | A stolen token is valid until it expires | Short-lived access tokens + refresh tokens, or server-side session store |
-| Encrypted-at-rest evidence storage | Demo keeps text in memory / plain Mongo documents | Use a KMS-backed encrypted store, field-level encryption for extracted text |
+| Encrypted-at-rest evidence storage | Supabase encrypts PostgreSQL and Storage at rest; ComplyLens adds no field-level encryption | Add field-level encryption for extracted text and a KMS-managed key |
 | Antivirus / content disinfection of uploads | Only extension + size are checked | Scan uploads in a sandboxed worker before analysis |
 | Immutable audit log export | Events are recorded but cannot be exported or made append-only | Append-only store with hash chaining and export UI |
 | CSRF protection | Not needed today (no cookie auth) | Required if cookies are introduced |
@@ -98,7 +98,7 @@ Set by `securityHeaders()` on every response:
 ## Privacy notes
 
 - The AcmeCloud organisation and "AcmeCloud Demo Workspace" are synthetic; the UI labels the sample workspace as Demo Data. The persona names are fictional.
-- Extracted evidence text lives in the store (memory by default, MongoDB if configured). Deleting a document removes its text from the store.
+- Extracted evidence text lives in the store (Supabase PostgreSQL in production, memory locally). Original uploaded bytes live in a private Supabase Storage bucket with a non-guessable object key and no public URL; they are only readable through `GET /api/evidence/:id/file`, which re-checks the caller's organisation against the database row. Deleting a document removes both the row and the stored object.
 - `retentionDays` is a stored preference in this build; nothing is purged automatically. A production deployment must implement the retention job.
 - If you enable an external AI provider, evidence text may leave your infrastructure. Keep `AI_ALLOW_EXTERNAL=false` (the default) unless that is acceptable, and review the provider's data-processing terms.
 

@@ -81,6 +81,13 @@ export type EvidenceRecord = {
   summary: string;
   sizeOnDisk?: number;
   createdByUser?: string;
+  /**
+   * Private Supabase Storage object holding the ORIGINAL uploaded bytes.
+   * Never a public URL and never returned to the browser: downloads go through
+   * the authenticated, organisation-scoped `GET /api/evidence/:id/file` route.
+   */
+  storageBucket?: string;
+  storagePath?: string;
 };
 
 export type EvidenceInput = Omit<EvidenceRecord, 'id'> & { id?: string };
