@@ -151,9 +151,9 @@ export type AppConfig = typeof config;
 // Production deployments must provide a persistent signing key. Vercel can
 // execute different requests on different instances, so an ephemeral key is
 // not safe for authenticated routes.
-if (config.isProduction && config.session.secretIsEphemeral) {
+if (config.isProduction && config.authRequired && config.session.secretIsEphemeral) {
   throw new Error(
-    'SESSION_SECRET is required in production. Set a long random SESSION_SECRET in the deployment environment before starting ComplyLens.',
+    'SESSION_SECRET is required when AUTH_REQUIRED=true in production. Set a long random SESSION_SECRET in the deployment environment before starting ComplyLens.',
   );
 }
 
