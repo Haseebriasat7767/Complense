@@ -1,9 +1,6 @@
 /**
- * Store factory: MongoDB when configured and reachable, otherwise in-memory.
- *
- * When MongoDB is configured but unavailable, keep the demo usable while
- * exposing a sanitized diagnostic through /api/health so deployment problems
- * can be fixed instead of silently guessing.
+ * Store factory. Production requires Supabase and never silently falls back to
+ * ephemeral memory. Memory mode remains available for local demos and tests.
  */
 import { config } from '../config.js';
 import { logger } from '../logger.js';
@@ -12,39 +9,27 @@ import { MemoryStore } from './memory.js';
 
 let store: Store | null = null;
 
-function safeErrorMessage(error: unknown): string {
-  const message = error instanceof Error ? error.message : String(error);
-  return message
-    .replace(/(mongodb(?:\+srv)?:\/\/[^:]+:)[^@]+@/gi, '$1***@')
-    .replace(/(password[=:\s]+)[^\s,;]+/gi, '$1***');
-}
-
 export async function initStore(): Promise<Store> {
   if (store) return store;
 
-  if (config.database.uri) {
-    const { MongoStore } = await import('./mongo.js');
-    let mongoFailure: string | null = null;
-
-    try {
-      const mongo = await MongoStore.connect();
-      await mongo.init();
-      store = mongo;
-      return store;
-    } catch (error) {
-      mongoFailure = safeErrorMessage(error);
-      logger.warn('MongoDB initialisation failed — falling back to in-memory store', {
-        reason: mongoFailure,
-      });
-    }
-
-    const memory = new MemoryStore(mongoFailure ?? 'MongoDB connection failed for an unknown reason.');
-    await memory.init();
-    store = memory;
+  const hasSupabaseConfig = Boolean(config.database.supabaseUrl && config.database.supabaseSecretKey);
+  if (hasSupabaseConfig) {
+    const { SupabaseStore } = await import('./supabase.js');
+    const persistent = SupabaseStore.connect();
+    await persistent.init();
+    store = persistent;
     return store;
   }
 
-  logger.info('MONGODB_URI not set — using the in-memory demo store');
+  if (config.isProduction) {
+    throw new Error('Supabase is required in production. Set SUPABASE_URL and SUPABASE_SECRET_KEY in the deployment environment.');
+  }
+
+  if (config.database.supabaseUrl || config.database.supabaseSecretKey) {
+    throw new Error('Supabase configuration is incomplete. Set both SUPABASE_URL and SUPABASE_SECRET_KEY.');
+  }
+
+  logger.info('Supabase not configured — using the in-memory demo store for local development only');
   const memory = new MemoryStore();
   await memory.init();
   store = memory;
