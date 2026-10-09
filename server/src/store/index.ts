@@ -21,16 +21,19 @@ export async function initStore(): Promise<Store> {
     return store;
   }
 
-  if (config.isProduction) {
-    throw new Error('Supabase is required in production. Set SUPABASE_URL and SUPABASE_SECRET_KEY in the deployment environment.');
-  }
-
   if (config.database.supabaseUrl || config.database.supabaseSecretKey) {
-    throw new Error('Supabase configuration is incomplete. Set both SUPABASE_URL and SUPABASE_SECRET_KEY.');
+    if (config.isProduction) {
+      logger.warn('Supabase configuration is incomplete — using the in-memory demo store as an emergency demo fallback. Set SUPABASE_SECRET_KEY to enable persistence.');
+    } else {
+      throw new Error('Supabase configuration is incomplete. Set both SUPABASE_URL and SUPABASE_SECRET_KEY.');
+    }
+  } else {
+    logger.info('Supabase not configured — using the in-memory demo store');
   }
 
-  logger.info('Supabase not configured — using the in-memory demo store for local development only');
-  const memory = new MemoryStore();
+  const memory = new MemoryStore(config.isProduction
+    ? 'SUPABASE_SECRET_KEY is missing in Vercel Production'
+    : undefined);
   await memory.init();
   store = memory;
   return store;
