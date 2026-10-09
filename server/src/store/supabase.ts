@@ -15,10 +15,6 @@ import { buildDemoSeed, logSeedSummary } from './seed.js';
 
 type Row = Record<string, any>;
 function makeId(prefix: string): string { return `${prefix}-${crypto.randomBytes(8).toString('hex')}`; }
-function withoutId<T extends { id?: string }>(value: T): Omit<T, 'id'> {
-  const { id: _id, ...rest } = value;
-  return rest;
-}
 function cleanPatch<T extends { id?: string }>(value: Partial<T>): Record<string, unknown> {
   const { id: _id, ...rest } = value;
   return rest as Record<string, unknown>;
