@@ -3,7 +3,7 @@
  *
  * Everything lives in process memory and is discarded on restart. It is the
  * right store for the demo, for evaluating the product, and for running the
- * test suite. Set MONGODB_URI to switch to the persistent store.
+ * test suite. Set SUPABASE_URL and SUPABASE_SECRET_KEY to use the persistent store.
  */
 import crypto from 'node:crypto';
 import type {
