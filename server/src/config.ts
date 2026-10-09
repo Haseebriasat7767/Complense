@@ -53,7 +53,7 @@ function bool(name: string, fallback: boolean): boolean {
   return ['1', 'true', 'yes', 'on'].includes(raw);
 }
 
-const nodeEnv = str('NODE_ENV', 'development');
+const nodeEnv = str('NODE_ENV', str('VERCEL') ? 'production' : 'development');
 const authRequired = bool('AUTH_REQUIRED', false);
 const configuredSessionSecret = str('SESSION_SECRET');
 
