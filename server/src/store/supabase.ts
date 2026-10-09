@@ -51,9 +51,10 @@ export class SupabaseStore implements Store {
     for (const [key, value] of Object.entries(options.query ?? {})) url.searchParams.set(key, value);
     const headers: Record<string, string> = {
       apikey: this.key,
-      Authorization: `Bearer ${this.key}`,
+      // Authorization is added below for legacy JWT keys only.
       Accept: 'application/json',
     };
+    if (!this.key.startsWith('sb_secret_')) headers.Authorization = `Bearer ${this.key}`;
     if (options.body !== undefined) headers['Content-Type'] = 'application/json';
     if (options.prefer) headers.Prefer = options.prefer;
     if (options.count) headers.Prefer = [headers.Prefer, 'count=exact'].filter(Boolean).join(',');
@@ -149,7 +150,7 @@ export class SupabaseStore implements Store {
   getOrganization(id: string) { return this.one<Organization>('organizations', { id: `eq.${id}` }); }
   updateOrganization(id: string, patch: Partial<Organization>) { return this.patchOne<Organization>('organizations', { id: `eq.${id}` }, cleanPatch(patch)); }
   getWorkspace(id: string) { return this.one<Workspace>('workspaces', { id: `eq.${id}` }); }
-  listWorkspaces(organizationId: string) { return this.rows<Workspace>('workspaces', { 'organizationId': `eq.${organizationId}`, order: '"createdAt".asc' }); }
+  listWorkspaces(organizationId: string) { return this.rows<Workspace>('workspaces', { 'organizationId': `eq.${organizationId}`, order: 'createdAt.asc' }); }
   updateWorkspace(id: string, patch: Partial<Workspace>) { return this.patchOne<Workspace>('workspaces', { id: `eq.${id}` }, cleanPatch(patch)); }
   getUserByEmail(email: string) { return this.one<User>('users', { email: `eq.${email.toLowerCase()}` }); }
   getUserById(id: string) { return this.one<User>('users', { id: `eq.${id}` }); }
@@ -159,14 +160,14 @@ export class SupabaseStore implements Store {
     const result = await this.request<Row[]>('users', { query: { select: 'id', 'organizationId': `eq.${organizationId}`, limit: '0' }, count: true });
     return result.count ?? 0;
   }
-  listEvidence(organizationId: string, workspaceId: string) { return this.rows<EvidenceRecord>('evidence', { organizationId: `eq.${organizationId}`, workspaceId: `eq.${workspaceId}`, order: '"uploadedAt".desc' }); }
+  listEvidence(organizationId: string, workspaceId: string) { return this.rows<EvidenceRecord>('evidence', { organizationId: `eq.${organizationId}`, workspaceId: `eq.${workspaceId}`, order: 'uploadedAt.desc' }); }
   getEvidence(id: string, organizationId: string) { return this.one<EvidenceRecord>('evidence', { id: `eq.${id}`, organizationId: `eq.${organizationId}` }); }
   async createEvidence(input: EvidenceInput) {
     return this.insert<EvidenceRecord>('evidence', { ...input, id: input.id ?? makeId('ev') });
   }
   updateEvidence(id: string, organizationId: string, patch: Partial<EvidenceRecord>) { return this.patchOne<EvidenceRecord>('evidence', { id: `eq.${id}`, organizationId: `eq.${organizationId}` }, cleanPatch(patch)); }
   deleteEvidence(id: string, organizationId: string) { return this.deleteOne('evidence', { id: `eq.${id}`, organizationId: `eq.${organizationId}` }); }
-  listReports(organizationId: string, workspaceId: string) { return this.rows<ReportRecord>('reports', { organizationId: `eq.${organizationId}`, workspaceId: `eq.${workspaceId}`, order: '"generatedAt".desc' }); }
+  listReports(organizationId: string, workspaceId: string) { return this.rows<ReportRecord>('reports', { organizationId: `eq.${organizationId}`, workspaceId: `eq.${workspaceId}`, order: 'generatedAt.desc' }); }
   getReport(id: string, organizationId: string) { return this.one<ReportRecord>('reports', { id: `eq.${id}`, organizationId: `eq.${organizationId}` }); }
   createReport(report: ReportRecord) { return this.insert<ReportRecord>('reports', report); }
   updateReport(id: string, organizationId: string, patch: Partial<ReportRecord>) { return this.patchOne<ReportRecord>('reports', { id: `eq.${id}`, organizationId: `eq.${organizationId}` }, cleanPatch(patch)); }
