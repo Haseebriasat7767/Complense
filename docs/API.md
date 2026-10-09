@@ -111,7 +111,7 @@ Re-runs analysis over text already retained for the document and refreshes its s
 Supports metadata fields `{ category?, frameworks?, summary?, fileName? }` → `{ evidence }`. Analysis status cannot be set directly.
 
 ### `DELETE /api/evidence/:id`
-Returns `200 { ok, deletedId, message }`. The record and its retained text are removed from the active store; memory mode is reseeded on a fresh process, while MongoDB stores the deletion.
+Returns `200 { ok, deletedId, message }`. The record, its retained text and (when Supabase Storage is enabled) the original file object are removed. In memory mode a fresh process reseeds the demo workspace; with Supabase the deletion is permanent.
 
 ---
 

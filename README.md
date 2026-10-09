@@ -67,7 +67,7 @@ npm run dev
 #      analyst@complylens.ai / AnalystPass123!  (member)
 ```
 
-No `.env` file is required. Copy `.env.example` to `.env` only if you want to change ports, persist to MongoDB, or enable an optional AI provider.
+No `.env` file is required for a local demo. Copy `.env.example` to `.env` to change ports, point the app at your Supabase project (**required in production**), or enable an optional AI provider.
 
 ### Seeded demo workspace
 
@@ -120,14 +120,105 @@ Everything is optional — see `.env.example` for the annotated version.
 | `AUTH_REQUIRED` | `false` | `true` requires a real sign-in for `/api/*` app routes |
 | `SESSION_SECRET` | random per boot | HS256 signing secret — **set this in production** |
 | `SESSION_TTL_HOURS` | `12` | Session lifetime |
-| `MONGODB_URI` / `MONGODB_DB` | empty / `complylens` | Optional persistence; empty uses the in-memory demo store |
+| `SUPABASE_URL` | empty | Supabase project URL. **Required in production** |
+| `SUPABASE_SECRET_KEY` | empty | Supabase secret (service-role) key — **server-side only**, never `VITE_`/`NEXT_PUBLIC_`. **Required in production** |
+| `SUPABASE_DB_SCHEMA` | `public` | Schema holding the ComplyLens tables |
+| `SUPABASE_EVIDENCE_BUCKET` | `evidence` | Private Storage bucket for original uploads |
+| `SUPABASE_TIMEOUT_MS` | `10000` | Abort a Supabase request after this many ms |
+| `EVIDENCE_RETAIN_ORIGINAL_FILES` | `true` | Keep original uploaded bytes in the private bucket |
+| `STORE_DRIVER` | `auto` | `auto` \| `supabase` \| `memory`. `memory` is refused in production |
+| `DATABASE_URL` | empty | Only for `npm run db:migrate`; never read by the running server |
 | `AI_PROVIDER`, `AI_API_KEY`, `AI_BASE_URL`, `AI_MODEL`, `AI_ALLOW_EXTERNAL`, `AI_TIMEOUT_MS` | `none` | Optional narrative provider. External calls happen only when the provider is `openai-compatible`, a key exists **and** `AI_ALLOW_EXTERNAL=true` |
 | `MAX_UPLOAD_MB` | `10` | Upload size limit (enforced server-side) |
 | `ALLOWED_UPLOAD_TYPES` | `pdf,docx,txt,csv` | Allowed extensions (enforced server-side) |
 | `CORS_ORIGINS` | empty | Comma-separated allowlist for a separately hosted client; empty = same-origin only |
 | `VITE_API_BASE_URL` | empty | Client build-time API base; empty means same-origin `/api` |
 
-Missing keys never break the app: with no AI configuration the interface shows **Demo Analysis Mode (deterministic local analysis)** and every feature still works.
+Missing AI keys never break the app: with no AI configuration the interface shows **Demo Analysis Mode (deterministic local analysis)** and every feature still works.
+
+Supabase is different. In **production** the server refuses to start without `SUPABASE_URL` and `SUPABASE_SECRET_KEY`, and it never falls back to the in-memory store — that fallback silently discards every upload, report and account. Locally, an empty configuration still boots the zero-setup demo store.
+
+---
+
+## Database — Supabase PostgreSQL
+
+ComplyLens persists organisations, workspaces, users, evidence (metadata +
+extracted text), reports and audit events in **Supabase PostgreSQL**. Original
+uploaded files go to a **private** Supabase Storage bucket. The browser never
+talks to Supabase: the React client only calls `/api/*`, and the secret key
+stays on the server.
+
+### 1. Apply the schema
+
+```bash
+# Option A — Supabase CLI (recommended)
+supabase link --project-ref <your-project-ref>
+supabase db push
+
+# Option B — this repository's migration runner
+export DATABASE_URL="postgresql://postgres:<password>@db.<ref>.supabase.co:5432/postgres"
+npm run db:migrate
+```
+
+Full instructions, connection-mode notes and the SQL-editor alternative:
+[`supabase/README.md`](supabase/README.md). Migrations live in
+`supabase/migrations/` and are append-only.
+
+### 2. Point the server at the project
+
+```bash
+SUPABASE_URL=https://<your-project-ref>.supabase.co
+SUPABASE_SECRET_KEY=<the secret / service-role key>
+```
+
+Both are **server-side only**. Never add a `VITE_`/`NEXT_PUBLIC_` variant, never
+commit them, never paste them into an issue or a chat.
+
+### 3. Verify
+
+```bash
+curl -s https://<your-deployment>/api/health | jq
+```
+
+A healthy deployment returns `"status":"ok"` **and**:
+
+```json
+{ "database": { "kind": "supabase", "connected": true, "persistent": true } }
+```
+
+`connected` is the result of a real query issued during that request. If the
+database cannot be reached the endpoint answers **503** with
+`"status":"degraded"` and `"connected": false` — a 200 never implies database
+connectivity on its own. The payload never contains a URL, key, password or raw
+SQL error.
+
+### Security model (summary)
+
+| Layer | Control |
+| --- | --- |
+| Browser | No Supabase key, no Supabase SDK, no direct Data API access |
+| Data API | RLS enabled on all six tables; all privileges revoked from `anon`/`authenticated`; a `RESTRICTIVE` org-isolation policy on top |
+| Backend | Secret key (bypasses RLS by design) + every query filtered by `organization_id` / `workspace_id` after the session token is verified |
+| Storage | Private `evidence` bucket, no public URL, 32 random hex chars in every object key, authorised streaming through `GET /api/evidence/:id/file` |
+| Logs | URLs, keys, tokens and passwords are stripped from every message |
+
+Details: [`supabase/README.md`](supabase/README.md) and
+[`docs/DATABASE.md`](docs/DATABASE.md).
+
+### Coming from the old MongoDB build?
+
+Existing MongoDB records **do not** appear in Supabase automatically. An
+optional, idempotent one-time import is provided:
+
+```bash
+npm install --no-save mongodb
+MONGODB_URI="..." SUPABASE_URL="..." SUPABASE_SECRET_KEY="..." \
+  npm run db:migrate:mongo            # dry run
+MONGODB_URI="..." SUPABASE_URL="..." SUPABASE_SECRET_KEY="..." \
+  npm run db:migrate:mongo -- --apply
+```
+
+See [`docs/MIGRATION-MONGODB-TO-SUPABASE.md`](docs/MIGRATION-MONGODB-TO-SUPABASE.md).
 
 ---
 
@@ -153,7 +244,7 @@ Details: [`docs/AI-ABSTRACTION.md`](docs/AI-ABSTRACTION.md) and [`docs/ARCHITECT
 | --- | --- |
 | Web client | React 19, TypeScript, Vite 7, Tailwind CSS v4 (CSS-first tokens), React Router 7, Recharts, lucide-react, self-hosted Inter |
 | API | Node 20+, Express 4, TypeScript, multer (memory storage), pdfkit |
-| Data | In-memory demo store by default; MongoDB (mongoose) when `MONGODB_URI` is set |
+| Data | Supabase PostgreSQL via `@supabase/supabase-js` (required in production); in-memory demo store for local runs. Original evidence files in a private Supabase Storage bucket |
 | Auth | HS256 JWT sessions, scrypt password hashing, organisation-scoped queries |
 | Build | npm workspaces (`client`, `server`), one process serves both in dev and production |
 
@@ -174,11 +265,12 @@ Complense/
 │  ├─ src/routes/             # HTTP endpoints (mounted under /api)
 │  ├─ src/ai/                 # AI abstraction (deterministic default + optional provider)
 │  ├─ src/pdf/                # readiness report renderer (pdfkit)
-│  ├─ src/store/              # in-memory store + optional MongoDB store
+│  ├─ src/store/              # Store interface + Supabase (PostgreSQL) and in-memory stores
 │  ├─ src/dev/vite.ts         # mounts the Vite dev server inside Express
 │  └─ test/                   # engine + HTTP integration tests (vitest)
+├─ supabase/migrations/       # version-controlled SQL schema, RLS policies, storage bucket
 ├─ docs/                      # architecture, API, database, AI, deployment, security, roadmap
-└─ scripts/                   # verify-demo, optional client smoke test
+└─ scripts/                   # apply-migrations, mongo->supabase import, verify-demo, smoke test
 ```
 
 ---
@@ -203,7 +295,7 @@ npm run build && npm run verify:deploy   # verifies the Vercel shape end to end 
 
 Health check: `GET /api/health` → `{"status":"ok", ...}`.
 
-On Vercel the default upload limit becomes 4 MB (the platform's request-body ceiling) and the in-memory store is per instance — set `MONGODB_URI` to persist. For a split deployment (static client on Vercel, API elsewhere) build with `VITE_API_BASE_URL=https://api.example.com` and set `CORS_ORIGINS` on the API. Step-by-step instructions, environment tables and troubleshooting: [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
+On Vercel the default upload limit becomes 4 MB (the platform's request-body ceiling). Set `SUPABASE_URL` and `SUPABASE_SECRET_KEY` so state is shared across function instances — without them a production build refuses to boot. For a split deployment (static client on Vercel, API elsewhere) build with `VITE_API_BASE_URL=https://api.example.com` and set `CORS_ORIGINS` on the API. Step-by-step instructions, environment tables and troubleshooting: [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
 
 ---
 
@@ -211,7 +303,7 @@ On Vercel the default upload limit becomes 4 MB (the platform's request-body cei
 
 - Sessions: HS256 JWT, `SESSION_SECRET` from the environment, expiry enforced server-side; passwords hashed with scrypt.
 - Authorisation: every evidence, control, gap, report and settings query is scoped to the caller's organisation; settings writes are limited to owners/admins.
-- Uploads: extension and size validated server-side, parsed in memory only, never written to disk; the extracted text is what gets stored/analysed.
+- Uploads: extension and size validated server-side and parsed in memory. The extracted text is stored in PostgreSQL; with Supabase configured the original bytes go to a **private** Storage bucket with a non-guessable key, downloadable only through the authenticated, organisation-scoped `GET /api/evidence/:id/file`.
 - Input: request bodies validated in helpers; errors are returned as `{ error: { code, message } }` without stack traces or internal details.
 - Frontend: no secrets in the bundle — the client only ever talks to its own `/api`.
 - Rate limiting: fixed-window limiter on `/api` (600 requests/minute per IP, 30 per 10 minutes on auth endpoints), plus baseline security headers.
@@ -228,7 +320,9 @@ Full detail, including what this demo deliberately does **not** implement (SSO, 
 | --- | --- |
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Process model, request flow, module responsibilities, design decisions |
 | [`docs/API.md`](docs/API.md) | Every endpoint with parameters, request/response shapes and examples |
-| [`docs/DATABASE.md`](docs/DATABASE.md) | Entities, fields, relationships, in-memory vs MongoDB behaviour |
+| [`docs/DATABASE.md`](docs/DATABASE.md) | Tables, columns, relationships, RLS model, in-memory vs Supabase behaviour |
+| [`supabase/README.md`](supabase/README.md) | Creating the Supabase project, applying migrations, the exact security model |
+| [`docs/MIGRATION-MONGODB-TO-SUPABASE.md`](docs/MIGRATION-MONGODB-TO-SUPABASE.md) | What changed, and the optional one-time data import from MongoDB |
 | [`docs/AI-ABSTRACTION.md`](docs/AI-ABSTRACTION.md) | Provider interface, deterministic fallback, configuration, safety rules |
 | [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) | Single-service and split deployments, Vercel/Railway/Docker, env vars, troubleshooting |
 | [`docs/SECURITY.md`](docs/SECURITY.md) | Threat model, implemented controls, limits, responsible disclosure |
@@ -238,7 +332,7 @@ Full detail, including what this demo deliberately does **not** implement (SSO, 
 
 ## Known limitations
 
-- The demo store is **in-memory**: restarting the server resets uploads, generated reports and settings changes. Set `MONGODB_URI` to persist them. On a serverless host (Vercel) each instance keeps its own copy until it is recycled, so demo figures stay deterministic but user uploads are per instance.
+- The **local** store is in-memory: restarting the server resets uploads, generated reports and settings changes. Configure Supabase (`SUPABASE_URL`, `SUPABASE_SECRET_KEY`) to persist them; production requires it and refuses to start without it.
 - Uploads are limited to 10 MB in a container deployment and 4 MB on Vercel (platform request-body ceiling). The UI reads the effective limit from the API.
 - PDF/DOCX extraction is a lightweight in-memory scan: documents without a reliable text layer are marked **needs review** (or **failed**) instead of being guessed at. OCR is roadmap work, not present.
 - The report is a readiness assessment snapshot, not a certification, audit opinion or control-attestation report (no SOC 2 §4 opinion language, no ISO certification claims).

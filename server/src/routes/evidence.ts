@@ -15,10 +15,17 @@ import { CONTROL_LIBRARY } from '../domain/controls.js';
 import { FRAMEWORK_KEYS, isFrameworkKey } from '../domain/frameworks.js';
 import { mapEvidenceAcrossFrameworks } from '../domain/analysis.js';
 import { extractText } from '../services/extract.js';
+import {
+  getEvidenceFile,
+  isEvidenceFileStorageEnabled,
+  putEvidenceFile,
+  removeEvidenceFile,
+} from '../services/evidence-files.js';
 import { ApiError, asyncHandler } from '../http/errors.js';
 import { evidenceDetailDto, evidenceDto } from '../http/dto.js';
 import { optionalString, queryString, requireObjectBody } from '../http/validate.js';
 import { getStore } from '../store/index.js';
+import { newId } from '../store/ids.js';
 import { resolveWorkspace } from './workspace.js';
 import type { EvidenceRecord, FrameworkKey } from '../domain/types.js';
 
@@ -202,6 +209,47 @@ evidenceRouter.get(
   }),
 );
 
+/**
+ * Download the ORIGINAL uploaded file.
+ *
+ * Authorisation happens twice before a byte is read: `requireAuth()` validates
+ * the session, and `getEvidence(id, session.org)` scopes the lookup to the
+ * caller's organisation in the database query itself. The object key is never
+ * taken from the request, and no public or signed URL is ever handed out.
+ */
+evidenceRouter.get(
+  '/:id/file',
+  asyncHandler(async (req, res) => {
+    const store = getStore();
+    const session = sessionOf(req);
+    const record = await store.getEvidence(req.params.id as string, session.org);
+    if (!record) throw ApiError.notFound('Evidence not found.');
+
+    if (!record.storagePath) {
+      throw ApiError.notFound(
+        isEvidenceFileStorageEnabled()
+          ? 'The original file was not retained for this record. Only the extracted text is available.'
+          : 'Original file retention is not enabled on this deployment. Only the extracted text is available.',
+      );
+    }
+
+    const bytes = await getEvidenceFile({
+      bucket: record.storageBucket,
+      path: record.storagePath,
+    });
+    if (!bytes) throw ApiError.notFound('The stored file could not be read.');
+
+    res.setHeader('content-type', record.mimeType || 'application/octet-stream');
+    res.setHeader('content-length', String(bytes.length));
+    res.setHeader('cache-control', 'private, no-store');
+    res.setHeader(
+      'content-disposition',
+      `attachment; filename="${record.fileName.replace(/["\r\n]/g, '')}"`,
+    );
+    res.send(bytes);
+  }),
+);
+
 evidenceRouter.post(
   '/',
   upload.single('file'),
@@ -236,22 +284,48 @@ evidenceRouter.post(
     const status: EvidenceRecord['status'] =
       extraction.confidence >= 0.8 ? 'analyzed' : extraction.text.length > 0 ? 'needs_review' : 'failed';
 
-    const record = await store.createEvidence({
+    const evidenceId = newId('ev');
+    const fileName = file.originalname.slice(0, 180);
+
+    // 1. Persist the original bytes in the private bucket (when enabled), so a
+    //    refresh or a brand-new serverless instance can still serve the file.
+    //    A storage failure aborts the request *before* any row is written, so
+    //    no orphaned metadata is created.
+    const stored = await putEvidenceFile({
       organizationId: session.org,
       workspaceId: workspace.id,
-      fileName: file.originalname.slice(0, 180),
-      fileExtension: extension,
+      evidenceId,
+      fileName,
       mimeType: file.mimetype || 'application/octet-stream',
-      sizeBytes: file.size,
-      category,
-      source: 'upload',
-      uploadedAt: new Date().toISOString(),
-      uploadedBy: session.email,
-      status,
-      frameworkKeys: frameworks,
-      content: extraction.text,
-      summary: extraction.text.length > 0 ? analysis.summary : extraction.note,
+      bytes: file.buffer,
     });
+
+    // 2. Persist the metadata + extracted text. If this fails, remove the
+    //    object we just wrote so storage and the database stay consistent.
+    let record: EvidenceRecord;
+    try {
+      record = await store.createEvidence({
+        id: evidenceId,
+        organizationId: session.org,
+        workspaceId: workspace.id,
+        fileName,
+        fileExtension: extension,
+        mimeType: file.mimetype || 'application/octet-stream',
+        sizeBytes: file.size,
+        category,
+        source: 'upload',
+        uploadedAt: new Date().toISOString(),
+        uploadedBy: session.email,
+        status,
+        frameworkKeys: frameworks,
+        content: extraction.text,
+        summary: extraction.text.length > 0 ? analysis.summary : extraction.note,
+        ...(stored ? { storageBucket: stored.bucket, storagePath: stored.path } : {}),
+      });
+    } catch (error) {
+      await removeEvidenceFile(stored);
+      throw error;
+    }
 
     await store.recordAuditEvent({
       organizationId: session.org,
@@ -348,6 +422,11 @@ evidenceRouter.delete(
     if (!record) throw ApiError.notFound('Evidence not found.');
 
     await store.deleteEvidence(record.id, session.org);
+    // Remove the original object as well — deleting evidence must not leave
+    // customer document bytes behind in the bucket.
+    await removeEvidenceFile(
+      record.storagePath ? { bucket: record.storageBucket, path: record.storagePath } : null,
+    );
     await store.recordAuditEvent({
       organizationId: session.org,
       actor: session.email,

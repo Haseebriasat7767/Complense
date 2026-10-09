@@ -12,9 +12,10 @@
  * it into many serverless handlers would duplicate that logic and risk the API
  * drifting from the CLI/Docker deployment.
  *
- * Cold starts: each instance initialises the store once (MongoDB when
- * MONGODB_URI is set and reachable, otherwise the deterministic in-memory demo
- * store). State is per instance — set MONGODB_URI for persistence.
+ * Cold starts: each instance initialises the store once. In production that is
+ * always Supabase PostgreSQL (SUPABASE_URL + SUPABASE_SECRET_KEY); the boot
+ * fails loudly rather than falling back to an in-memory store, because a
+ * per-instance memory store silently discards uploads, reports and accounts.
  *
  * This file is plain JavaScript on purpose: it imports the compiled server so
  * Vercel does not need to transpile the project's NodeNext TypeScript.

@@ -166,7 +166,7 @@ export function HelpPage() {
             },
             {
               q: 'Where is my data stored?',
-              a: 'In the demo deployment records live in the server process memory and reset when it restarts. Set MONGODB_URI to persist workspace data in MongoDB.',
+              a: 'In the local demo records live in the server process memory and reset when it restarts. Set SUPABASE_URL and SUPABASE_SECRET_KEY to persist workspace data in Supabase PostgreSQL — that is required in production.',
             },
             {
               q: 'Which frameworks are supported?',

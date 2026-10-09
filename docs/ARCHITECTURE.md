@@ -14,7 +14,7 @@ ComplyLens AI is a two-workspace TypeScript monorepo that runs as **one Node pro
 │   ├─ /api/readiness, /api/reports/*, /api/organization… (session)                   │
 │   └─ error handler (last)                                                           │
 │                                                                                     │
-│   store: in-memory (default) │ MongoDB (MONGODB_URI)                                │
+│   store: Supabase PostgreSQL (SUPABASE_URL) │ in-memory (local/test only)            │
 │   analysis: deterministic engine │ optional AI provider for narrative only          │
 └─────────────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -67,7 +67,7 @@ The client never re-computes product logic. Scores, statuses, findings and recom
 | `ai/` | Provider abstraction (`analyzeEvidence`, `writeNarrative`) with a deterministic default and an optional OpenAI-compatible provider |
 | `pdf/report.ts` | pdfkit A4 renderer: cover page + 12 numbered sections + footer disclaimer |
 | `http/` | `errors.ts` (`ApiError`, `errorHandler`, `notFoundHandler`), `security.ts` (headers, CORS, rate limit), `validate.ts` (body/query helpers), `dto.ts` (API shapes) |
-| `store/` | `store.ts` (interface), `memory.ts` (default), `mongo.ts` (optional), `seed.ts` (demo seed), `index.ts` (factory with automatic fallback) |
+| `store/` | `store.ts` (interface), `supabase.ts` (PostgreSQL, production), `supabase-client.ts` (client + error sanitising), `memory.ts` (local/test only), `ids.ts`, `seed.ts` (demo seed), `index.ts` (factory — fails fast in production) |
 | `auth/` | `tokens.ts` (HS256 sign/verify), `passwords.ts` (scrypt hash/verify), `middleware.ts` (`requireAuth`, `sessionOf`, `assertSameOrganization`) |
 | `test/` | `demo-workspace.test.ts` (deterministic engine) and `api.test.ts` (HTTP integration on an ephemeral port) |
 
@@ -93,9 +93,9 @@ The client never re-computes product logic. Scores, statuses, findings and recom
 
 **Deterministic engine first, AI second.** The assessment is rule-based and reproducible. An AI provider may only improve narrative wording — never the statuses, scores or mappings. This keeps the demo honest and lets the product run with no keys at all.
 
-**In-memory by default, MongoDB optional.** The demo boots instantly with no services to run; persistence is opt-in. The Mongo store is loaded lazily so the `mongoose` dependency is genuinely optional and a connection failure degrades to memory instead of crashing.
+**Supabase PostgreSQL in production, in-memory locally.** The demo still boots instantly with no services to run, but production *requires* Supabase: `initStore()` throws (naming the missing variable keys, never their values) rather than degrading to a per-instance memory store that silently discards customer data. The Supabase Data API client is used instead of a raw PostgreSQL socket because serverless functions are short-lived and highly concurrent — HTTPS needs no pooling, and the same client reaches Supabase Storage for evidence files.
 
-**Minimal dependency surface.** Express, multer, pdfkit on the server (mongoose optional); React, Router, Recharts, lucide on the client; Tailwind for styling. Security headers, rate limiting, the `.env` loader and validation helpers are implemented in ~200 lines instead of pulling in helmet, express-rate-limit, dotenv and zod.
+**Minimal dependency surface.** Express, multer, pdfkit and `@supabase/supabase-js` on the server; React, Router, Recharts, lucide on the client; Tailwind for styling. Security headers, rate limiting, the `.env` loader and validation helpers are implemented in ~200 lines instead of pulling in helmet, express-rate-limit, dotenv and zod.
 
 **Server-rendered PDFs.** The report is rendered by pdfkit on the server from the same snapshot the UI shows, then streamed to the browser. No client-side PDF library, no duplicated report logic.
 

@@ -19,6 +19,11 @@
     "test": "npm run test --workspace server && npm run test --workspace client",
     "verify:demo": "npm run verify:demo --workspace server",
     "verify:deploy": "node scripts/verify-deploy.mjs",
-    "smoke:client": "tsx --tsconfig client/tsconfig.json scripts/smoke-client.tsx"
+    "smoke:client": "tsx --tsconfig client/tsconfig.json scripts/smoke-client.tsx",
+    "db:migrate": "node scripts/apply-migrations.mjs",
+    "db:migrate:mongo": "node scripts/migrate-mongo-to-supabase.mjs"
+  },
+  "devDependencies": {
+    "pg": "^8.23.1"
   }
 }

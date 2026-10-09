@@ -1,11 +1,12 @@
 /**
- * In-memory store — the zero-setup default.
+ * In-memory store — local/demo/test only.
  *
  * Everything lives in process memory and is discarded on restart. It is the
- * right store for the demo, for evaluating the product, and for running the
- * test suite. Set MONGODB_URI to switch to the persistent store.
+ * right store for a local demo, for evaluating the product, and for running
+ * the test suite. It is explicitly REFUSED in production (see
+ * `resolveStoreDriver` in src/config.ts): production must use Supabase so that
+ * uploads, reports and accounts actually survive a restart.
  */
-import crypto from 'node:crypto';
 import type {
   AuditEvent,
   EvidenceInput,
@@ -15,15 +16,14 @@ import type {
   User,
   Workspace,
 } from '../domain/types.js';
-import type { NewAccount, Store } from './store.js';
+import type { NewAccount, Store, StoreHealth } from './store.js';
+import { newId as id } from './ids.js';
 import { buildDemoSeed, logSeedSummary } from './seed.js';
-
-function id(prefix: string): string {
-  return `${prefix}-${crypto.randomBytes(8).toString('hex')}`;
-}
 
 export class MemoryStore implements Store {
   readonly kind = 'memory' as const;
+  /** Data is lost on restart. Never report this store as durable. */
+  readonly persistent = false;
 
   constructor(private readonly diagnostic?: string) {}
 
@@ -47,11 +47,13 @@ export class MemoryStore implements Store {
     await logSeedSummary('memory', seed);
   }
 
-  async health() {
+  async health(): Promise<StoreHealth> {
+    const detail = `In-memory demo store — ${this.evidence.size} evidence records, ${this.users.size} users. Data resets on restart.`;
     return {
       ok: true,
       kind: this.kind,
-      detail: `In-memory demo store — ${this.evidence.size} evidence records, ${this.users.size} users. Data resets on restart.`,
+      persistent: false,
+      detail: this.diagnostic ? `${detail} ${this.diagnostic}` : detail,
     };
   }
 

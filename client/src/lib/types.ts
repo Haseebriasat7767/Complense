@@ -61,7 +61,7 @@ export type SessionPayload = {
   organization: Organization;
   workspace: Workspace | null;
   workspaces: Workspace[];
-  persistence: 'memory' | 'mongodb';
+  persistence: 'memory' | 'supabase';
 };
 
 export type WorkspaceContext = {
@@ -97,6 +97,8 @@ export type EvidenceItem = {
   mappedControlCount: number;
   mappedControls: MappedControlRef[];
   textExcerpt: string;
+  /** True when the ORIGINAL uploaded file is retained in private storage. */
+  originalFileAvailable?: boolean;
 };
 
 export type MappingEntry = {

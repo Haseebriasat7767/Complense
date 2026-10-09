@@ -34,7 +34,7 @@ const PRIVACY: LegalSection[] = [
   {
     heading: 'Retention and deletion',
     body: [
-      'In the default in-memory mode, all data disappears when the process stops. With MongoDB configured, retention is controlled by the operator; the organisation settings include a retention preference that roadmap versions will enforce.',
+      'In the default in-memory mode, all data disappears when the process stops. With Supabase PostgreSQL configured, retention is controlled by the operator; the organisation settings include a retention preference that roadmap versions will enforce.',
       'Evidence documents and reports can be deleted from the workspace at any time, and deletions are recorded in the activity log.',
     ],
   },

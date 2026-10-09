@@ -20,18 +20,46 @@ export const PRODUCT = {
   stage: 'MVP — demo ready',
 };
 
+/**
+ * Liveness + real database connectivity.
+ *
+ * A 200 here never means "the database is fine" on its own: `database.ok` is
+ * the result of an actual query issued during this request, and the HTTP
+ * status is 503 whenever a production deployment cannot reach its persistent
+ * store. The payload intentionally contains no URL, connection string, key or
+ * raw SQL error — only a sanitised detail string.
+ */
 metaRouter.get(
   '/health',
   asyncHandler(async (_req, res) => {
     const store = getStore();
     const database = await store.health();
-    res.json({
-      status: database.ok ? 'ok' : 'degraded',
+
+    // Production must never advertise durable persistence while it is really
+    // running on the in-memory store.
+    const persistentInProduction = !config.isProduction || database.persistent;
+    const healthy = database.ok && persistentInProduction;
+
+    res.status(healthy ? 200 : 503).json({
+      status: healthy ? 'ok' : 'degraded',
       product: PRODUCT.name,
       version: PRODUCT.version,
       time: new Date().toISOString(),
       uptimeSeconds: Math.round(process.uptime()),
-      store: { kind: store.kind, detail: database.detail },
+      store: {
+        kind: store.kind,
+        detail: database.detail,
+        persistent: database.persistent,
+      },
+      database: {
+        kind: store.kind,
+        persistent: database.persistent,
+        // True only because a query actually succeeded a moment ago.
+        connected: database.ok,
+        checkedAt: new Date().toISOString(),
+        ...(database.latencyMs === undefined ? {} : { latencyMs: database.latencyMs }),
+        detail: database.detail,
+      },
       demoMode: config.demoMode,
       analysisMode: analysisMode(),
       authRequired: config.authRequired,

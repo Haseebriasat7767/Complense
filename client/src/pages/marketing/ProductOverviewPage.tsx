@@ -23,7 +23,7 @@ const FEATURES = [
 const TECH = [
   ['Frontend', 'React 19, TypeScript, Vite, Tailwind CSS v4, React Router, Recharts, Lucide'],
   ['Backend', 'Node.js 20+, Express 4, TypeScript (ESM), Multer, PDFKit'],
-  ['Data', 'In-memory demo store by default; MongoDB via Mongoose when MONGODB_URI is set'],
+  ['Data', 'Supabase PostgreSQL (required in production); in-memory demo store for local runs'],
   ['Analysis', 'Deterministic signal-matching engine with an optional OpenAI-compatible narrative layer'],
   ['Security', 'scrypt hashing, HS256 session tokens, rate limiting, security headers, server-side validation'],
   ['Deployment', 'Single Node process, health endpoint, Vercel-ready static client with a separate API service'],
@@ -123,7 +123,7 @@ export function ProductOverviewPage() {
               origin, one port and no CORS configuration. Domain logic lives in{' '}
               <code className="rounded border border-ink-200 bg-ink-100 px-1.5 py-0.5 font-mono text-[12px]">server/src/domain</code>{' '}
               and is pure: given a control library and evidence records it returns assessments, mappings, findings and a
-              readiness index. Routes only orchestrate; the store is behind an interface with in-memory and MongoDB
+              readiness index. Routes only orchestrate; the store is behind an interface with in-memory and Supabase
               implementations; PDF reports are rendered server-side with PDFKit.
             </p>
             <pre className="mt-4 overflow-x-auto scroll-area rounded-lg border border-ink-200 bg-ink-900 px-4 py-3.5 font-mono text-[11.5px] leading-relaxed text-ink-100">{`npm install
@@ -132,7 +132,7 @@ npm run build      # client/dist + server/dist
 npm start          # production
 
 # optional
-MONGODB_URI=mongodb://...      # persistent store
+SUPABASE_URL=https://...       # persistent store (required in production)
 SESSION_SECRET=<long random>   # stable sessions
 AI_PROVIDER=openai-compatible  # optional narrative layer`}</pre>
           </div>
@@ -151,7 +151,7 @@ AI_PROVIDER=openai-compatible  # optional narrative layer`}</pre>
                 'No customer testimonials, logos, revenue or traction claims appear anywhere in the product.',
                 'The control libraries are demonstration datasets, not licensed reproductions of AICPA or ISO text.',
                 'AI assistance is optional. The default analysis is deterministic and runs locally with no API key.',
-                'MongoDB persistence and AI providers are implemented but optional — the app never fails without them.',
+                'Supabase persistence is required in production; AI providers stay optional — the app never fails without them.',
               ].map((item) => (
                 <li key={item} className="flex items-start gap-2.5 text-[13.5px] leading-relaxed text-ink-600">
                   <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-ink-300" aria-hidden="true" />

@@ -5,7 +5,7 @@ ComplyLens AI is a full-stack TypeScript app (Express API + React client). The s
 | | Shape | Best for | State |
 | --- | --- | --- | --- |
 | **A** | One Node service: Express serves the API **and** the built client on one port (§2, Docker §4) | Long-running demos and container hosts; in-memory mode needs no paid AI or database | In-memory state survives for the life of the process |
-| **B** | Vercel: static client on the CDN + one serverless function running the **same** Express app (§4) | Short-lived previews or deployments already using shared persistence | State is per instance; use `MONGODB_URI` for dependable persistence |
+| **B** | Vercel: static client on the CDN + one serverless function running the **same** Express app (§4) | Previews and production | State lives in Supabase PostgreSQL, shared by every instance |
 
 Both keep the client and API on **one origin**, which is why neither needs CORS configuration. The code is identical in both shapes: `vercel.json` and `api/index.mjs` only describe *how* the existing Express app is reached, never a second implementation of it. A split deployment (client on Vercel, API on a container host) is also documented in §4 and needs `VITE_API_BASE_URL` + `CORS_ORIGINS`.
 
@@ -22,7 +22,7 @@ npm run dev                              # container shape: one process, API + c
 
 - Node.js **22.12+** (Node 24 LTS recommended — it's Vercel's current default Function runtime; Node 20 was deprecated on Vercel on October 1, 2026) and npm 10+
 - No database, no API keys, no third-party services required
-- For persistence: a MongoDB connection string (optional)
+- A Supabase project with the migrations in `supabase/migrations/` applied — **required in production** (see [`../supabase/README.md`](../supabase/README.md))
 
 ## 2. Production build
 
@@ -34,7 +34,7 @@ NODE_ENV=production SESSION_SECRET="<long-random-string>" npm start
 
 `npm start` runs `node server/dist/index.js` which:
 
-1. initialises the store (MongoDB if `MONGODB_URI` is set and reachable, otherwise in-memory),
+1. initialises the store — Supabase PostgreSQL when `SUPABASE_URL` + `SUPABASE_SECRET_KEY` are set; in production a missing or unreachable database aborts startup instead of falling back to memory,
 2. serves `/api/*` from Express,
 3. serves the SPA from `client/dist` with a history fallback so deep links like `/app/gaps/find-soc2-cc7-2` work on refresh,
 4. listens on `HOST`/`PORT` (default `0.0.0.0:4000`).
@@ -52,7 +52,12 @@ Verify: `GET /api/health` → `{"status":"ok", …}` and `GET /` → the app HTM
 | `PORT` | no | Default `4000`; most platforms inject it |
 | `HOST` | no | Default `0.0.0.0` |
 | `TRUST_PROXY_HOPS` | no | Default `0`: trust no forwarded client IPs. Set only to the exact number of trusted proxies in front of the app; never use an unbounded trust setting |
-| `MONGODB_URI`, `MONGODB_DB` | no | Set to persist data across restarts |
+| `SUPABASE_URL` | **yes** | `https://<project-ref>.supabase.co` |
+| `SUPABASE_SECRET_KEY` | **yes** | Secret (service-role) key. Server-side only — never `VITE_`/`NEXT_PUBLIC_` |
+| `SUPABASE_DB_SCHEMA`, `SUPABASE_EVIDENCE_BUCKET`, `SUPABASE_TIMEOUT_MS` | no | Defaults `public`, `evidence`, `10000` |
+| `EVIDENCE_RETAIN_ORIGINAL_FILES` | no | Default `true`: keep original uploads in the private bucket |
+| `STORE_DRIVER` | no | `auto` (default) \| `supabase` \| `memory`. `memory` is refused in production |
+| `DATABASE_URL` | no | Only for `npm run db:migrate`; never read by the running server |
 | `DEMO_MODE` | no | Default `true`: seeds the labelled AcmeCloud sample workspace and enables instant demo sessions. Set `false` for a private deployment |
 | `AUTH_REQUIRED` | no | Set `true` to require a real sign-in for all `/api/*` routes |
 | `MAX_UPLOAD_MB`, `ALLOWED_UPLOAD_TYPES` | no | Upload guards; defaults 10 MB, `pdf,docx,txt,csv` |
@@ -66,7 +71,7 @@ Verify: `GET /api/health` → `{"status":"ok", …}` and `GET /` → the app HTM
 - Build command: `npm ci && npm run build`
 - Start command: `npm start`
 - Health check path: `/api/health`
-- Set `SESSION_SECRET` (and optionally `MONGODB_URI`).
+- Set `SESSION_SECRET`, `SUPABASE_URL` and `SUPABASE_SECRET_KEY`.
 
 ### Docker
 
@@ -78,11 +83,11 @@ docker run -p 4000:4000 -e SESSION_SECRET="<long-random-string>" complylens-ai
 # → http://localhost:4000   (health check: GET /api/health)
 ```
 
-The image builds the client and server in a first stage and ships only `server/dist`, `client/dist` and production `node_modules`. Set `MONGODB_URI` to persist data in a volume-backed database, and `-e DEMO_MODE=false` for a private deployment.
+The image builds the client and server in a first stage and ships only `server/dist`, `client/dist` and production `node_modules`. Pass `-e SUPABASE_URL=... -e SUPABASE_SECRET_KEY=...` to persist data, and `-e DEMO_MODE=false` for a private deployment.
 
 ### Vercel (serverless preview; shared persistence recommended)
 
-The repository includes a Vercel configuration intended to serve the client and route `/api/*` to a single Node function running the existing Express app (`api/index.mjs` → `server/dist`). The entrypoint and PDF path were exercised locally by `npm run verify:deploy`; this does not verify or claim a hosted Vercel deployment. Since function instances are ephemeral and do not share the in-memory store, use the recommended single Node service for a persistent no-database demo, or configure MongoDB before relying on Vercel for stateful usage.
+The repository includes a Vercel configuration intended to serve the client and route `/api/*` to a single Node function running the existing Express app (`api/index.mjs` → `server/dist`). The entrypoint and PDF path were exercised locally by `npm run verify:deploy`; this does not verify or claim a hosted Vercel deployment. Function instances are ephemeral, so all state lives in Supabase PostgreSQL: configure `SUPABASE_URL` and `SUPABASE_SECRET_KEY` before relying on Vercel for stateful usage. A production build refuses to start without them.
 
 ```
 https://your-app.vercel.app
@@ -106,7 +111,7 @@ Why this shape: the API and the client stay on **one origin**, so there is no CO
 3. Set environment variables (Project → Settings → Environment Variables) before any user-facing deployment:
    - `SESSION_SECRET` — long random string, so sessions survive a redeploy
    - `DEMO_MODE=true` (default) and `AUTH_REQUIRED=false` (default) for an open demo
-   - `MONGODB_URI` — required if evidence, reports and other user changes must persist reliably across function instances; without it each instance has its own temporary in-memory demo store
+   - `SUPABASE_URL` and `SUPABASE_SECRET_KEY` — **required**. Without them a production deployment refuses to boot rather than silently losing every upload, report and account to a per-instance memory store. Add them to Production, Preview and Development as needed, then **redeploy** (environment variables are read at function start)
 4. Deploy, then verify: `/api/health` returns `{"status":"ok",…}` and `/` renders the landing page.
 
 #### Vercel-specific behaviour
@@ -114,12 +119,12 @@ Why this shape: the API and the client stay on **one origin**, so there is no CO
 | Topic | Behaviour |
 | --- | --- |
 | Upload size | Vercel rejects request bodies above ~4.5 MB before the app sees them, so the default upload limit becomes **4 MB** on Vercel (`MAX_UPLOAD_MB` overrides it). The UI reads the limit from `/api/meta`, so the message always matches reality |
-| Cold starts | Each function instance seeds its own demo workspace. Without `MONGODB_URI`, uploads and reports are temporary and are not shared across instances |
+| Cold starts | Each instance connects to Supabase and seeds the demo workspace only if it is absent (idempotent). All instances share the same PostgreSQL data |
 | PDF reports | Rendered in the function by pdfkit; the report is streamed and is not persisted to disk |
 | Rate limiting | Per instance (fixed window). Use a shared store for a multi-instance production deployment |
 | Timeouts | `maxDuration: 30s` is configured; verify actual limits and cold-start behaviour in the target Vercel project |
 
-Use this shape for a preview or when shared persistence is already configured. Prefer the single Node service (§2) for a reliable no-database demo, uploads above 4 MB, or long-lived in-memory state.
+Use this shape for previews and production. Prefer the single Node service (§2) when you need uploads above 4 MB.
 
 #### Alternative: client on Vercel + API elsewhere
 
@@ -150,14 +155,14 @@ When nginx is the app's sole trusted proxy, set `TRUST_PROXY_HOPS=1`. For a chai
 
 | Concern | Today | Production recommendation |
 | --- | --- | --- |
-| Persistence | In-memory store | Set `MONGODB_URI`, enable auth + TLS on the cluster, back up `evidence` and `reports` |
+| Persistence | Supabase PostgreSQL | Enable Point-in-Time Recovery / scheduled backups in the Supabase dashboard; keep `SUPABASE_SECRET_KEY` in the platform secret manager and rotate it periodically |
 | Sessions | HS256 JWT with `SESSION_SECRET` | Store the secret in the platform's secret manager; rotate with a short overlap window |
 | Rate limiting | Per-process fixed windows (30 auth attempts/10 min; 600 API requests/min) | Replace with a shared store (Redis) when running more than one instance |
 | Logging | Structured JSON lines to stdout | Ship stdout to your log platform; add request ids if you need tracing |
-| Uploads | Parsed in memory, only the extracted text retained | Add object storage + antivirus scanning before accepting customer files at scale |
-| Serverless | On Vercel the store is per instance and uploads are capped at 4 MB | Set `MONGODB_URI` for persistence and use `MAX_UPLOAD_MB` deliberately |
+| Uploads | Parsed in memory; extracted text in PostgreSQL, original bytes in the private `evidence` bucket | Add antivirus scanning before accepting customer files at scale |
+| Serverless | On Vercel uploads are capped at 4 MB; state is shared through Supabase | Use `MAX_UPLOAD_MB` deliberately |
 | Monitoring | `/api/health` | Point the platform health check at it; alert on 5xx rate |
-| Migrations | Not applicable (schemaless demo) | Add migrations before changing stored shapes |
+| Migrations | Version-controlled SQL in `supabase/migrations/`, applied with `supabase db push` or `npm run db:migrate` | Apply migrations **before** deploying code that depends on them; never edit an applied file |
 
 ## 7. Troubleshooting
 
@@ -168,10 +173,13 @@ When nginx is the app's sole trusted proxy, set `TRUST_PROXY_HOPS=1`. For a chai
 | Everyone is signed out after a restart | `SESSION_SECRET` is not set |
 | Uploads return 415/413 | Extension is outside `ALLOWED_UPLOAD_TYPES` (415) or file exceeds `MAX_UPLOAD_MB` (413) |
 | Browser console shows CORS errors | The API origin is missing from `CORS_ORIGINS`, or the client was built with the wrong `VITE_API_BASE_URL` |
-| Data disappears after redeploy | In-memory store: set `MONGODB_URI` |
+| Data disappears after redeploy | The deployment is on the in-memory store. Check `GET /api/health` → `database.kind`; set `SUPABASE_URL` + `SUPABASE_SECRET_KEY` and redeploy |
+| Startup fails with `Missing required Supabase configuration in production` | The named variables are absent in that Vercel environment. Add them and redeploy |
+| Startup fails with `The ComplyLens schema is missing` | The migrations were never applied to this project — run `supabase db push` or `npm run db:migrate` |
+| `/api/health` returns 503 with `database.connected:false` | Supabase is unreachable, paused, or the secret key was rotated. The `category` in the server log distinguishes configuration / authentication / network / schema |
 | 429 responses under load | Rate limiter; raise the limit in `app.ts` or front the API with a CDN for static assets |
 | PDF download returns 401 | Use the in-app download action, which sends the `Authorization` header, and confirm the session is still valid; query-string tokens are not accepted |
 | Vercel: every `/api/*` request 404s | The build did not run: check that `npm run build` succeeded and that `server/dist` is included by `functions."api/index.mjs".includeFiles` |
 | Vercel: uploads over ~4 MB fail with a platform error | Vercel's request-body limit; keep `MAX_UPLOAD_MB` at or below 4, or move the API to a container host (§2) |
 | Vercel: a "Cannot find module" error names an Express/pdfkit file | Add the missing path to `functions.*.includeFiles` in `vercel.json` and redeploy |
-| Vercel: state resets between requests | Expected without `MONGODB_URI` — serverless instances are ephemeral and independent |
+| Vercel: state resets between requests | Only possible on the in-memory store, which production refuses to use. Verify `GET /api/health` reports `database.kind: "supabase"` |

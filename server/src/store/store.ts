@@ -1,7 +1,8 @@
 /**
  * Storage abstraction. Two implementations ship with ComplyLens:
- *  - memory  : zero-setup in-memory store seeded with the demo workspace
- *  - mongodb : persistent store used automatically when MONGODB_URI is set
+ *  - supabase : persistent Supabase PostgreSQL store (production)
+ *  - memory   : zero-setup in-memory store seeded with the demo workspace.
+ *               Local/demo/test only — refused in production.
  *
  * Analytical results (control status, mappings, findings) are derived
  * deterministically from evidence by the analysis engine, so only the
@@ -17,7 +18,26 @@ import type {
   Workspace,
 } from '../domain/types.js';
 
-export type StoreKind = 'memory' | 'mongodb';
+export type StoreKind = 'memory' | 'supabase';
+
+/**
+ * Health of the active store.
+ *
+ * `ok` means a real query succeeded just now — a healthy HTTP response never
+ * implies database connectivity on its own. `persistent` tells the caller
+ * whether data actually survives a restart, so production can never report a
+ * durable database while it is really running on memory.
+ *
+ * `detail` is always sanitised: no URLs, connection strings, keys or raw SQL
+ * that could carry credentials.
+ */
+export type StoreHealth = {
+  ok: boolean;
+  kind: StoreKind;
+  persistent: boolean;
+  detail: string;
+  latencyMs?: number;
+};
 
 export type NewAccount = {
   organization: Organization;
@@ -27,8 +47,10 @@ export type NewAccount = {
 
 export interface Store {
   readonly kind: StoreKind;
+  /** True when records survive a process restart. */
+  readonly persistent: boolean;
   init(): Promise<void>;
-  health(): Promise<{ ok: boolean; kind: StoreKind; detail: string }>;
+  health(): Promise<StoreHealth>;
 
   createAccount(input: NewAccount): Promise<void>;
 

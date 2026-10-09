@@ -80,6 +80,9 @@ export function evidenceDto(record: EvidenceRecord, mappedControls: MappingEntry
       confidence: entry.confidence,
     })),
     textExcerpt: record.content.slice(0, 280),
+    // Additive, non-breaking: tells the UI whether the ORIGINAL file can be
+    // downloaded. The storage path itself is never exposed to the browser.
+    originalFileAvailable: Boolean(record.storagePath),
   };
 }
 
