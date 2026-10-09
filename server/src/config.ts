@@ -93,8 +93,8 @@ export const config = {
   },
 
   database: {
-    uri: str('MONGODB_URI'),
-    dbName: str('MONGODB_DB', 'complylens'),
+    supabaseUrl: str('SUPABASE_URL'),
+    supabaseSecretKey: str('SUPABASE_SECRET_KEY') || str('SUPABASE_SERVICE_ROLE_KEY'),
   },
 
   ai: {
