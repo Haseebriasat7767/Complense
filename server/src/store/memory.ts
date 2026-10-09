@@ -51,7 +51,9 @@ export class MemoryStore implements Store {
     return {
       ok: true,
       kind: this.kind,
-      detail: `In-memory demo store — ${this.evidence.size} evidence records, ${this.users.size} users. Data resets on restart.`,
+      detail: this.diagnostic
+        ? `Supabase configured but unavailable: ${this.diagnostic}. In-memory demo data resets on restart.`
+        : `In-memory demo store — ${this.evidence.size} evidence records, ${this.users.size} users. Data resets on restart.`,
     };
   }
 
