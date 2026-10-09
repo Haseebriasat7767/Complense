@@ -3,7 +3,7 @@
  *
  * Everything lives in process memory and is discarded on restart. It is the
  * right store for the demo, for evaluating the product, and for running the
- * test suite. Set MONGODB_URI to switch to the persistent store.
+ * test suite. Set SUPABASE_URL and SUPABASE_SECRET_KEY to use the persistent store.
  */
 import crypto from 'node:crypto';
 import type {
@@ -51,7 +51,9 @@ export class MemoryStore implements Store {
     return {
       ok: true,
       kind: this.kind,
-      detail: `In-memory demo store — ${this.evidence.size} evidence records, ${this.users.size} users. Data resets on restart.`,
+      detail: this.diagnostic
+        ? `Supabase configured but unavailable: ${this.diagnostic}. In-memory demo data resets on restart.`
+        : `In-memory demo store — ${this.evidence.size} evidence records, ${this.users.size} users. Data resets on restart.`,
     };
   }
 

@@ -257,3 +257,16 @@ GitHub / AWS / Google Workspace / Microsoft 365 / Slack / Jira integrations, aut
 ## License and disclaimer
 
 Released as a demo project; see `package.json` (`UNLICENSED`). Do not use the output of this software as evidence of compliance, and do not represent a readiness report as a certification or an audit opinion.
+
+
+## Supabase persistent database (migration branch)
+
+Production persistence uses Supabase PostgreSQL through the server-side Data API. Apply `supabase/migrations/20261009000100_initial_schema.sql` using the Supabase SQL Editor or the Supabase CLI migration workflow.
+
+Configure these **server-only** Vercel Production environment variables:
+- `SUPABASE_URL`: your Supabase project URL (for example, `https://your-project-ref.supabase.co`)
+- `SUPABASE_SECRET_KEY`: the project's secret API key (`sb_secret_...`). A legacy `SUPABASE_SERVICE_ROLE_KEY` is accepted temporarily for compatibility.
+
+Never use a secret key in a `VITE_*` variable or browser code. Redeploy after changing environment variables. The migration enables RLS and intentionally creates no public policies; all data requests must go through the ComplyLens server, which must enforce organization/workspace authorization. Existing MongoDB records are not automatically copied to Supabase.
+
+Local demo/test mode may use MemoryStore when Supabase variables are absent. Production startup fails if Supabase is not configured or the schema/database cannot be reached.

@@ -53,7 +53,7 @@ function bool(name: string, fallback: boolean): boolean {
   return ['1', 'true', 'yes', 'on'].includes(raw);
 }
 
-const nodeEnv = str('NODE_ENV', 'development');
+const nodeEnv = str('NODE_ENV', str('VERCEL') ? 'production' : 'development');
 const authRequired = bool('AUTH_REQUIRED', false);
 const configuredSessionSecret = str('SESSION_SECRET');
 
@@ -93,8 +93,8 @@ export const config = {
   },
 
   database: {
-    uri: str('MONGODB_URI'),
-    dbName: str('MONGODB_DB', 'complylens'),
+    supabaseUrl: str('SUPABASE_URL'),
+    supabaseSecretKey: str('SUPABASE_SECRET_KEY') || str('SUPABASE_SERVICE_ROLE_KEY'),
   },
 
   ai: {
@@ -151,9 +151,9 @@ export type AppConfig = typeof config;
 // Production deployments must provide a persistent signing key. Vercel can
 // execute different requests on different instances, so an ephemeral key is
 // not safe for authenticated routes.
-if (config.isProduction && config.session.secretIsEphemeral) {
+if (config.isProduction && config.authRequired && config.session.secretIsEphemeral) {
   throw new Error(
-    'SESSION_SECRET is required in production. Set a long random SESSION_SECRET in the deployment environment before starting ComplyLens.',
+    'SESSION_SECRET is required when AUTH_REQUIRED=true in production. Set a long random SESSION_SECRET in the deployment environment before starting ComplyLens.',
   );
 }
 
