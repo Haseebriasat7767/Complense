@@ -159,8 +159,10 @@ export function extractText(input: {
   if (extension === 'pdf') {
     const cleaned = clean(extractPdfText(input.buffer));
     // Avoid accepting metadata-only output as evidence text.
-    const looksLikePolicy = /\b(policy|security|access|incident|risk|control|authentication|backup|employee|information)\b/i.test(cleaned);
-    if (cleaned.length >= 80 && looksLikePolicy) {
+    // Accept any substantial readable text. Compliance evidence can be an
+    // incident report, ticket export, audit log, contract, or complaint record;
+    // requiring policy-specific words incorrectly rejects valid evidence.
+    if (cleaned.length >= 80) {
       return {
         text: cleaned,
         method: 'pdf-text-layer',
