@@ -79,13 +79,13 @@ export function normalizeEvidenceForMatching(input: string): string {
       excludingSection = true;
       continue;
     }
-    // The source documents use blank lines to separate section content.
-    // End exclusion at the first paragraph boundary as well as at a heading;
-    // otherwise a checklist with sentence-case bullets can hide all later
-    // factual incident narrative from the matcher.
-    if (excludingSection && (!trimmed || isHeading)) {
+    // Keep instructional/template sections excluded until the next real
+    // section heading. Blank lines are not a boundary: evidence-request lists
+    // often contain blank lines and must not become factual evidence.
+    if (excludingSection && isHeading) {
+      const isAnotherExcludedHeading = excludedHeadings.some((pattern) => pattern.test(trimmed));
+      if (isAnotherExcludedHeading) continue;
       excludingSection = false;
-      if (!trimmed) continue;
     }
     if (!excludingSection) kept.push(line);
   }
