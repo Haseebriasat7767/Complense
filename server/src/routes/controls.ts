@@ -252,6 +252,8 @@ controlsRouter.get(
             confidence: entry.confidence,
             matchedItems: entry.matchedItems,
             missingItems: entry.missingItems,
+            ...(entry.sourceExcerpt ? { sourceExcerpt: entry.sourceExcerpt } : {}),
+            ...(entry.sourceRef ? { sourceRef: entry.sourceRef } : {}),
           })),
         };
       });
