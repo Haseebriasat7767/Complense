@@ -35,7 +35,7 @@ export const ISO27001_CONTROLS: ControlDefinition[] = [
         signals: ['segregation of duties matrix', 'sod matrix'],
       },
     ],
-    weakSignals: ['segregation of duties'],
+    weakSignals: ['segregation of duties', 'access restrictions', 'two-factor authentication', 'credentials', 'accessed corporate github credentials'],
     remediation: {
       fix: 'Publish the access rights allocation standard with a segregation-of-duties matrix for privileged roles.',
       owner: 'Security / IT',
@@ -243,7 +243,7 @@ export const ISO27001_CONTROLS: ControlDefinition[] = [
         signals: ['post-incident review records', 'lessons learned register'],
       },
     ],
-    weakSignals: ['post-incident review', 'incident handling'],
+    weakSignals: ['post-incident review', 'incident handling', 'security incident', 'breach', 'attacker', 'exposed credentials', 'incident involved'],
     remediation: {
       fix: 'Retain incident records including severity, timeline and post-incident review outcomes.',
       owner: 'Security Operations',
@@ -594,7 +594,7 @@ export const ISO27001_CONTROLS: ControlDefinition[] = [
       },
       { label: 'Log review evidence', signals: ['log review'] },
     ],
-    weakSignals: [],
+    weakSignals: ['monitoring', 'insufficient monitoring', 'security incident', 'breach'],
     remediation: {
       fix: 'Publish a logging standard defining log sources, retention and protection, then retain periodic log review evidence.',
       owner: 'Security Operations',
@@ -623,7 +623,7 @@ export const ISO27001_CONTROLS: ControlDefinition[] = [
         signals: ['centralised monitoring', 'monitoring platform'],
       },
     ],
-    weakSignals: [],
+    weakSignals: ['monitoring', 'insufficient monitoring', 'security incident', 'breach'],
     remediation: {
       fix: 'Define monitoring scope, ownership and alert thresholds, and retain evidence of triage and follow-up.',
       owner: 'Security Operations',
