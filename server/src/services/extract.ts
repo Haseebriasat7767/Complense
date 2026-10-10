@@ -86,7 +86,7 @@ function extractPdfText(buffer: Buffer): string {
   const chunks: string[] = [];
   // Read PDF streams and decompress Flate streams where possible. Only parse
   // text-showing operators inside streams, never document metadata dictionaries.
-  const streamPattern = /<<(.*?)>>\s*stream\r?\n([\s\S]*?)\r?\nendstream/g;
+  const streamPattern = /<<([\s\S]*?)>>\s*stream\r?\n([\s\S]*?)\r?\nendstream/g;
   for (const match of source.matchAll(streamPattern)) {
     const dictionary = match[1] ?? '';
     const rawStream = match[2] ?? '';
