@@ -90,7 +90,7 @@ function extractPdfText(buffer: Buffer): string {
   for (const match of source.matchAll(streamPattern)) {
     const dictionary = match[1] ?? '';
     const rawStream = match[2] ?? '';
-    let stream = Buffer.from(rawStream, 'latin1');
+    let stream: Buffer<ArrayBufferLike> = Buffer.from(rawStream, 'latin1');
     // Many generated PDFs (including ReportLab exports) apply ASCII85 before
     // Flate compression. Decode filters in reverse stream order before parsing.
     try {
