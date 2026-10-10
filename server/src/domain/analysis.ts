@@ -269,6 +269,24 @@ function buildAnalysisNote(input: {
   return `No supporting evidence was found for ${total} expected item${total === 1 ? '' : 's'}: ${missingItems.join('; ')}.`;
 }
 
+/**
+ * Return a short, exact excerpt from the original document around the first
+ * matched signal. This is a traceability aid, not proof that a control operated.
+ * Page/section references are only shown when the source record already has one.
+ */
+function extractSourceExcerpt(content: string, signals: string[]): string | undefined {
+  for (const signal of signals) {
+    const index = content.toLowerCase().indexOf(signal.toLowerCase());
+    if (index < 0) continue;
+    const start = Math.max(0, index - 90);
+    const end = Math.min(content.length, index + signal.length + 130);
+    const prefix = start > 0 ? '…' : '';
+    const suffix = end < content.length ? '…' : '';
+    return prefix + content.slice(start, end).replace(/\\s+/g, ' ').trim() + suffix;
+  }
+  return undefined;
+}
+
 /** Evidence → control mapping, computed from the same matching pass. */
 export function mapEvidenceToControls(
   controls: ControlDefinition[],
@@ -319,6 +337,13 @@ export function mapEvidenceToControls(
         confidence,
         matchedItems,
         missingItems,
+        sourceExcerpt: extractSourceExcerpt(
+          doc.evidence.content,
+          control.requiredEvidence
+            .filter((item) => matchedItems.includes(item.label))
+            .flatMap((item) => item.signals),
+        ),
+        ...(doc.evidence.sourceRef ? { sourceRef: doc.evidence.sourceRef } : {}),
       });
     }
 
