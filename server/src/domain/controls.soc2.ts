@@ -467,7 +467,7 @@ export const SOC2_CONTROLS: ControlDefinition[] = [
         signals: ['manager approval', 'approval matrix'],
       },
     ],
-    weakSignals: ['onboarding access'],
+    weakSignals: ['onboarding access', 'two-factor authentication', 'multi-factor authentication', 'mfa', 'github credentials', 'login information'],
     remediation: {
       fix: 'Route all access requests through the ticketing queue with manager approval recorded before provisioning.',
       owner: 'Security / IT',
@@ -664,7 +664,7 @@ export const SOC2_CONTROLS: ControlDefinition[] = [
         signals: ['alert triage', 'monitoring alert records', 'detection alert review'],
       },
     ],
-    weakSignals: ['log sources'],
+    weakSignals: ['log sources', 'insufficient monitoring', 'monitoring', 'logs', 'logging', 'security incident', 'breach', 'attacker'],
     remediation: {
       fix: 'Centralise application, identity and infrastructure logs with alert rules for privileged activity and retain triage records.',
       owner: 'Security Operations',
@@ -786,7 +786,7 @@ export const SOC2_CONTROLS: ControlDefinition[] = [
         signals: ['recovery strategies', 'recovery time objective', 'rto', 'rpo'],
       },
     ],
-    weakSignals: ['continuity arrangements'],
+    weakSignals: [],
     remediation: {
       fix: 'Map each critical process to a recovery objective and validate the plan with an annual exercise.',
       owner: 'Operations',
