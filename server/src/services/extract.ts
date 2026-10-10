@@ -1,15 +1,14 @@
 /**
  * Evidence text extraction.
  *
- * ComplyLens never writes uploads to disk: files are parsed in memory and only
- * the extracted text is retained. Text-based formats are read directly. For
- * PDF and DOCX (compressed formats) a lightweight in-memory scan is attempted;
- * when no reliable text layer is available the document is marked
- * "needs review" rather than pretending it was analysed.
- *
- * In a production deployment this module is the single place to plug in
- * OCR or a document-parsing service.
+ * PDF text is read from content streams (including Flate-compressed streams)
+ * rather than scanning the whole binary file, which can accidentally retain
+ * C2PA/XMP metadata instead of the visible document. Files are parsed in
+ * memory only. This lightweight parser supports common text-based PDFs; scanned
+ * PDFs and unusual font encodings still require OCR/a dedicated PDF parser.
  */
+import { inflateSync } from 'node:zlib';
+
 export type ExtractionResult = {
   text: string;
   method: 'direct-text' | 'pdf-text-layer' | 'docx-text-layer' | 'unavailable';
@@ -32,10 +31,52 @@ function clean(raw: string): string {
     .slice(0, MAX_TEXT_CHARS);
 }
 
-/**
- * Recover readable ASCII runs from a binary container. This is a heuristic:
- * it works for uncompressed text layers and fails safely otherwise.
- */
+function decodePdfLiteral(value: string): string {
+  return value.replace(/\\([nrtbf()\\])/g, (_match, escaped: string) => {
+    const map: Record<string, string> = { n: '\n', r: '\r', t: '\t', b: '\b', f: '\f', '(': '(', ')': ')', '\\': '\\' };
+    return map[escaped] ?? escaped;
+  }).replace(/\\([0-7]{1,3})/g, (_match, octal: string) =>
+    String.fromCharCode(parseInt(octal, 8)),
+  );
+}
+
+function extractPdfText(buffer: Buffer): string {
+  const source = buffer.toString('latin1');
+  const chunks: string[] = [];
+  // Read PDF streams and decompress Flate streams where possible. Only parse
+  // text-showing operators inside streams, never document metadata dictionaries.
+  const streamPattern = /<<(.*?)>>\s*stream\r?\n([\s\S]*?)\r?\nendstream/g;
+  for (const match of source.matchAll(streamPattern)) {
+    const dictionary = match[1] ?? '';
+    const rawStream = match[2] ?? '';
+    let stream = Buffer.from(rawStream, 'latin1');
+    if (/\/FlateDecode\b/.test(dictionary)) {
+      try {
+        stream = inflateSync(stream);
+      } catch {
+        continue;
+      }
+    } else if (/\/Filter\b/.test(dictionary)) {
+      continue;
+    }
+    const body = stream.toString('latin1');
+    // Capture literal strings used by Tj and TJ text-showing operators.
+    const operatorPattern = /\(((?:\\.|[^\\)])*)\)\s*Tj|\[((?:.|\n)*?)\]\s*TJ/g;
+    for (const op of body.matchAll(operatorPattern)) {
+      if (op[1] !== undefined) {
+        chunks.push(decodePdfLiteral(op[1]));
+      } else if (op[2] !== undefined) {
+        for (const part of op[2].matchAll(/\(((?:\\.|[^\\)])*)\)/g)) {
+          chunks.push(decodePdfLiteral(part[1] ?? ''));
+        }
+      }
+      chunks.push('\n');
+    }
+  }
+  return chunks.join('');
+}
+
+/** Fallback for DOCX containers; PDF uses the stream-aware parser above. */
 function scanBinaryForText(buffer: Buffer): { text: string; runs: number } {
   const ascii = buffer.toString('latin1');
   const matches = ascii.match(/[ -~\n\r\t]{24,}/g) ?? [];
@@ -58,13 +99,8 @@ export function extractText(input: {
 
   if (['txt', 'csv', 'md', 'json', 'log'].includes(extension)) {
     const text = clean(input.buffer.toString('utf8'));
-    if (text.length === 0) {
-      return {
-        text: '',
-        method: 'unavailable',
-        confidence: 0,
-        note: 'The file contains no readable text.',
-      };
+    if (!text) {
+      return { text: '', method: 'unavailable', confidence: 0, note: 'The file contains no readable text.' };
     }
     return {
       text,
@@ -74,30 +110,42 @@ export function extractText(input: {
     };
   }
 
-  if (extension === 'pdf' || extension === 'docx') {
-    const { text, runs } = scanBinaryForText(input.buffer);
-    const cleaned = clean(text);
-    if (cleaned.length >= 200 && runs >= 4) {
+  if (extension === 'pdf') {
+    const cleaned = clean(extractPdfText(input.buffer));
+    // Avoid accepting metadata-only output as evidence text.
+    const looksLikePolicy = /\b(policy|security|access|incident|risk|control|authentication|backup|employee|information)\b/i.test(cleaned);
+    if (cleaned.length >= 80 && looksLikePolicy) {
       return {
         text: cleaned,
-        method: extension === 'pdf' ? 'pdf-text-layer' : 'docx-text-layer',
-        confidence: 0.85,
-        note: 'Text layer recovered from the uploaded file. Verify against the source document before relying on it.',
-      };
-    }
-    if (cleaned.length >= 60) {
-      return {
-        text: cleaned,
-        method: extension === 'pdf' ? 'pdf-text-layer' : 'docx-text-layer',
-        confidence: 0.5,
-        note: 'Only partial text could be recovered from this file. It is flagged for manual review.',
+        method: 'pdf-text-layer',
+        confidence: 0.8,
+        note: 'Text extracted from PDF content streams. Verify the extracted text against the original document before relying on it.',
       };
     }
     return {
       text: '',
       method: 'unavailable',
       confidence: 0,
-      note: 'No text layer was found. This is typical for scanned documents — upload a text-based export or an OCR-processed copy.',
+      note: 'No reliable readable text was found in the PDF content streams. The file may be scanned or use an unsupported encoding; upload a text-based PDF or OCR-processed copy.',
+    };
+  }
+
+  if (extension === 'docx') {
+    const { text, runs } = scanBinaryForText(input.buffer);
+    const cleaned = clean(text);
+    if (cleaned.length >= 200 && runs >= 4) {
+      return {
+        text: cleaned,
+        method: 'docx-text-layer',
+        confidence: 0.7,
+        note: 'Text recovered heuristically from the DOCX file. Verify against the source document before relying on it.',
+      };
+    }
+    return {
+      text: '',
+      method: 'unavailable',
+      confidence: 0,
+      note: 'No reliable text could be recovered from this DOCX file in this build.',
     };
   }
 
