@@ -297,13 +297,17 @@ export function mapEvidenceToControls(
         }
       }
 
-      if (matchedItems.length === 0) continue;
+      const weakHits = countSignalHits(doc.text, control.weakSignals);
+
+      // Surface weakly relevant controls for manual review, without treating
+      // a topical mention as proof that required control artefacts exist.
+      if (matchedItems.length === 0 && weakHits === 0) continue;
 
       const coverage = matchedItems.length / control.requiredEvidence.length;
-      const depth = signalHits / (matchedItems.length * 2);
+      const depth = matchedItems.length === 0 ? 0 : signalHits / (matchedItems.length * 2);
       const base = 0.6 * coverage + 0.4 * depth;
       const confidence = Number(
-        Math.min(1, Math.max(0.05, doc.weakOnly ? base * 0.6 : base)).toFixed(2),
+        Math.min(1, Math.max(0.05, matchedItems.length === 0 ? 0.25 : doc.weakOnly ? base * 0.6 : base)).toFixed(2),
       );
 
       entries.push({
