@@ -438,7 +438,7 @@ export const SOC2_CONTROLS: ControlDefinition[] = [
         signals: ['access provisioning records', 'provisioning evidence'],
       },
     ],
-    weakSignals: ['access management'],
+    weakSignals: ['access management', 'two-factor authentication', 'access restrictions', 'credentials', 'accessed corporate github credentials'],
     remediation: {
       fix: 'Document and perform quarterly user-access reviews, retaining the reviewer, population and outcome for each cycle.',
       owner: 'Security / IT',
@@ -694,7 +694,7 @@ export const SOC2_CONTROLS: ControlDefinition[] = [
         signals: ['incident register', 'incident log', 'incident ticket'],
       },
     ],
-    weakSignals: ['tabletop exercise', 'incident response testing'],
+    weakSignals: ['tabletop exercise', 'incident response testing', 'security incident', 'breach', 'attacker', 'exposed credentials', 'incident involved'],
     remediation: {
       fix: 'Run and document at least one tabletop or live exercise per year, and retain incident records with dates and severity.',
       owner: 'Security Operations',
