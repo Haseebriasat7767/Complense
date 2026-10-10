@@ -166,6 +166,18 @@ export function MappingsPage() {
                                     <p className="text-ink-600">{control.missingItems.join('; ') || 'Nothing'}</p>
                                   </div>
                                 </div>
+                                {control.sourceExcerpt ? (
+                                  <div className="mt-3 rounded-md border border-brand-100 bg-brand-50/60 p-3">
+                                    <p className="text-[11px] font-semibold uppercase tracking-wide text-brand-800">Matched source excerpt</p>
+                                    <blockquote className="mt-1 text-[12px] leading-relaxed text-ink-700">{control.sourceExcerpt}</blockquote>
+                                    <p className="mt-2 text-[10.5px] text-ink-500">
+                                      {control.sourceRef ? 'Source locator: ' + control.sourceRef : 'Source locator unavailable in the uploaded file metadata.'}
+                                      {' '}This excerpt supports a suggested mapping; it does not prove the control operated effectively.
+                                    </p>
+                                  </div>
+                                ) : (
+                                  <p className="mt-3 text-[11px] text-ink-500">No exact supporting excerpt could be located. Review the source document before relying on this mapping.</p>
+                                )}
                               </li>
                             ))}
                           </ul>
