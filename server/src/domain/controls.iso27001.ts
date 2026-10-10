@@ -61,7 +61,7 @@ export const ISO27001_CONTROLS: ControlDefinition[] = [
         signals: ['unique user identifiers', 'no shared accounts'],
       },
     ],
-    weakSignals: ['identity'],
+    weakSignals: ['identity', 'two-factor authentication', 'multi-factor authentication', 'mfa', 'github credentials', 'login information'],
     remediation: {
       fix: 'Document provisioning, transfer and deprovisioning steps and eliminate shared administrative accounts.',
       owner: 'Security / IT',
@@ -594,7 +594,7 @@ export const ISO27001_CONTROLS: ControlDefinition[] = [
       },
       { label: 'Log review evidence', signals: ['log review'] },
     ],
-    weakSignals: ['monitoring', 'insufficient monitoring', 'security incident', 'breach'],
+    weakSignals: ['monitoring', 'insufficient monitoring', 'security incident', 'breach', 'logs', 'logging', 'attacker', 'github credentials'],
     remediation: {
       fix: 'Publish a logging standard defining log sources, retention and protection, then retain periodic log review evidence.',
       owner: 'Security Operations',
