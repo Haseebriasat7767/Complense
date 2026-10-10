@@ -79,7 +79,14 @@ export function normalizeEvidenceForMatching(input: string): string {
       excludingSection = true;
       continue;
     }
-    if (excludingSection && isHeading) excludingSection = false;
+    // The source documents use blank lines to separate section content.
+    // End exclusion at the first paragraph boundary as well as at a heading;
+    // otherwise a checklist with sentence-case bullets can hide all later
+    // factual incident narrative from the matcher.
+    if (excludingSection && (!trimmed || isHeading)) {
+      excludingSection = false;
+      if (!trimmed) continue;
+    }
     if (!excludingSection) kept.push(line);
   }
   return normalizeText(kept.join(' '));
