@@ -53,6 +53,38 @@ export function normalizeText(input: string): string {
     .trim();
 }
 
+/**
+ * Remove instructional/template sections before matching controls.
+ *
+ * Case studies and audit-preparation documents often list evidence an
+ * organisation SHOULD provide. Those lists are not proof that the evidence
+ * exists. Keep the factual narrative, but exclude sections explicitly framed
+ * as evidence requests, suggested mappings, checklists, or source caveats.
+ */
+export function normalizeEvidenceForMatching(input: string): string {
+  const excludedHeadings = [
+    /^compliance evidence to request\b/i,
+    /^suggested (?:complylens categorisation|framework mapping)\b/i,
+    /^test checklist\b/i,
+    /^source caveat\b/i,
+  ];
+  const lines = input.split(/\r?\n/);
+  const kept: string[] = [];
+  let excludingSection = false;
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    const isHeading = /^[A-Z][A-Z0-9 /—–&().:-]{3,}$/.test(trimmed);
+    if (excludedHeadings.some((pattern) => pattern.test(trimmed))) {
+      excludingSection = true;
+      continue;
+    }
+    if (excludingSection && isHeading) excludingSection = false;
+    if (!excludingSection) kept.push(line);
+  }
+  return normalizeText(kept.join(' '));
+}
+
 export function containsSignal(text: string, signal: string): boolean {
   const needle = normalizeText(signal);
   if (!needle) return false;
@@ -80,7 +112,7 @@ function prepareDocuments(evidence: EvidenceRecord[], frameworkKey: FrameworkKey
     .filter((doc) => isAnalyzable(doc) && doc.frameworkKeys.includes(frameworkKey))
     .map((doc) => ({
       evidence: doc,
-      text: normalizeText(doc.content ?? ''),
+      text: normalizeEvidenceForMatching(doc.content ?? ''),
       weakOnly: doc.status !== 'analyzed',
     }));
 }
