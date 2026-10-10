@@ -282,7 +282,7 @@ function extractSourceExcerpt(content: string, signals: string[]): string | unde
     const end = Math.min(content.length, index + signal.length + 130);
     const prefix = start > 0 ? '…' : '';
     const suffix = end < content.length ? '…' : '';
-    return prefix + content.slice(start, end).replace(/\\s+/g, ' ').trim() + suffix;
+    return prefix + content.slice(start, end).replace(/\s+/g, ' ').trim() + suffix;
   }
   return undefined;
 }
