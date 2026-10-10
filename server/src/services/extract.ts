@@ -40,6 +40,47 @@ function decodePdfLiteral(value: string): string {
   );
 }
 
+
+/** Decode the ASCII85 filter commonly used before Flate compression in PDFs. */
+function decodeAscii85(input: Buffer): Buffer {
+  let source = input.toString('latin1').replace(/\\s+/g, '');
+  source = source.replace(/^<~/, '').replace(/~>$/, '');
+  const output: number[] = [];
+  let group: number[] = [];
+
+  const flush = (values: number[], final = false) => {
+    if (final && values.length === 1) return;
+    const originalLength = values.length;
+    const padded = [...values];
+    while (padded.length < 5) padded.push(84); // 'u' padding
+    let value = 0;
+    for (const digit of padded) value = value * 85 + digit;
+    const bytes = [
+      (value >>> 24) & 255,
+      (value >>> 16) & 255,
+      (value >>> 8) & 255,
+      value & 255,
+    ];
+    output.push(...bytes.slice(0, final ? originalLength - 1 : 4));
+  };
+
+  for (const char of source) {
+    if (char === 'z' && group.length === 0) {
+      output.push(0, 0, 0, 0);
+      continue;
+    }
+    const code = char.charCodeAt(0) - 33;
+    if (code < 0 || code > 84) continue;
+    group.push(code);
+    if (group.length === 5) {
+      flush(group);
+      group = [];
+    }
+  }
+  if (group.length > 1) flush(group, true);
+  return Buffer.from(output);
+}
+
 function extractPdfText(buffer: Buffer): string {
   const source = buffer.toString('latin1');
   const chunks: string[] = [];
@@ -50,13 +91,18 @@ function extractPdfText(buffer: Buffer): string {
     const dictionary = match[1] ?? '';
     const rawStream = match[2] ?? '';
     let stream = Buffer.from(rawStream, 'latin1');
-    if (/\/FlateDecode\b/.test(dictionary)) {
-      try {
+    // Many generated PDFs (including ReportLab exports) apply ASCII85 before
+    // Flate compression. Decode filters in reverse stream order before parsing.
+    try {
+      if (/\/ASCII85Decode\b|\/A85\b/.test(dictionary)) {
+        stream = decodeAscii85(stream);
+      }
+      if (/\/FlateDecode\b|\/Fl\b/.test(dictionary)) {
         stream = inflateSync(stream);
-      } catch {
+      } else if (/\/Filter\b/.test(dictionary) && !/\/ASCII85Decode\b|\/A85\b/.test(dictionary)) {
         continue;
       }
-    } else if (/\/Filter\b/.test(dictionary)) {
+    } catch {
       continue;
     }
     const body = stream.toString('latin1');
