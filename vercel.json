@@ -5,7 +5,7 @@
       "root": "client",
       "framework": "vite"
     },
-    "server-v2": {
+    "server-next": {
       "root": ".",
       "runtime": "container",
       "bindings": [
@@ -22,7 +22,7 @@
     {
       "source": "/api/(.*)",
       "destination": {
-        "service": "server-v2"
+        "service": "server-next"
       }
     },
     {
