@@ -47,7 +47,7 @@ async function stripeRequest<T>(method: string, path: string, values: Record<str
 }
 
 type CheckoutSession = { id: string; url: string };
-type StripeSubscription = { id: string; status: string; customer: string | { id: string } };
+type StripeSubscription = { id: string; status: string; customer: string | { id: string }; metadata?: Record<string, string> };
 
 export async function createCheckoutSession(input: {
   organizationId: string;
