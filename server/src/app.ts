@@ -28,7 +28,8 @@ export function createApp(): Express {
   app.disable('x-powered-by');
   app.set('trust proxy', config.trustProxyHops);
   app.use(securityHeaders());
-  // Stripe webhooks require the raw request body for signature verification.\n  app.use('/api/billing/webhook', express.raw({ type: 'application/json', limit: '2mb' }));
+  // Stripe webhooks require the raw request body for signature verification.
+  app.use('/api/billing/webhook', express.raw({ type: 'application/json', limit: '2mb' }));
   app.use(corsHeaders());
   app.use(express.json({ limit: '1mb' }));
   app.use(
@@ -40,7 +41,8 @@ export function createApp(): Express {
     }),
   );
 
-  app.use('/api', billingRouter);\n  app.use('/api', metaRouter);
+  app.use('/api', billingRouter);
+  app.use('/api', metaRouter);
   app.use('/api/auth', authRouter);
   app.use('/api', workspaceRouter);
   // Mounted under its own prefix so evidence ids cannot shadow other routes.
