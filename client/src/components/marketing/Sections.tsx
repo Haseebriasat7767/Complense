@@ -19,7 +19,7 @@ import { Badge } from '@/components/ui/Badge';
 import { ButtonLink } from '@/components/ui/Button';
 import { api, authToken } from '@/lib/api';
 import { cn } from '@/lib/utils';
-import { DemoButton, Eyebrow, Section } from './MarketingLayout';
+import { Eyebrow, Section } from './MarketingLayout';
 
 /* -------------------------------------------------------------------------- */
 /* How it works                                                               */
