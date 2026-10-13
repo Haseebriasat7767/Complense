@@ -20,6 +20,7 @@ import { gapsRouter } from './routes/gaps.js';
 import { metaRouter } from './routes/meta.js';
 import { reportsRouter } from './routes/reports.js';
 import { workspaceRouter } from './routes/workspace.js';
+import { billingRouter } from './routes/billing.js';
 
 export function createApp(): Express {
   const app = express();
@@ -27,6 +28,7 @@ export function createApp(): Express {
   app.disable('x-powered-by');
   app.set('trust proxy', config.trustProxyHops);
   app.use(securityHeaders());
+  // Stripe webhooks require the raw request body for signature verification.\n  app.use('/api/billing/webhook', express.raw({ type: 'application/json', limit: '2mb' }));
   app.use(corsHeaders());
   app.use(express.json({ limit: '1mb' }));
   app.use(
@@ -38,7 +40,7 @@ export function createApp(): Express {
     }),
   );
 
-  app.use('/api', metaRouter);
+  app.use('/api', billingRouter);\n  app.use('/api', metaRouter);
   app.use('/api/auth', authRouter);
   app.use('/api', workspaceRouter);
   // Mounted under its own prefix so evidence ids cannot shadow other routes.
