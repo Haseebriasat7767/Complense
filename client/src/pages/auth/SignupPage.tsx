@@ -7,7 +7,7 @@ import { InlineAlert } from '@/components/ui/Feedback';
 import { useToast } from '@/components/ui/Toast';
 import { useSession } from '@/lib/session';
 import { ApiError } from '@/lib/api';
-import { AuthDivider, AuthFootnoteLink, AuthLayout, DemoEntryPanel } from './AuthLayout';
+import { AuthFootnoteLink, AuthLayout } from './AuthLayout';
 
 export function SignupPage() {
   const { signup, loading } = useSession();
@@ -164,8 +164,6 @@ export function SignupPage() {
         </Button>
       </form>
 
-      <AuthDivider />
-      <DemoEntryPanel />
     </AuthLayout>
   );
 }
