@@ -12,7 +12,10 @@ create table if not exists public.organizations (
   industry text not null default '',
   "employeeCount" integer not null default 0,
   "createdAt" text not null,
-  settings jsonb not null default '{}'::jsonb
+  settings jsonb not null default '{}'::jsonb,
+  "stripeCustomerId" text,
+  "stripeSubscriptionId" text,
+  "stripeSubscriptionStatus" text
 );
 
 create table if not exists public.workspaces (
@@ -98,3 +101,11 @@ alter table public.audit_events enable row level security;
 
 -- Deliberately no anon/authenticated policies. Client access must go through
 -- the authenticated ComplyLens server; its secret key is never sent to browsers.
+
+
+-- Billing metadata for Stripe subscriptions. Safe to run on existing databases.
+alter table public.organizations add column if not exists "stripeCustomerId" text;
+alter table public.organizations add column if not exists "stripeSubscriptionId" text;
+alter table public.organizations add column if not exists "stripeSubscriptionStatus" text;
+create index if not exists organizations_stripe_customer_idx on public.organizations ("stripeCustomerId");
+create index if not exists organizations_stripe_subscription_idx on public.organizations ("stripeSubscriptionId");
