@@ -87,8 +87,14 @@ export const config = {
   authRequired,
 
   session: {
-    secret: configuredSessionSecret || crypto.randomBytes(32).toString('hex'),
-    secretIsEphemeral: !configuredSessionSecret,
+    // In production, derive a stable signing key from the already-required
+    // Supabase secret when SESSION_SECRET is not separately configured.
+    // This avoids ephemeral sessions across Vercel instances without exposing
+    // or duplicating a second secret in deployment configuration.
+    secret: configuredSessionSecret || (str('SUPABASE_SECRET_KEY') || str('SUPABASE_SERVICE_ROLE_KEY')
+      ? crypto.createHash('sha256').update(str('SUPABASE_SECRET_KEY') || str('SUPABASE_SERVICE_ROLE_KEY')).digest('hex')
+      : crypto.randomBytes(32).toString('hex')),
+    secretIsEphemeral: !configuredSessionSecret && !(str('SUPABASE_SECRET_KEY') || str('SUPABASE_SERVICE_ROLE_KEY')),
     ttlHours: num('SESSION_TTL_HOURS', 12),
   },
 
