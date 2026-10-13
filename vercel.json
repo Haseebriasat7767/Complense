@@ -5,7 +5,7 @@
       "root": "client",
       "framework": "vite"
     },
-    "server": {
+    "server-next": {
       "root": ".",
       "runtime": "container",
       "bindings": [
@@ -16,7 +16,7 @@
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": { "service": "server" }
+      "destination": { "service": "server-next" }
     },
     {
       "source": "/(.*)",
