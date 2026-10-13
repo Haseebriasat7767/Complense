@@ -92,6 +92,16 @@ export const config = {
     ttlHours: num('SESSION_TTL_HOURS', 12),
   },
 
+  stripe: {
+    secretKey: str('STRIPE_SECRET_KEY'),
+    webhookSecret: str('STRIPE_WEBHOOK_SECRET'),
+    priceIds: {
+      starter: str('STRIPE_PRICE_STARTER'),
+      growth: str('STRIPE_PRICE_GROWTH'),
+      business: str('STRIPE_PRICE_BUSINESS'),
+    },
+  },
+
   database: {
     supabaseUrl: str('SUPABASE_URL'),
     supabaseSecretKey: str('SUPABASE_SECRET_KEY') || str('SUPABASE_SERVICE_ROLE_KEY'),
