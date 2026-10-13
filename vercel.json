@@ -5,41 +5,72 @@
       "root": "client",
       "framework": "vite"
     },
-    "server": {
+    "server-v2": {
       "root": ".",
       "runtime": "container",
       "bindings": [
-        { "type": "service", "service": "client", "format": "url", "env": "CLIENT_URL" }
+        {
+          "type": "service",
+          "service": "client",
+          "format": "url",
+          "env": "CLIENT_URL"
+        }
       ]
     }
   },
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": { "service": "server" }
+      "destination": {
+        "service": "server-v2"
+      }
     },
     {
       "source": "/(.*)",
-      "destination": { "service": "client" }
+      "destination": {
+        "service": "client"
+      }
     }
   ],
   "headers": [
     {
       "source": "/(.*)",
       "headers": [
-        { "key": "X-Content-Type-Options", "value": "nosniff" },
-        { "key": "X-Frame-Options", "value": "SAMEORIGIN" },
-        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
-        { "key": "Permissions-Policy", "value": "camera=(), microphone=(), geolocation=()" }
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "SAMEORIGIN"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "Permissions-Policy",
+          "value": "camera=(), microphone=(), geolocation=()"
+        }
       ]
     },
     {
       "source": "/assets/(.*)",
-      "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
     },
     {
       "source": "/index.html",
-      "headers": [{ "key": "Cache-Control", "value": "no-store" }]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store"
+        }
+      ]
     }
   ]
 }
