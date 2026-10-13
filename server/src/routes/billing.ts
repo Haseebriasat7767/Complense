@@ -42,7 +42,7 @@ billingRouter.post('/billing/checkout', requireAuth(), asyncHandler(async (req, 
  * Stripe must receive the exact raw request bytes for signature verification.
  * This route is mounted before express.json() in app.ts.
  */
-billingRouter.post('/billing/webhook', express.raw({ type: 'application/json', limit: '2mb' }), asyncHandler(async (req, res) => {
+billingRouter.post('/billing/webhook', asyncHandler(async (req, res) => {
   const signature = req.header('stripe-signature');
   if (!signature || !Buffer.isBuffer(req.body)) throw ApiError.badRequest('Invalid Stripe webhook payload.');
   const payload = req.body.toString('utf8');
