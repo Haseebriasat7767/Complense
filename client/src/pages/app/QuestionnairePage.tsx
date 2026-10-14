@@ -23,7 +23,7 @@ export function QuestionnairePage() {
   }
   return <div className="space-y-6">
     <PageHeader title="Security questionnaire assistant" subtitle="Find relevant workspace evidence for a customer security question, with excerpts you can review before answering." />
-    <InlineAlert tone="warning" title="Evidence-first, human-approved">This initial version uses transparent keyword matching. It does not independently verify controls or write a customer-ready claim. Review every excerpt and confirm it is current before responding.</InlineAlert>
+    <InlineAlert tone="warn" title="Evidence-first, human-approved">This initial version uses transparent keyword matching. It does not independently verify controls or write a customer-ready claim. Review every excerpt and confirm it is current before responding.</InlineAlert>
     <Card>
       <CardHeader title="Question to research" description="Searches successfully analyzed evidence in the current workspace." icon={<FileSearch className="size-4" />} />
       <CardContent>
