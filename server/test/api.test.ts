@@ -266,6 +266,42 @@ describe('reports', () => {
   });
 });
 
+describe('security questionnaire assistant', () => {
+  it('requires authentication before searching workspace evidence', async () => {
+    const response = await fetch(`${base}/api/questionnaire/draft`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ question: 'How are production permissions reviewed?' }),
+    });
+    expect(response.status).toBe(401);
+  });
+
+  it('rejects short questions with a structured client error', async () => {
+    const response = await fetch(`${base}/api/questionnaire/draft`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+      body: JSON.stringify({ question: 'MFA?' }),
+    });
+    expect(response.status).toBe(400);
+  });
+
+  it('returns a review-required response for an unsupported question', async () => {
+    const response = await fetch(`${base}/api/questionnaire/draft`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+      body: JSON.stringify({ question: 'Do you provide quantum teleportation for all employees?' }),
+    });
+    expect(response.status).toBe(200);
+    const payload = (await response.json()) as {
+      status: string; sources: unknown[]; requiresHumanApproval: boolean; draftAnswer: string;
+    };
+    expect(payload.status).toBe('unsupported');
+    expect(payload.sources).toEqual([]);
+    expect(payload.requiresHumanApproval).toBe(true);
+    expect(payload.draftAnswer).toContain('No sufficiently relevant');
+  });
+});
+
 describe('input validation', () => {
   it('returns a structured client error for malformed JSON', async () => {
     const response = await fetch(`${base}/api/auth/login`, {
