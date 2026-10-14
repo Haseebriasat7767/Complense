@@ -28,6 +28,7 @@ import { GapDetailPage } from '@/pages/app/GapDetailPage';
 import { ReportsPage } from '@/pages/app/ReportsPage';
 import { ReportDetailPage } from '@/pages/app/ReportDetailPage';
 import { FrameworksPage } from '@/pages/app/FrameworksPage';
+import { QuestionnairePage } from '@/pages/app/QuestionnairePage';
 import { SettingsPage } from '@/pages/app/SettingsPage';
 import { HelpPage } from '@/pages/app/HelpPage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
@@ -89,6 +90,7 @@ export function App() {
               <Route path="/app/reports" element={<ReportsPage />} />
               <Route path="/app/reports/:reportId" element={<ReportDetailPage />} />
               <Route path="/app/frameworks" element={<FrameworksPage />} />
+              <Route path="/app/questionnaire" element={<QuestionnairePage />} />
               <Route path="/app/settings" element={<SettingsPage />} />
               <Route path="/app/help" element={<HelpPage />} />
               <Route path="/app/*" element={<NotFoundPage insideApp />} />
