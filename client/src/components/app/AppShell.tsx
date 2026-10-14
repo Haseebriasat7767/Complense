@@ -5,6 +5,7 @@ import {
   ChevronDown,
   CircleHelp,
   FileText,
+  ClipboardCheck,
   GitCompareArrows,
   LayoutDashboard,
   LogOut,
@@ -51,6 +52,7 @@ const NAV_GROUPS: Array<{ label: string; items: NavItem[] }> = [
       { to: '/app/gaps', label: 'Gap analysis', icon: TriangleAlert, badgeKey: 'gaps' },
       { to: '/app/reports', label: 'Reports', icon: TrendingUp },
       { to: '/app/frameworks', label: 'Frameworks', icon: Sparkles },
+      { to: '/app/questionnaire', label: 'Questionnaire assistant', icon: ClipboardCheck },
     ],
   },
 ];
