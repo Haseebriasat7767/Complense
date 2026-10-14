@@ -95,6 +95,10 @@ export type MappingEntry = {
   confidence: number;
   matchedItems: string[];
   missingItems: string[];
+  /** Exact source excerpt supporting this proposed mapping, when available. */
+  sourceExcerpt?: string;
+  /** Existing source locator metadata; not inferred from document contents. */
+  sourceRef?: string;
 };
 
 export type ControlAssessment = {

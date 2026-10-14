@@ -79,6 +79,10 @@ export function evidenceDto(record: EvidenceRecord, mappedControls: MappingEntry
       controlCode: entry.controlCode,
       controlName: entry.controlName,
       confidence: entry.confidence,
+      matchedItems: entry.matchedItems,
+      missingItems: entry.missingItems,
+      ...(entry.sourceExcerpt ? { sourceExcerpt: entry.sourceExcerpt } : {}),
+      ...(entry.sourceRef ? { sourceRef: entry.sourceRef } : {}),
     })),
     textExcerpt: record.content.slice(0, 280),
   };

@@ -322,6 +322,8 @@ export type MappingsResponse = {
       confidence: number;
       matchedItems: string[];
       missingItems: string[];
+      sourceExcerpt?: string;
+      sourceRef?: string;
     }>;
   }>;
   controls: Array<{
