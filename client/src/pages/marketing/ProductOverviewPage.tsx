@@ -1,4 +1,5 @@
-import { AlertTriangle, ArrowRight, BadgeCheck } from 'lucide-react';
+import { AlertTriangle, ArrowRight, BadgeCheck, Calculator, TrendingUp } from 'lucide-react';
+import { useMemo, useState } from 'react';
 import { Badge } from '@/components/ui/Badge';
 import { ButtonLink } from '@/components/ui/Button';
 import { DemoButton, Eyebrow, Section } from '@/components/marketing/MarketingLayout';
@@ -39,6 +40,19 @@ const OPPORTUNITIES = [
 ];
 
 export function ProductOverviewPage() {
+  const [teamSize, setTeamSize] = useState(3);
+  const [hoursPerPerson, setHoursPerPerson] = useState(8);
+  const [hourlyCost, setHourlyCost] = useState(75);
+  const [estimatedReduction, setEstimatedReduction] = useState(25);
+  const [monthlyToolCost, setMonthlyToolCost] = useState(149);
+  const estimate = useMemo(() => {
+    const monthlyHours = teamSize * hoursPerPerson;
+    const savedHours = monthlyHours * (estimatedReduction / 100);
+    const monthlyValue = savedHours * hourlyCost;
+    const netMonthlyValue = monthlyValue - monthlyToolCost;
+    return { monthlyHours, savedHours, monthlyValue, netMonthlyValue, annualNetValue: netMonthlyValue * 12 };
+  }, [teamSize, hoursPerPerson, hourlyCost, estimatedReduction, monthlyToolCost]);
+
   return (
     <>
       <Section className="border-b border-ink-200 pb-12">
@@ -84,6 +98,75 @@ export function ProductOverviewPage() {
               prioritised finding with a suggested owner and timeline, and the whole workspace exports as a readiness
               report that can be shared internally or with an auditor as preparation material.
             </p>
+          </div>
+        </div>
+      </Section>
+
+      <Section className="border-b border-ink-200 bg-ink-50/40">
+        <div className="grid gap-8 lg:grid-cols-[1fr_0.9fr] lg:items-start">
+          <div>
+            <div className="flex items-center gap-2 text-brand-700">
+              <Calculator className="size-4" aria-hidden="true" />
+              <Eyebrow>Interactive business case</Eyebrow>
+            </div>
+            <h2 className="mt-3 text-2xl tracking-tight">Estimate the value of less manual readiness work</h2>
+            <p className="mt-3 max-w-2xl text-[13.5px] leading-relaxed text-ink-600">
+              Adjust the assumptions to model what your team currently spends on evidence preparation. This calculator is a planning aid, not a promise of savings or a measured ComplyLens result.
+            </p>
+            <div className="mt-6 grid gap-4 sm:grid-cols-2">
+              <label className="block text-[12.5px] font-medium text-ink-700">
+                People involved
+                <input aria-label="People involved" type="number" min="1" max="100" value={teamSize} onChange={(event) => setTeamSize(Math.min(100, Math.max(1, Number(event.target.value) || 1)))} className="mt-1.5 w-full rounded-lg border border-ink-200 bg-white px-3 py-2.5 text-sm text-ink-900" />
+              </label>
+              <label className="block text-[12.5px] font-medium text-ink-700">
+                Hours per person / month
+                <input aria-label="Hours per person per month" type="number" min="1" max="200" value={hoursPerPerson} onChange={(event) => setHoursPerPerson(Math.min(200, Math.max(1, Number(event.target.value) || 1)))} className="mt-1.5 w-full rounded-lg border border-ink-200 bg-white px-3 py-2.5 text-sm text-ink-900" />
+              </label>
+              <label className="block text-[12.5px] font-medium text-ink-700">
+                Loaded hourly cost (USD)
+                <input aria-label="Loaded hourly cost in US dollars" type="number" min="1" max="1000" value={hourlyCost} onChange={(event) => setHourlyCost(Math.min(1000, Math.max(1, Number(event.target.value) || 1)))} className="mt-1.5 w-full rounded-lg border border-ink-200 bg-white px-3 py-2.5 text-sm text-ink-900" />
+              </label>
+              <label className="block text-[12.5px] font-medium text-ink-700">
+                Assumed time reduction
+                <select aria-label="Assumed time reduction" value={estimatedReduction} onChange={(event) => setEstimatedReduction(Number(event.target.value))} className="mt-1.5 w-full rounded-lg border border-ink-200 bg-white px-3 py-2.5 text-sm text-ink-900">
+                  <option value="10">10% — cautious scenario</option>
+                  <option value="25">25% — planning scenario</option>
+                  <option value="40">40% — optimistic scenario</option>
+                </select>
+              </label>
+              <label className="block text-[12.5px] font-medium text-ink-700 sm:col-span-2">
+                Monthly software budget assumption (USD)
+                <input aria-label="Monthly software budget in US dollars" type="number" min="0" max="100000" value={monthlyToolCost} onChange={(event) => setMonthlyToolCost(Math.min(100000, Math.max(0, Number(event.target.value) || 0)))} className="mt-1.5 w-full rounded-lg border border-ink-200 bg-white px-3 py-2.5 text-sm text-ink-900" />
+              </label>
+            </div>
+          </div>
+          <div className="surface rounded-2xl p-5 sm:p-6">
+            <p className="text-[12px] font-semibold tracking-wide text-ink-500 uppercase">Your hypothetical scenario</p>
+            <div className="mt-5 grid grid-cols-2 gap-3">
+              <div className="rounded-xl bg-ink-50 p-4">
+                <p className="text-[11.5px] text-ink-500">Hours spent / month</p>
+                <p className="mt-1 text-2xl font-semibold tracking-tight text-ink-900">{estimate.monthlyHours.toLocaleString()}</p>
+              </div>
+              <div className="rounded-xl bg-ink-50 p-4">
+                <p className="text-[11.5px] text-ink-500">Potential hours freed</p>
+                <p className="mt-1 text-2xl font-semibold tracking-tight text-ink-900">{estimate.savedHours.toLocaleString(undefined, { maximumFractionDigits: 1 })}</p>
+              </div>
+              <div className="rounded-xl bg-brand-50 p-4">
+                <p className="text-[11.5px] text-ink-600">Estimated monthly time value</p>
+                <p className="mt-1 text-xl font-semibold tracking-tight text-ink-900">{estimate.monthlyValue.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })}</p>
+              </div>
+              <div className="rounded-xl bg-brand-50 p-4">
+                <p className="text-[11.5px] text-ink-600">Annual net scenario</p>
+                <p className="mt-1 text-xl font-semibold tracking-tight text-ink-900">{estimate.annualNetValue.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })}</p>
+              </div>
+            </div>
+            <p className="mt-4 flex items-start gap-2 text-[12px] leading-relaxed text-ink-500">
+              <TrendingUp className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+              Calculated as assumed hours × assumed hourly cost × assumed time reduction, less the budget you entered. Actual savings, product fit, and pricing have not been independently validated.
+            </p>
+            <div className="mt-5">
+              <DemoButton label="Test the workflow with demo data" />
+            </div>
           </div>
         </div>
       </Section>
