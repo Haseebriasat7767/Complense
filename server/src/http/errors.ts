@@ -40,6 +40,9 @@ export class ApiError extends Error {
   static unsupportedMedia(message: string) {
     return new ApiError(415, 'unsupported_media_type', message);
   }
+  static serviceUnavailable(message = 'Service temporarily unavailable.') {
+    return new ApiError(503, 'service_unavailable', message);
+  }
   static internal(message = 'Something went wrong on our side.') {
     return new ApiError(500, 'internal_error', message);
   }

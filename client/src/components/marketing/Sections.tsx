@@ -17,8 +17,9 @@ import {
 } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { ButtonLink } from '@/components/ui/Button';
+import { api, authToken } from '@/lib/api';
 import { cn } from '@/lib/utils';
-import { DemoButton, Eyebrow, Section } from './MarketingLayout';
+import { Eyebrow, Section } from './MarketingLayout';
 
 /* -------------------------------------------------------------------------- */
 /* How it works                                                               */
@@ -367,23 +368,46 @@ export const PRICING_PLANS: PricingPlan[] = [
 ] as const;
 
 export function PricingSection({ heading = true }: { heading?: boolean }) {
+  const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
+  const [billingMessage, setBillingMessage] = useState<string | null>(null);
+
+  const checkout = async (plan: PricingPlan) => {
+    setBillingMessage(null);
+    if (!authToken()) {
+      window.location.assign('/login?next=/pricing');
+      return;
+    }
+    setLoadingPlan(plan.name);
+    try {
+      const result = await api.post<{ url: string }>('/billing/checkout', {
+        plan: plan.name.toLowerCase(),
+      });
+      window.location.assign(result.url);
+    } catch (error) {
+      setBillingMessage(error instanceof Error ? error.message : 'Unable to start checkout.');
+      setLoadingPlan(null);
+    }
+  };
+
   return (
     <Section id="pricing">
       {heading ? (
         <div className="max-w-2xl">
           <Eyebrow>Pricing</Eyebrow>
-          <h2 className="mt-3 text-2xl tracking-tight sm:text-3xl">Simple plans, no procurement theatre</h2>
+          <h2 className="mt-3 text-2xl tracking-tight sm:text-3xl">Simple plans, secure checkout</h2>
           <p className="mt-3 text-[15px] leading-relaxed text-ink-500">
-            These are the plans the product is built around. Billing is not connected in this build — every plan opens
-            the same demo workspace.
+            Choose a plan and complete payment securely through Stripe. Your organisation is upgraded after Stripe confirms the subscription.
           </p>
         </div>
       ) : null}
 
       <div className="mt-6 flex items-center gap-3">
-        <Badge tone="info">Demo pricing</Badge>
-        <span className="text-[12.5px] text-ink-500">No payment provider is connected. Nothing is charged.</span>
+        <Badge tone="info">Stripe billing</Badge>
+        <span className="text-[12.5px] text-ink-500">Subscriptions are processed by Stripe; ComplyLens never receives card details.</span>
       </div>
+      {billingMessage ? (
+        <p role="alert" className="mt-4 text-[13px] text-red-700">{billingMessage}</p>
+      ) : null}
 
       <div className="mt-8 grid gap-5 lg:grid-cols-3">
         {PRICING_PLANS.map((plan) => (
@@ -397,7 +421,7 @@ export function PricingSection({ heading = true }: { heading?: boolean }) {
             {plan.highlighted ? (
               <span className="absolute -top-3 left-5">
                 <Badge tone="brand" size="sm">
-                  Most demoed
+                  Most popular
                 </Badge>
               </span>
             ) : null}
@@ -416,7 +440,18 @@ export function PricingSection({ heading = true }: { heading?: boolean }) {
               ))}
             </ul>
             <div className="mt-5">
-              <DemoButton fullWidth label={plan.cta} variant={plan.highlighted ? 'primary' : 'secondary'} />
+              <button
+                type="button"
+                onClick={() => checkout(plan)}
+                disabled={loadingPlan !== null}
+                className={cn(
+                  'inline-flex w-full items-center justify-center rounded-lg px-4 py-2.5 text-[13px] font-semibold transition',
+                  plan.highlighted ? 'bg-ink-900 text-white hover:bg-ink-800' : 'border border-ink-300 bg-white text-ink-800 hover:bg-ink-50',
+                  loadingPlan === plan.name && 'cursor-wait opacity-70',
+                )}
+              >
+                {loadingPlan === plan.name ? 'Opening Stripe…' : `Subscribe to ${plan.name}`}
+              </button>
             </div>
           </div>
         ))}

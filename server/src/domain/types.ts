@@ -177,6 +177,9 @@ export type Organization = {
   industry: string;
   employeeCount: number;
   createdAt: string;
+  stripeCustomerId?: string;
+  stripeSubscriptionId?: string;
+  stripeSubscriptionStatus?: string;
   settings: {
     defaultFramework: FrameworkKey;
     monthlyDigest: boolean;

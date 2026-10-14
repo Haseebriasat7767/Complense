@@ -37,7 +37,7 @@ export function PricingPage() {
           <div className="mt-5 flex items-center gap-3">
             <Badge tone="info">Demo pricing</Badge>
             <span className="text-[12.5px] text-ink-500">
-              Billing is not connected in this build — nothing is charged and every plan opens the demo workspace.
+              Billing is connected through Stripe Checkout. Payment details are handled by Stripe, and your plan changes after webhook confirmation.
             </span>
           </div>
         </div>
@@ -91,7 +91,7 @@ export function PricingPage() {
         <div className="mt-6 flex flex-wrap items-center gap-3">
           <DemoButton label="Try the Demo" />
           <span className="text-[12.5px] text-ink-500">
-            Buying instead of demoing? The product overview page documents what is included in the source.
+            Already have an account? Choose a plan above to open secure Stripe Checkout.
           </span>
         </div>
       </Section>
