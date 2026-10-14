@@ -8,7 +8,7 @@ import crypto from 'node:crypto';
 import { config } from '../config.js';
 import { logger } from '../logger.js';
 import type {
-  AuditEvent, EvidenceInput, EvidenceRecord, Organization, ReportRecord, User, Workspace,
+  AuditEvent, EvidenceInput, EvidenceRecord, Organization, RemediationEvent, RemediationRecord, ReportRecord, User, Workspace,
 } from '../domain/types.js';
 import type { NewAccount, Store } from './store.js';
 import { buildDemoSeed, logSeedSummary } from './seed.js';
@@ -168,6 +168,80 @@ export class SupabaseStore implements Store {
   createReport(report: ReportRecord) { return this.insert<ReportRecord>('reports', report); }
   updateReport(id: string, organizationId: string, patch: Partial<ReportRecord>) { return this.patchOne<ReportRecord>('reports', { id: `eq.${id}`, organizationId: `eq.${organizationId}` }, cleanPatch(patch)); }
   deleteReport(id: string, organizationId: string) { return this.deleteOne('reports', { id: `eq.${id}`, organizationId: `eq.${organizationId}` }); }
+  async listRemediations(organizationId: string, workspaceId: string) {
+    const rows = await this.rows<Row>('remediations', {
+      organization_id: `eq.${organizationId}`,
+      workspace_id: `eq.${workspaceId}`,
+      order: 'updated_at.desc',
+    });
+    return rows.map((row) => ({
+      id: row.id, organizationId: row.organization_id, workspaceId: row.workspace_id,
+      controlId: row.control_id, controlCode: row.control_code, title: row.title,
+      description: row.description, owner: row.owner, dueDate: row.due_date,
+      status: row.status, priority: row.priority, requiredProof: row.required_proof,
+      createdBy: row.created_by, createdAt: row.created_at, updatedAt: row.updated_at,
+      verifiedBy: row.verified_by, verifiedAt: row.verified_at,
+    } as RemediationRecord));
+  }
+  async getRemediation(id: string, organizationId: string, workspaceId: string) {
+    const records = await this.rows<Row>('remediations', {
+      id: `eq.${id}`, organization_id: `eq.${organizationId}`, workspace_id: `eq.${workspaceId}`,
+    });
+    const row = records[0];
+    if (!row) return null;
+    return {
+      id: row.id, organizationId: row.organization_id, workspaceId: row.workspace_id,
+      controlId: row.control_id, controlCode: row.control_code, title: row.title,
+      description: row.description, owner: row.owner, dueDate: row.due_date,
+      status: row.status, priority: row.priority, requiredProof: row.required_proof,
+      createdBy: row.created_by, createdAt: row.created_at, updatedAt: row.updated_at,
+      verifiedBy: row.verified_by, verifiedAt: row.verified_at,
+    } as RemediationRecord;
+  }
+  async createRemediation(record: RemediationRecord) {
+    const row = await this.insert<Row>('remediations', {
+      id: record.id, organization_id: record.organizationId, workspace_id: record.workspaceId,
+      control_id: record.controlId, control_code: record.controlCode, title: record.title,
+      description: record.description, owner: record.owner, due_date: record.dueDate,
+      status: record.status, priority: record.priority, required_proof: record.requiredProof,
+      created_by: record.createdBy, created_at: record.createdAt, updated_at: record.updatedAt,
+      verified_by: record.verifiedBy, verified_at: record.verifiedAt,
+    });
+    return (await this.getRemediation(row.id, record.organizationId, record.workspaceId))!;
+  }
+  async updateRemediation(id: string, organizationId: string, workspaceId: string, patch: Partial<RemediationRecord>) {
+    const columns: Record<string, string> = {
+      controlId: 'control_id', controlCode: 'control_code', title: 'title',
+      description: 'description', owner: 'owner', dueDate: 'due_date',
+      status: 'status', priority: 'priority', requiredProof: 'required_proof',
+      updatedAt: 'updated_at', verifiedBy: 'verified_by', verifiedAt: 'verified_at',
+    };
+    const body: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(patch)) if (columns[key]) body[columns[key]] = value;
+    const row = await this.patchOne<Row>('remediations', {
+      id: `eq.${id}`, organization_id: `eq.${organizationId}`, workspace_id: `eq.${workspaceId}`,
+    }, body);
+    return row ? this.getRemediation(id, organizationId, workspaceId) : null;
+  }
+  async listRemediationEvents(organizationId: string, workspaceId: string, remediationId: string) {
+    const rows = await this.rows<Row>('remediation_events', {
+      organization_id: `eq.${organizationId}`, workspace_id: `eq.${workspaceId}`,
+      remediation_id: `eq.${remediationId}`, order: 'at.desc',
+    });
+    return rows.map((row) => ({
+      id: row.id, organizationId: row.organization_id, workspaceId: row.workspace_id,
+      remediationId: row.remediation_id, actorId: row.actor_id, action: row.action,
+      detail: row.detail, at: row.at,
+    } as RemediationEvent));
+  }
+  async recordRemediationEvent(event: RemediationEvent) {
+    await this.insert('remediation_events', {
+      id: event.id, organization_id: event.organizationId, workspace_id: event.workspaceId,
+      remediation_id: event.remediationId, actor_id: event.actorId, action: event.action,
+      detail: event.detail, at: event.at,
+    });
+  }
+
   listAuditEvents(organizationId: string, limit: number) { return this.rows<AuditEvent>('audit_events', { organizationId: `eq.${organizationId}`, order: 'at.desc', limit: String(Math.max(0, Math.min(limit, 500))) }); }
   async recordAuditEvent(event: Omit<AuditEvent, 'id'>) { await this.insert('audit_events', { ...event, id: makeId('aud') }); }
   async close(): Promise<void> { /* fetch-based client holds no pooled socket */ }

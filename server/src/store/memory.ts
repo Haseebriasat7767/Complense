@@ -12,6 +12,8 @@ import type {
   EvidenceRecord,
   Organization,
   ReportRecord,
+  RemediationEvent,
+  RemediationRecord,
   User,
   Workspace,
 } from '../domain/types.js';
@@ -33,6 +35,8 @@ export class MemoryStore implements Store {
   private usersByEmail = new Map<string, string>();
   private evidence = new Map<string, EvidenceRecord>();
   private reports = new Map<string, ReportRecord>();
+  private remediations = new Map<string, RemediationRecord>();
+  private remediationEvents: RemediationEvent[] = [];
   private audit: AuditEvent[] = [];
 
   async init(): Promise<void> {
@@ -185,6 +189,50 @@ export class MemoryStore implements Store {
     if (!current) return false;
     this.reports.delete(reportId);
     return true;
+  }
+
+  async listRemediations(organizationId: string, workspaceId: string) {
+    return [...this.remediations.values()]
+      .filter((record) => record.organizationId === organizationId && record.workspaceId === workspaceId)
+      .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  }
+
+  async getRemediation(recordId: string, organizationId: string, workspaceId: string) {
+    const record = this.remediations.get(recordId);
+    if (!record || record.organizationId !== organizationId || record.workspaceId !== workspaceId) return null;
+    return record;
+  }
+
+  async createRemediation(record: RemediationRecord) {
+    this.remediations.set(record.id, record);
+    return record;
+  }
+
+  async updateRemediation(recordId: string, organizationId: string, workspaceId: string, patch: Partial<RemediationRecord>) {
+    const current = await this.getRemediation(recordId, organizationId, workspaceId);
+    if (!current) return null;
+    const next = {
+      ...current,
+      ...patch,
+      id: current.id,
+      organizationId: current.organizationId,
+      workspaceId: current.workspaceId,
+      createdBy: current.createdBy,
+      createdAt: current.createdAt,
+    };
+    this.remediations.set(recordId, next);
+    return next;
+  }
+
+  async listRemediationEvents(organizationId: string, workspaceId: string, remediationId: string) {
+    return this.remediationEvents
+      .filter((event) => event.organizationId === organizationId && event.workspaceId === workspaceId && event.remediationId === remediationId)
+      .sort((a, b) => b.at.localeCompare(a.at));
+  }
+
+  async recordRemediationEvent(event: RemediationEvent) {
+    this.remediationEvents.push(event);
+    if (this.remediationEvents.length > 2000) this.remediationEvents = this.remediationEvents.slice(-2000);
   }
 
   async listAuditEvents(organizationId: string, limit: number) {

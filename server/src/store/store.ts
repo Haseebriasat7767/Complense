@@ -2,7 +2,7 @@
  * Storage abstraction. Supabase is the persistent production store; MemoryStore
  * is only for local demo/test use when explicitly configured.
  */
-import type { AuditEvent, EvidenceInput, EvidenceRecord, Organization, ReportRecord, User, Workspace } from '../domain/types.js';
+import type { AuditEvent, EvidenceInput, EvidenceRecord, Organization, RemediationEvent, RemediationRecord, ReportRecord, User, Workspace } from '../domain/types.js';
 
 export type StoreKind = 'memory' | 'supabase';
 export type NewAccount = { organization: Organization; workspace: Workspace; user: User };
@@ -32,6 +32,12 @@ export interface Store {
   createReport(report: ReportRecord): Promise<ReportRecord>;
   updateReport(id: string, organizationId: string, patch: Partial<ReportRecord>): Promise<ReportRecord | null>;
   deleteReport(id: string, organizationId: string): Promise<boolean>;
+  listRemediations(organizationId: string, workspaceId: string): Promise<RemediationRecord[]>;
+  getRemediation(id: string, organizationId: string, workspaceId: string): Promise<RemediationRecord | null>;
+  createRemediation(record: RemediationRecord): Promise<RemediationRecord>;
+  updateRemediation(id: string, organizationId: string, workspaceId: string, patch: Partial<RemediationRecord>): Promise<RemediationRecord | null>;
+  listRemediationEvents(organizationId: string, workspaceId: string, remediationId: string): Promise<RemediationEvent[]>;
+  recordRemediationEvent(event: RemediationEvent): Promise<void>;
   listAuditEvents(organizationId: string, limit: number): Promise<AuditEvent[]>;
   recordAuditEvent(event: Omit<AuditEvent, 'id'>): Promise<void>;
   close(): Promise<void>;

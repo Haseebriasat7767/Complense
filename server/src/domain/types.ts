@@ -220,6 +220,38 @@ export type User = {
   lastLoginAt?: string;
 };
 
+export type RemediationStatus = 'open' | 'in_progress' | 'blocked' | 'ready_for_review' | 'verified' | 'dismissed';
+export type RemediationPriority = 'critical' | 'high' | 'medium' | 'low';
+export type RemediationRecord = {
+  id: string;
+  organizationId: string;
+  workspaceId: string;
+  controlId: string;
+  controlCode: string;
+  title: string;
+  description: string;
+  owner: string;
+  dueDate: string | null;
+  status: RemediationStatus;
+  priority: RemediationPriority;
+  requiredProof: string;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+  verifiedBy: string | null;
+  verifiedAt: string | null;
+};
+export type RemediationEvent = {
+  id: string;
+  organizationId: string;
+  workspaceId: string;
+  remediationId: string;
+  actorId: string;
+  action: string;
+  detail: string;
+  at: string;
+};
+
 export type ReportStatus = 'generating' | 'ready' | 'failed';
 
 /**
