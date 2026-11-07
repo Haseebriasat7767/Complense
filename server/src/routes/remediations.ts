@@ -39,7 +39,7 @@ remediationsRouter.post('/remediations', asyncHandler(async (req, res) => {
     controlId, controlCode, title,
     description: optionalString(body.description, 'description', 4000) ?? '',
     owner: optionalString(body.owner, 'owner', 180) ?? session.email,
-    dueDate: optionalString(body.dueDate, 'dueDate', 40) ?? null,
+    dueDate: body.dueDate === null ? null : optionalString(body.dueDate, 'dueDate', 40) ?? null,
     status, priority,
     requiredProof: optionalString(body.requiredProof, 'requiredProof', 4000) ?? '',
     createdBy: session.sub, createdAt: now, updatedAt: now,
