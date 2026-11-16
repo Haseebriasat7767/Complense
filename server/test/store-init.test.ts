@@ -4,6 +4,7 @@ afterEach(() => {
   vi.resetModules();
   vi.doUnmock('../src/config.js');
   vi.doUnmock('../src/store/supabase.js');
+  vi.unstubAllGlobals();
 });
 
 describe('production store initialization', () => {
@@ -43,5 +44,31 @@ describe('production store initialization', () => {
     await expect(initStore()).rejects.toThrow(
       'Production startup aborted because Supabase is unavailable',
     );
+  });
+});
+
+describe('Supabase production initialization', () => {
+  it('does not create demo users or evidence when demo mode is disabled', async () => {
+    vi.doMock('../src/config.js', () => ({
+      config: {
+        isProduction: true,
+        demoMode: false,
+        database: {
+          supabaseUrl: 'https://example.supabase.co',
+          supabaseSecretKey: 'sb_secret_test_only',
+        },
+      },
+    }));
+
+    const fetchMock = vi.fn(async () => new Response('[]', {
+      status: 200,
+      headers: { 'content-type': 'application/json' },
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { SupabaseStore } = await import('../src/store/supabase.js');
+    await SupabaseStore.connect().init();
+
+    expect(fetchMock.mock.calls.some(([, init]) => init?.method === 'POST')).toBe(false);
   });
 });
