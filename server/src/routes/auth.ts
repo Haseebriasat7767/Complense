@@ -72,7 +72,7 @@ authRouter.post(
     const password = requirePassword(body.password);
     const organizationName = requireString(body.organizationName, 'organizationName', { max: 120 });
     const jobTitle = optionalString(body.jobTitle, 'jobTitle', 120) ?? 'Security Owner';
-    const seedDemo = optionalBoolean(body.seedDemo, 'seedDemo') ?? true;
+    const seedDemo = optionalBoolean(body.seedDemo, 'seedDemo') ?? config.demoMode;
 
     const store = getStore();
     const existing = await store.getUserByEmail(email);
@@ -167,7 +167,11 @@ authRouter.post(
 
     const store = getStore();
     const user = await store.getUserByEmail(email);
-    if (!user || !(await verifyPassword(password, user.passwordHash))) {
+    if (
+      !user ||
+      (user.isDemoUser && !config.demoMode) ||
+      !(await verifyPassword(password, user.passwordHash))
+    ) {
       throw ApiError.unauthorized('Email or password is incorrect.');
     }
 
