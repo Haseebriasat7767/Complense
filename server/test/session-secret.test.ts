@@ -59,6 +59,28 @@ describe('production SESSION_SECRET enforcement', () => {
     expect(parsed.secretIsEphemeral).toBe(false);
   });
 
+  it('rejects passwordless demo access in production even with a session secret', () => {
+    const result = runWithEnv({
+      NODE_ENV: 'production',
+      SESSION_SECRET: 'a-long-randomly-generated-production-secret-value-123456',
+      AUTH_REQUIRED: 'true',
+      DEMO_MODE: 'true',
+    });
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain('Production requires AUTH_REQUIRED=true and DEMO_MODE=false');
+  });
+
+  it('rejects disabled authentication in production even if demo mode is false', () => {
+    const result = runWithEnv({
+      NODE_ENV: 'production',
+      SESSION_SECRET: 'a-long-randomly-generated-production-secret-value-123456',
+      AUTH_REQUIRED: 'false',
+      DEMO_MODE: 'false',
+    });
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain('Production requires AUTH_REQUIRED=true and DEMO_MODE=false');
+  });
+
   it('never prints the configured secret value anywhere in stdout/stderr', () => {
     const secret = 'super-secret-value-that-must-never-be-logged-ABC123';
     const result = runWithEnv({ NODE_ENV: 'production', SESSION_SECRET: secret });
