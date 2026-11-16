@@ -61,7 +61,7 @@ export type SessionPayload = {
   organization: Organization;
   workspace: Workspace | null;
   workspaces: Workspace[];
-  persistence: 'memory' | 'mongodb';
+  persistence: 'memory' | 'supabase';
 };
 
 export type WorkspaceContext = {
