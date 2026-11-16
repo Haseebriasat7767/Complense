@@ -33,15 +33,28 @@ function clean(raw: string): string {
 
 function decodePdfLiteral(value: string): string {
   return value.replace(/\\([nrtbf()\\])/g, (_match, escaped: string) => {
-    const map: Record<string, string> = { n: '\n', r: '\r', t: '\t', b: '\b', f: '\f', '(': '(', ')': ')', '\\': '\\' };
+    const map: Record<string, string> = { n: '\\n', r: '\\r', t: '\\t', b: '\\b', f: '\\f', '(': '(', ')': ')', '\\\\': '\\\\' };
     return map[escaped] ?? escaped;
   }).replace(/\\([0-7]{1,3})/g, (_match, octal: string) =>
     String.fromCharCode(parseInt(octal, 8)),
   );
 }
 
+/** Decode hexadecimal PDF text strings used by several PDF generators. */
+function decodePdfHex(value: string): string {
+  const hex = value.replace(/\\s+/g, '');
+  const normalized = hex.length % 2 === 0 ? hex : `${hex}0`;
+  const bytes = Buffer.from(normalized, 'hex');
+  if (bytes.length >= 2 && bytes[0] === 0xfe && bytes[1] === 0xff) {
+    let decoded = '';
+    for (let index = 2; index + 1 < bytes.length; index += 2) {
+      decoded += String.fromCharCode((bytes[index]! << 8) | bytes[index + 1]!);
+    }
+    return decoded;
+  }
+  return bytes.toString('latin1');
+}
 
-/** Decode the ASCII85 filter commonly used before Flate compression in PDFs. */
 function decodeAscii85(input: Buffer): Buffer {
   let source = input.toString('latin1').replace(/\\s+/g, '');
   source = source.replace(/^<~/, '').replace(/~>$/, '');
@@ -107,18 +120,22 @@ function extractPdfText(buffer: Buffer): string {
     }
     const body = stream.toString('latin1');
     // Capture literal strings used by Tj and TJ text-showing operators.
-    const operatorPattern = /\(((?:\\.|[^\\)])*)\)\s*Tj|\[((?:.|\n)*?)\]\s*TJ/g;
+    const operatorPattern =
+      /\\(((?:\\\\.|[^\\\\)])*)\\)\\s*Tj|<([0-9A-Fa-f\\s]+)>\\s*Tj|\\[([\\s\\S]*?)\\]\\s*TJ/g;
     for (const op of body.matchAll(operatorPattern)) {
       if (op[1] !== undefined) {
         chunks.push(decodePdfLiteral(op[1]));
       } else if (op[2] !== undefined) {
-        for (const part of op[2].matchAll(/\(((?:\\.|[^\\)])*)\)/g)) {
-          chunks.push(decodePdfLiteral(part[1] ?? ''));
+        chunks.push(decodePdfHex(op[2]));
+      } else if (op[3] !== undefined) {
+        const textToken = /\\(((?:\\\\.|[^\\\\)])*)\\)|<([0-9A-Fa-f\\s]+)>/g;
+        for (const part of op[3].matchAll(textToken)) {
+          if (part[1] !== undefined) chunks.push(decodePdfLiteral(part[1]));
+          else if (part[2] !== undefined) chunks.push(decodePdfHex(part[2]));
         }
       }
-      chunks.push('\n');
+      chunks.push('\\n');
     }
-  }
   return chunks.join('');
 }
 
