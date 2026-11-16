@@ -60,7 +60,7 @@ describe('Supabase production initialization', () => {
       },
     }));
 
-    const fetchMock = vi.fn(async () => new Response('[]', {
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => new Response('[]', {
       status: 200,
       headers: { 'content-type': 'application/json' },
     }));
