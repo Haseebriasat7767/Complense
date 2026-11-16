@@ -110,6 +110,34 @@ describe('authentication', () => {
     expect(response.status).toBe(401);
   });
 
+  it('rejects seeded demo credentials when demo mode is disabled', async () => {
+    const previous = config.demoMode;
+    config.demoMode = false;
+    try {
+      const response = await fetch(`${base}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ email: 'demo@complylens.ai', password: 'DemoPass123!' }),
+      });
+      expect(response.status).toBe(401);
+      const payload = (await response.json()) as { error: { message: string } };
+      expect(payload.error.message).toBe('Email or password is incorrect.');
+    } finally {
+      config.demoMode = previous;
+    }
+  });
+
+  it('rejects previously issued demo sessions when demo mode is disabled', async () => {
+    const previous = config.demoMode;
+    config.demoMode = false;
+    try {
+      const response = await get('/api/context');
+      expect(response.status).toBe(401);
+    } finally {
+      config.demoMode = previous;
+    }
+  });
+
   it('issues an instant demo session', async () => {
     const response = await fetch(`${base}/api/auth/demo`, { method: 'POST' });
     expect(response.status).toBe(200);
