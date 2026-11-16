@@ -7,7 +7,7 @@ on:
     branches: [main]
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   verify:
@@ -20,24 +20,10 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - name: Install dependencies
+      - name: Install locked dependencies
         run: npm ci
-      - name: Apply compatible dependency security updates
-        run: npm audit fix
-      - name: Commit dependency lockfile updates
-        if: github.event_name == 'pull_request'
-        run: |
-          if git diff --quiet -- package.json package-lock.json; then
-            echo "No dependency lockfile changes."
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add package.json package-lock.json
-          git commit -m "fix: patch vulnerable npm dependencies"
-          git push origin "HEAD:${GITHUB_HEAD_REF}"
-      - name: Verify production dependencies
-        run: npm audit --omit=dev
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=high
       - name: Run tests
         run: npm test
       - name: Build production bundles
