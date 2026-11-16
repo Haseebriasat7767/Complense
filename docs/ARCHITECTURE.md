@@ -95,7 +95,7 @@ The client never re-computes product logic. Scores, statuses, findings and recom
 
 **Supabase in production, MemoryStore locally.** Production startup requires valid Supabase credentials and a successful schema/database check. A missing or unavailable database aborts startup; production never degrades to volatile memory. Local development and automated tests can use MemoryStore without external services.
 
-**Minimal dependency surface.** Express, multer, pdfkit on the server (mongoose optional); React, Router, Recharts, lucide on the client; Tailwind for styling. Security headers, rate limiting, the `.env` loader and validation helpers are implemented in ~200 lines instead of pulling in helmet, express-rate-limit, dotenv and zod.
+**Minimal dependency surface.** Express, multer, pdfkit on the server (no MongoDB persistence dependency); React, Router, Recharts, lucide on the client; Tailwind for styling. Security headers, rate limiting, the `.env` loader and validation helpers are implemented in ~200 lines instead of pulling in helmet, express-rate-limit, dotenv and zod.
 
 **Server-rendered PDFs.** The report is rendered by pdfkit on the server from the same snapshot the UI shows, then streamed to the browser. No client-side PDF library, no duplicated report logic.
 
