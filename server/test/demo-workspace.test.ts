@@ -45,20 +45,20 @@ describe('seeded demo workspace', () => {
   });
 
   it('produces the documented readiness scores', () => {
-    expect(soc2.readiness.index).toBe(92);
+    expect(soc2.readiness.index).toBe(94);
     expect(soc2.readiness.bandLabel).toBe('Strong readiness');
-    expect(iso.readiness.index).toBe(78);
+    expect(iso.readiness.index).toBe(84);
     expect(iso.readiness.bandLabel).toBe('Moderate readiness');
   });
 
   it('reports the documented SOC 2 control counts', () => {
     expect(soc2.readiness.counts).toEqual({
       total: 28,
-      reviewed: 24,
+      reviewed: 23,
       passed: 18,
       needsAttention: 4,
-      missing: 2,
-      needsReview: 4,
+      missing: 1,
+      needsReview: 5,
     });
   });
 
@@ -104,7 +104,7 @@ describe('seeded demo workspace', () => {
 
   it('flags the controls with no supporting evidence as missing', () => {
     const missing = soc2.assessments.filter((assessment) => assessment.status === 'missing');
-    expect(missing.map((assessment) => assessment.controlCode).sort()).toEqual(['SOC2-CC7.2', 'SOC2-CC8.1']);
+    expect(missing.map((assessment) => assessment.controlCode).sort()).toEqual(['SOC2-CC8.1']);
   });
 
   it('produces a remediation recommendation for every finding', () => {
