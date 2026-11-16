@@ -13,7 +13,7 @@ import { attachErrorHandling, createApp } from '../src/app.js';
 import { config } from '../src/config.js';
 import { DEMO_WORKSPACE_LABEL } from '../src/domain/evidence-seed.js';
 import { CONTROL_LIBRARY } from '../src/domain/controls.js';
-import { closeStore, initStore } from '../src/store/index.js';
+import { closeStore, getStore, initStore } from '../src/store/index.js';
 
 let server: http.Server;
 let base: string;
@@ -432,6 +432,14 @@ describe('input validation', () => {
     expect(uploaded.status).toBe(201);
     const { evidence } = (await uploaded.json()) as { evidence: { id: string; frameworkKeys: string[] } };
     expect(evidence.frameworkKeys).toEqual(['soc2']);
+
+    const context = (await (await get('/api/context')).json()) as {
+      user: { id: string } | null;
+      organization: { id: string };
+    };
+    const persisted = await getStore().getEvidence(evidence.id, context.organization.id);
+    expect(context.user?.id).toBeTruthy();
+    expect(persisted?.createdByUser).toBe(context.user?.id);
 
     const detail = (await (await get(`/api/evidence/${evidence.id}`)).json()) as {
       mapping: Array<{ frameworkKey: string }>;
