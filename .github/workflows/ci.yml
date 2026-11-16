@@ -22,11 +22,8 @@ jobs:
           cache: npm
       - name: Install locked dependencies
         run: npm ci
-      - name: Audit production dependencies
-        run: |
-          if ! npm audit --omit=dev --audit-level=high; then
-            echo "::warning::Production dependency advisories remain; release is blocked until fixed."
-          fi
+      - name: Audit production dependencies (release gate)
+        run: npm audit --omit=dev --audit-level=low
       - name: Run tests
         run: npm test
       - name: Build production bundles
