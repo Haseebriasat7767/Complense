@@ -33,6 +33,26 @@ describe('PDF evidence extraction', () => {
     expect(result.text).toContain('privileged accounts');
   });
 
+  it('extracts text when a PDF stream has no newline before endstream', () => {
+    const text = 'Northstar security policy requires quarterly access reviews and approved multifactor authentication for privileged production accounts.';
+    const stream = `BT /F1 12 Tf (${text}) Tj ET`;
+    // Minimal PDF content stream matching generators that put endstream
+    // immediately after the declared stream bytes (without a trailing newline).
+    const pdf = Buffer.from(
+      `%PDF-1.4\\n1 0 obj\\n<< /Length ${Buffer.byteLength(stream, 'latin1')} >>\\nstream\\n${stream}endstream\\nendobj\\n%%EOF`,
+      'latin1',
+    );
+    const result = extractText({
+      buffer: pdf,
+      extension: 'pdf',
+      fileName: 'northstar-information-security-policy.pdf',
+    });
+
+    expect(result.method).toBe('pdf-text-layer');
+    expect(result.text).toContain('quarterly access reviews');
+    expect(result.text).toContain('multifactor authentication');
+  });
+
   it('does not pretend an image-only or empty PDF has extractable text', async () => {
     const result = extractText({
       buffer: await createPdf(''),
