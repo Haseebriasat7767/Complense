@@ -112,7 +112,7 @@ describe('authentication', () => {
 
   it('rejects seeded demo credentials when demo mode is disabled', async () => {
     const previous = config.demoMode;
-    config.demoMode = false;
+    Object.defineProperty(config, 'demoMode', { value: false, configurable: true, writable: true });
     try {
       const response = await fetch(`${base}/api/auth/login`, {
         method: 'POST',
@@ -129,12 +129,12 @@ describe('authentication', () => {
 
   it('rejects previously issued demo sessions when demo mode is disabled', async () => {
     const previous = config.demoMode;
-    config.demoMode = false;
+    Object.defineProperty(config, 'demoMode', { value: false, configurable: true, writable: true });
     try {
       const response = await get('/api/context');
       expect(response.status).toBe(401);
     } finally {
-      config.demoMode = previous;
+      Object.defineProperty(config, 'demoMode', { value: previous, configurable: true, writable: true });
     }
   });
 
