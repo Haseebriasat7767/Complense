@@ -5,6 +5,7 @@ import { ButtonLink } from '@/components/ui/Button';
 import { Card, CardContent, CardHeader } from '@/components/ui/Card';
 import { ErrorState, InlineAlert, LoadingBlock } from '@/components/ui/Feedback';
 import { PageHeader } from '@/components/app/PageHeader';
+import { RemediationManager } from '@/components/app/RemediationManager';
 import { useApi } from '@/lib/api';
 import { formatDateTime } from '@/lib/utils';
 import type { Finding } from '@/lib/types';
@@ -132,6 +133,8 @@ export function GapDetailPage() {
               <p className="text-[11.5px] leading-relaxed text-ink-400">{guidanceNotice}</p>
             </CardContent>
           </Card>
+
+          <RemediationManager finding={finding} />
         </div>
 
         <div className="space-y-5">
