@@ -41,7 +41,7 @@ describe('production SESSION_SECRET enforcement', () => {
     expect(result.status).not.toBe(0);
     expect(result.stdout).not.toContain('CONFIG_OK');
     // The error must actually explain what to do, not just fail silently.
-    expect(result.stderr).toContain('SESSION_SECRET is required in production');
+    expect(result.stderr).toContain('SESSION_SECRET is required when AUTH_REQUIRED=true in production');
     expect(result.stderr.toLowerCase()).toContain('set a long random session_secret');
   });
 
