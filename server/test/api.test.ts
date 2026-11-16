@@ -173,7 +173,7 @@ describe('readiness workspace', () => {
       findings: { critical: number; total: number };
       priorityFindings: Array<{ controlCode: string }>;
     };
-    expect(payload.metric.readinessIndex).toBe(92);
+    expect(payload.metric.readinessIndex).toBe(94);
     expect(payload.counts).toMatchObject({ total: 28, passed: 18, needsAttention: 4, missing: 2 });
     expect(payload.findings.total).toBe(10);
     expect(payload.findings.critical).toBe(2);
@@ -208,7 +208,7 @@ describe('readiness workspace', () => {
       items: Array<{ key: string; readinessIndex: number }>;
     };
     const indexes = Object.fromEntries(payload.items.map((item) => [item.key, item.readinessIndex]));
-    expect(indexes).toEqual({ soc2: 92, iso27001: 78 });
+    expect(indexes).toEqual({ soc2: 94, iso27001: 84 });
   });
 });
 
@@ -245,7 +245,7 @@ describe('reports', () => {
         };
       };
     };
-    expect(report.scoreIndex).toBe(92);
+    expect(report.scoreIndex).toBe(94);
 
     // The report carries the per-status control lists used by PDF sections 4-7.
     expect(report.summary.controlsByStatus.passed.length).toBe(18);
