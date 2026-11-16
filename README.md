@@ -267,6 +267,6 @@ Configure these **server-only** Vercel Production environment variables:
 - `SUPABASE_URL`: your Supabase project URL (for example, `https://your-project-ref.supabase.co`)
 - `SUPABASE_SECRET_KEY`: the project's secret API key (`sb_secret_...`). A legacy `SUPABASE_SERVICE_ROLE_KEY` is accepted temporarily for compatibility.
 
-Never use a secret key in a `VITE_*` variable or browser code. Redeploy after changing environment variables. The migration enables RLS and intentionally creates no public policies; all data requests must go through the ComplyLens server, which must enforce organization/workspace authorization. Existing MongoDB records are not automatically copied to Supabase.
+Never use a secret key in a `VITE_*` variable or browser code. Redeploy after changing environment variables. The migration enables RLS and intentionally creates no public policies; all data requests must go through the ComplyLens server, which must enforce organization/workspace authorization. Records in any legacy store are not automatically copied to Supabase.
 
 Local development and automated tests may use MemoryStore when Supabase variables are absent. Production startup fails if Supabase is not configured or the schema/database cannot be reached; there is no production in-memory fallback.
