@@ -39,7 +39,7 @@ describe('PDF evidence extraction', () => {
     // Minimal PDF content stream matching generators that put endstream
     // immediately after the declared stream bytes (without a trailing newline).
     const pdf = Buffer.from(
-      `%PDF-1.4\\n1 0 obj\\n<< /Length ${Buffer.byteLength(stream, 'latin1')} >>\\nstream\\n${stream}endstream\\nendobj\\n%%EOF`,
+      `%PDF-1.4\n1 0 obj\n<< /Length ${Buffer.byteLength(stream, 'latin1')} >>\nstream\n${stream}endstream\nendobj\n%%EOF`,
       'latin1',
     );
     const result = extractText({
