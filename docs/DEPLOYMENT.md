@@ -48,8 +48,10 @@ Apply migrations in `supabase/migrations/` in version order and keep the reposit
 - `20261116123537` — remediation service-role grants and uploader hardening
 - `20261116124052` — revoke public execution of the internal RLS helper
 - `20261116124417` — Stripe billing metadata
+- `20261116133055` — foreign-key lookup indexes
+- `20261116133229` — revoke direct public-role table privileges
 
-All eight application tables have RLS enabled. The current access design intentionally gives `anon` and `authenticated` no direct table SELECT privileges; the server uses the Supabase secret key and applies organization/workspace scoping in application queries. Because the server-side secret role bypasses RLS, route-level authorization and tenant-scoped store queries are security-critical. Do not add public grants or broad RLS policies merely to silence the Supabase advisor.
+All eight application tables have RLS enabled. The current access design revokes all direct table privileges from `PUBLIC`, `anon` and `authenticated`; the server uses the Supabase secret key and applies organization/workspace scoping in application queries. Because the server-side secret role bypasses RLS, route-level authorization and tenant-scoped store queries are security-critical. Application migrations are applied as the `postgres` owner role, whose default table/sequence privileges are also restricted. Do not add public grants or broad RLS policies merely to silence the Supabase advisor.
 
 After schema changes, run Supabase security and performance advisors and inspect table grants, policies, indexes and migration history.
 
