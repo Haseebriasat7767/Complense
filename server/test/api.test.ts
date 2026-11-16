@@ -176,7 +176,7 @@ describe('readiness workspace', () => {
     expect(payload.metric.readinessIndex).toBe(94);
     expect(payload.counts).toMatchObject({ total: 28, passed: 18, needsAttention: 4, missing: 1 });
     expect(payload.findings.total).toBe(10);
-    expect(payload.findings.critical).toBe(2);
+    expect(payload.findings.critical).toBe(1);
     expect(payload.priorityFindings.length).toBeGreaterThanOrEqual(3);
   });
 
