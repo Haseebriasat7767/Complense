@@ -129,6 +129,10 @@ export class SupabaseStore implements Store {
 
   async init(): Promise<void> {
     await this.verifyRequiredTables();
+    if (!config.demoMode) {
+      logger.info('Supabase store ready; demo seeding is disabled');
+      return;
+    }
     const seed = await buildDemoSeed();
     const existing = await this.one<Organization>('organizations', { id: `eq.${seed.organization.id}` });
     if (!existing) {
