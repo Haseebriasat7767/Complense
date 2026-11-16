@@ -123,7 +123,7 @@ describe('authentication', () => {
       const payload = (await response.json()) as { error: { message: string } };
       expect(payload.error.message).toBe('Email or password is incorrect.');
     } finally {
-      config.demoMode = previous;
+      Object.defineProperty(config, 'demoMode', { value: previous, configurable: true, writable: true });
     }
   });
 
