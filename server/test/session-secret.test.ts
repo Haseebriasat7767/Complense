@@ -23,6 +23,7 @@ function runWithEnv(env: Record<string, string | undefined>) {
     env: {
       ...process.env,
       ...env,
+      AUTH_REQUIRED: env.AUTH_REQUIRED ?? 'true',
       // Guarantee a clean slate regardless of the outer shell's environment.
       SESSION_SECRET: env.SESSION_SECRET ?? '',
       NODE_ENV: env.NODE_ENV ?? '',
