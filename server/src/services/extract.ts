@@ -136,6 +136,7 @@ function extractPdfText(buffer: Buffer): string {
       }
       chunks.push('\n');
     }
+  }
   return chunks.join('');
 }
 
