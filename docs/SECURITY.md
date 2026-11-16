@@ -21,7 +21,7 @@ This document describes the implemented security model and the remaining limitat
 - Resource ownership is checked before updates and deletes.
 - Settings writes are role-restricted.
 - Supabase RLS is enabled on all eight application tables.
-- The current database design intentionally grants no direct table SELECT access to `anon` or `authenticated`; the server accesses the Data API using a server-only Supabase secret key.
+- The current database design revokes all direct table privileges from `PUBLIC`, `anon` and `authenticated`; the server accesses the Data API using a server-only Supabase secret key.
 - Since the server secret role bypasses RLS, application-level tenant scoping is mandatory. A database administrator should periodically review the grants, policies and route/store scoping together.
 
 ### Production persistence
