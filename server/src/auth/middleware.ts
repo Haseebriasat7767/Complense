@@ -8,6 +8,7 @@
  */
 import type { NextFunction, Request, RequestHandler, Response } from 'express';
 import { ApiError } from '../http/errors.js';
+import { config } from '../config.js';
 import { getStore } from '../store/index.js';
 import { verifySessionToken, type SessionClaims } from './tokens.js';
 
@@ -29,6 +30,10 @@ export function requireAuth(): RequestHandler {
       session = verifySessionToken(token);
     } catch (error) {
       next(error);
+      return;
+    }
+    if (session.demo && !config.demoMode) {
+      next(ApiError.unauthorized('Demo sessions are disabled for this deployment. Sign in with a real account.'));
       return;
     }
     req.session = session;
