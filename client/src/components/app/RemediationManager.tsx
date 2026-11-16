@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type FormEvent } from 'react';
 import { api, useApi } from '@/lib/api';
 import { formatDateTime } from '@/lib/utils';
 import { Card, CardContent, CardHeader } from '@/components/ui/Card';
@@ -45,7 +45,7 @@ export function RemediationManager({ finding }: { finding: Finding }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
-  async function createPlan(event: React.FormEvent<HTMLFormElement>) {
+  async function createPlan(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSaving(true);
     setError('');
