@@ -12,6 +12,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { attachErrorHandling, createApp } from '../src/app.js';
 import { config } from '../src/config.js';
 import { DEMO_WORKSPACE_LABEL } from '../src/domain/evidence-seed.js';
+import { CONTROL_LIBRARY } from '../src/domain/controls.js';
 import { closeStore, initStore } from '../src/store/index.js';
 
 let server: http.Server;
@@ -263,6 +264,78 @@ describe('reports', () => {
     const buffer = Buffer.from(await pdf.arrayBuffer());
     expect(buffer.subarray(0, 5).toString()).toBe('%PDF-');
     expect(buffer.byteLength).toBeGreaterThan(10_000);
+  });
+});
+
+describe('persistent remediation API', () => {
+  it('requires authentication before listing remediation plans', async () => {
+    const response = await get('/api/remediations', false);
+    expect(response.status).toBe(401);
+  });
+
+  it('creates, lists, updates and audits a remediation plan', async () => {
+    const control = CONTROL_LIBRARY[0]!;
+    const createdResponse = await fetch(`${base}/api/remediations`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+      body: JSON.stringify({
+        controlId: control.id,
+        controlCode: control.code,
+        title: 'QA remediation persistence check',
+        description: 'Temporary test plan',
+        owner: 'QA',
+        priority: 'high',
+        requiredProof: 'Approved test evidence',
+      }),
+    });
+    expect(createdResponse.status).toBe(201);
+    const { remediation } = (await createdResponse.json()) as {
+      remediation: { id: string; controlId: string; status: string; createdBy: string };
+    };
+    expect(remediation.controlId).toBe(control.id);
+    expect(remediation.status).toBe('open');
+    expect(remediation.createdBy.length).toBeGreaterThan(0);
+
+    const listed = (await (await get('/api/remediations')).json()) as {
+      items: Array<{ id: string }>;
+    };
+    expect(listed.items.some((item) => item.id === remediation.id)).toBe(true);
+
+    const firstEvents = (await (await get(`/api/remediations/${remediation.id}/events`)).json()) as {
+      items: Array<{ action: string }>;
+    };
+    expect(firstEvents.items.map((item) => item.action)).toEqual(['created']);
+
+    const updatedResponse = await fetch(`${base}/api/remediations/${remediation.id}`, {
+      method: 'PATCH',
+      headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+      body: JSON.stringify({ status: 'in_progress', owner: 'IT Operations' }),
+    });
+    expect(updatedResponse.status).toBe(200);
+    const updated = (await updatedResponse.json()) as {
+      remediation: { status: string; owner: string };
+    };
+    expect(updated.remediation).toMatchObject({ status: 'in_progress', owner: 'IT Operations' });
+
+    const finalEvents = (await (await get(`/api/remediations/${remediation.id}/events`)).json()) as {
+      items: Array<{ action: string }>;
+    };
+    expect(finalEvents.items).toHaveLength(2);
+    expect(finalEvents.items.map((item) => item.action)).toContain('updated');
+  });
+
+  it('rejects a control id/code mismatch', async () => {
+    const control = CONTROL_LIBRARY[0]!;
+    const response = await fetch(`${base}/api/remediations`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+      body: JSON.stringify({
+        controlId: control.id,
+        controlCode: 'NOT-A-REAL-CONTROL',
+        title: 'Invalid remediation',
+      }),
+    });
+    expect(response.status).toBe(400);
   });
 });
 
