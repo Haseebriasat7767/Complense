@@ -20,8 +20,8 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - name: Refresh lockfile from reviewed package manifests
-        run: npm install --package-lock-only --ignore-scripts
+      - name: Apply compatible security patches to the dependency lockfile
+        run: npm audit fix --package-lock-only --ignore-scripts
       - name: Install locked dependencies
         run: npm ci
       - name: Upload regenerated lockfile for review
