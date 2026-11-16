@@ -107,8 +107,28 @@ export class SupabaseStore implements Store {
     return result.data.length > 0;
   }
 
+  private async verifyRequiredTables(): Promise<void> {
+    // A single organizations query is not enough: the API can otherwise report
+    // a healthy persistent store while a feature table is missing or denied.
+    const requiredTables = [
+      'organizations',
+      'workspaces',
+      'users',
+      'evidence',
+      'reports',
+      'audit_events',
+      'remediations',
+      'remediation_events',
+    ];
+    await Promise.all(
+      requiredTables.map((table) =>
+        this.request(table, { query: { select: 'id', limit: '0' } }),
+      ),
+    );
+  }
+
   async init(): Promise<void> {
-    await this.request('organizations', { query: { select: 'id', limit: '1' } });
+    await this.verifyRequiredTables();
     const seed = await buildDemoSeed();
     const existing = await this.one<Organization>('organizations', { id: `eq.${seed.organization.id}` });
     if (!existing) {
@@ -125,8 +145,8 @@ export class SupabaseStore implements Store {
 
   async health() {
     try {
-      await this.request('organizations', { query: { select: 'id', limit: '1' } });
-      return { ok: true, kind: this.kind, detail: 'Connected to Supabase PostgreSQL; database query succeeded.' };
+      await this.verifyRequiredTables();
+      return { ok: true, kind: this.kind, detail: 'Connected to Supabase PostgreSQL; all required application tables are readable.' };
     } catch {
       return { ok: false, kind: this.kind, detail: 'Supabase is configured but a database health query failed.' };
     }
