@@ -1,9 +1,9 @@
 /**
  * Runtime configuration.
  *
- * Every value is optional: with an empty environment ComplyLens boots in
- * DEMO MODE on an in-memory store with the deterministic local analysis
- * engine. Nothing throws because a key is missing.
+ * Local development and tests default to the deterministic demo mode. Production
+ * defaults to authenticated access and must use a healthy Supabase store; unsafe
+ * production combinations fail during startup.
  */
 import { existsSync } from 'node:fs';
 import path from 'node:path';
@@ -54,7 +54,7 @@ function bool(name: string, fallback: boolean): boolean {
 }
 
 const nodeEnv = str('NODE_ENV', str('VERCEL') ? 'production' : 'development');
-const authRequired = bool('AUTH_REQUIRED', false);
+const authRequired = bool('AUTH_REQUIRED', nodeEnv === 'production');
 const configuredSessionSecret = str('SESSION_SECRET');
 
 // A stateless session token must use the same signing secret on every
@@ -83,7 +83,7 @@ export const config = {
   trustProxyHops: nonNegativeInt('TRUST_PROXY_HOPS', 0),
 
   /** Demo mode is the default: seeded AcmeCloud workspace, instant demo login. */
-  demoMode: bool('DEMO_MODE', !authRequired),
+  demoMode: bool('DEMO_MODE', nodeEnv === 'production' ? false : !authRequired),
   authRequired,
 
   session: {
@@ -157,6 +157,12 @@ export const config = {
 } as const;
 
 export type AppConfig = typeof config;
+
+// Production must never start with passwordless demo access enabled or
+// authentication disabled, even if an environment variable is misconfigured.
+if (config.isProduction && (!config.authRequired || config.demoMode)) {
+  throw new Error('Production requires AUTH_REQUIRED=true and DEMO_MODE=false. Disable demo access and require authenticated sessions before starting ComplyLens.');
+}
 
 // Production deployments must provide a persistent signing key. Vercel can
 // execute different requests on different instances, so an ephemeral key is
