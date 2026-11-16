@@ -43,7 +43,7 @@ function decodePdfLiteral(value: string): string {
 /** Decode hexadecimal PDF text strings used by several PDF generators. */
 function decodePdfHex(value: string): string {
   const hex = value.replace(/\s+/g, '');
-  const normalized = hex.length % 2 === 0 ? hex : \`\${hex}0\`;
+  const normalized = hex.length % 2 === 0 ? hex : hex + '0';
   const bytes = Buffer.from(normalized, 'hex');
   if (bytes.length >= 2 && bytes[0] === 0xfe && bytes[1] === 0xff) {
     let decoded = '';
