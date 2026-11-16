@@ -21,7 +21,8 @@ export function SignupPage() {
     organizationName: '',
     jobTitle: '',
   });
-  const [seedDemo, setSeedDemo] = useState(true);
+  // Sample documents are opt-in; real customer workspaces start empty.
+  const [seedDemo, setSeedDemo] = useState(false);
   const [accepted, setAccepted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
