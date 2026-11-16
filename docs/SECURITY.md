@@ -8,7 +8,8 @@ This document describes the implemented security model and the remaining limitat
 
 - Passwords are stored using scrypt with a per-user random salt and constant-time verification.
 - Session tokens are HS256-signed and expire server-side.
-- Production requires a stable `SESSION_SECRET`; the application refuses to use an ephemeral signing secret when authenticated production mode is enabled.
+- Production requires `AUTH_REQUIRED=true`, `DEMO_MODE=false` and a stable `SESSION_SECRET`; unsafe combinations fail during startup.
+- Seeded demo users cannot sign in through the password endpoint when demo mode is disabled, and previously issued demo sessions are rejected by protected routes.
 - Production configuration must set `AUTH_REQUIRED=true` and `DEMO_MODE=false`.
 - Bearer tokens are sent in the Authorization header; query-string tokens are rejected.
 - Failed login and password-reset responses avoid revealing whether an account exists.
