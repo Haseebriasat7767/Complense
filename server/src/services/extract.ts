@@ -66,13 +66,18 @@ function decodeAscii85(input: Buffer): Buffer {
     const originalLength = values.length;
     const padded = [...values];
     while (padded.length < 5) padded.push(84); // 'u' padding
-    let value = 0;
-    for (const digit of padded) value = value * 85 + digit;
+    // Five base-85 digits can exceed Number's 32-bit bitwise range.
+    // Use BigInt so every ASCII85 group is decoded without truncation.
+    let value = 0n;
+    for (const digit of padded) value = value * 85n + BigInt(digit);
+    if (value > 0xffff_ffffn) {
+      throw new Error('Invalid ASCII85 group exceeds 32 bits.');
+    }
     const bytes = [
-      (value >>> 24) & 255,
-      (value >>> 16) & 255,
-      (value >>> 8) & 255,
-      value & 255,
+      Number((value >> 24n) & 255n),
+      Number((value >> 16n) & 255n),
+      Number((value >> 8n) & 255n),
+      Number(value & 255n),
     ];
     output.push(...bytes.slice(0, final ? originalLength - 1 : 4));
   };
