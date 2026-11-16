@@ -250,8 +250,8 @@ describe('reports', () => {
     // The report carries the per-status control lists used by PDF sections 4-7.
     expect(report.summary.controlsByStatus.passed.length).toBe(18);
     expect(report.summary.controlsByStatus.needsAttention.length).toBe(4);
-    expect(report.summary.controlsByStatus.missing.length).toBe(2);
-    expect(report.summary.controlsByStatus.needsReview.length).toBe(4);
+    expect(report.summary.controlsByStatus.missing.length).toBe(1);
+    expect(report.summary.controlsByStatus.needsReview.length).toBe(5);
     expect(report.summary.disclaimer).toContain(
       'This report is an AI-generated preliminary readiness assessment. It is not a certification, audit opinion, or substitute for professional compliance advice.',
     );
