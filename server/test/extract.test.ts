@@ -53,6 +53,58 @@ describe('PDF evidence extraction', () => {
     expect(result.text).toContain('multifactor authentication');
   });
 
+  it('extracts text from every ASCII85+Flate compressed page stream', async () => {
+    const { deflateSync } = await import('node:zlib');
+    const encodeAscii85 = (input: Buffer): string => {
+      let encoded = '';
+      for (let offset = 0; offset < input.length; offset += 4) {
+        const chunk = input.subarray(offset, offset + 4);
+        const padded = Buffer.alloc(4);
+        chunk.copy(padded);
+        let value = BigInt(padded.readUInt32BE(0));
+        const digits = new Array<string>(5);
+        for (let index = 4; index >= 0; index -= 1) {
+          digits[index] = String.fromCharCode(Number(value % 85n) + 33);
+          value /= 85n;
+        }
+        encoded += digits.join('').slice(0, chunk.length + 1);
+      }
+      return encoded;
+    };
+    const pageOne = 'BT /F1 12 Tf (Page one contains the approved access control policy and quarterly access reviews.) Tj ET';
+    const pageTwo = 'BT /F1 12 Tf (Page two requires multifactor authentication and annual incident response testing.) Tj ET';
+    const streamOne = encodeAscii85(deflateSync(Buffer.from(pageOne, 'latin1')));
+    const streamTwo = encodeAscii85(deflateSync(Buffer.from(pageTwo, 'latin1')));
+    const pdf = Buffer.from(
+      [
+        '%PDF-1.4',
+        '1 0 obj',
+        '<< /Length 150 /Filter [ /ASCII85Decode /FlateDecode ] >>',
+        'stream',
+        streamOne,
+        'endstream',
+        'endobj',
+        '2 0 obj',
+        '<< /Length 150 /Filter [ /ASCII85Decode /FlateDecode ] >>',
+        'stream',
+        streamTwo,
+        'endstream',
+        'endobj',
+        '%%EOF',
+      ].join('\n'),
+      'latin1',
+    );
+    const result = extractText({
+      buffer: pdf,
+      extension: 'pdf',
+      fileName: 'multi-page-security-policy.pdf',
+    });
+
+    expect(result.method).toBe('pdf-text-layer');
+    expect(result.text).toContain('Page one contains the approved access control policy');
+    expect(result.text).toContain('Page two requires multifactor authentication');
+  });
+
   it('does not pretend an image-only or empty PDF has extractable text', async () => {
     const result = extractText({
       buffer: await createPdf(''),
