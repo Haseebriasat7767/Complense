@@ -1,13 +1,12 @@
 /**
  * Evidence text extraction.
  *
- * PDF text is read from content streams (including Flate-compressed streams)
- * rather than scanning the whole binary file, which can accidentally retain
- * C2PA/XMP metadata instead of the visible document. Files are parsed in
- * memory only. This lightweight parser supports common text-based PDFs; scanned
- * PDFs and unusual font encodings still require OCR/a dedicated PDF parser.
+ * PDFs are parsed with Mozilla PDF.js so text is read from the document's
+ * page model rather than by scanning binary streams. Scanned/image-only PDFs
+ * still require OCR and are reported as unavailable instead of being marked
+ * successfully analysed.
  */
-import { inflateSync } from 'node:zlib';
+import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
 
 export type ExtractionResult = {
   text: string;
@@ -17,6 +16,7 @@ export type ExtractionResult = {
 };
 
 const MAX_TEXT_CHARS = 200_000;
+const MAX_PDF_PAGES = 1_000;
 
 function clean(raw: string): string {
   return raw
@@ -31,147 +31,45 @@ function clean(raw: string): string {
     .slice(0, MAX_TEXT_CHARS);
 }
 
-function decodePdfLiteral(value: string): string {
-  return value.replace(/\\([nrtbf()\\])/g, (_match, escaped: string) => {
-    const map: Record<string, string> = { n: '\n', r: '\r', t: '\t', b: '\b', f: '\f', '(': '(', ')': ')', '\\': '\\' };
-    return map[escaped] ?? escaped;
-  }).replace(/\\([0-7]{1,3})/g, (_match, octal: string) =>
-    String.fromCharCode(parseInt(octal, 8)),
-  );
-}
+/** Extract page text with PDF.js, respecting PDF object graphs and font maps. */
+async function extractPdfText(buffer: Buffer): Promise<{ text: string; pages: number }> {
+  const task = getDocument({
+    data: new Uint8Array(buffer),
+    useSystemFonts: true,
+    disableFontFace: true,
+    isEvalSupported: false,
+    stopAtErrors: false,
+    verbosity: 0,
+  });
 
-/** Decode hexadecimal PDF text strings used by several PDF generators. */
-function decodePdfHex(value: string): string {
-  const hex = value.replace(/\s+/g, '');
-  const normalized = hex.length % 2 === 0 ? hex : hex + '0';
-  const bytes = Buffer.from(normalized, 'hex');
-  if (bytes.length >= 2 && bytes[0] === 0xfe && bytes[1] === 0xff) {
-    let decoded = '';
-    for (let index = 2; index + 1 < bytes.length; index += 2) {
-      decoded += String.fromCharCode((bytes[index]! << 8) | bytes[index + 1]!);
-    }
-    return decoded;
-  }
-  return bytes.toString('latin1');
-}
-
-function decodeAscii85(input: Buffer): Buffer {
-  let source = input.toString('latin1').replace(/\\s+/g, '');
-  source = source.replace(/^<~/, '').replace(/~>$/, '');
-  const output: number[] = [];
-  let group: number[] = [];
-
-  const flush = (values: number[], final = false) => {
-    if (final && values.length === 1) return;
-    const originalLength = values.length;
-    const padded = [...values];
-    while (padded.length < 5) padded.push(84); // 'u' padding
-    // Five base-85 digits can exceed Number's 32-bit bitwise range.
-    // Use BigInt so every ASCII85 group is decoded without truncation.
-    let value = 0n;
-    for (const digit of padded) value = value * 85n + BigInt(digit);
-    if (value > 0xffff_ffffn) {
-      throw new Error('Invalid ASCII85 group exceeds 32 bits.');
-    }
-    const bytes = [
-      Number((value >> 24n) & 255n),
-      Number((value >> 16n) & 255n),
-      Number((value >> 8n) & 255n),
-      Number(value & 255n),
-    ];
-    output.push(...bytes.slice(0, final ? originalLength - 1 : 4));
-  };
-
-  for (const char of source) {
-    if (char === 'z' && group.length === 0) {
-      output.push(0, 0, 0, 0);
-      continue;
-    }
-    const code = char.charCodeAt(0) - 33;
-    if (code < 0 || code > 84) continue;
-    group.push(code);
-    if (group.length === 5) {
-      flush(group);
-      group = [];
-    }
-  }
-  if (group.length > 1) flush(group, true);
-  return Buffer.from(output);
-}
-
-function extractPdfText(buffer: Buffer): string {
-  // PDF stream lengths are byte counts, not character counts. Latin1 keeps a
-  // one-to-one byte mapping so /Length can locate each stream precisely.
-  const source = buffer.toString('latin1');
-  const chunks: string[] = [];
-  let cursor = 0;
-
-  while (cursor < source.length) {
-    const streamToken = source.indexOf('stream', cursor);
-    if (streamToken < 0) break;
-    const before = source[streamToken - 1] ?? '';
-    const after = source[streamToken + 6] ?? '';
-    if ((before && !/[\s>]/.test(before)) || (after && !/[\r\n\s]/.test(after))) {
-      cursor = streamToken + 6;
-      continue;
+  const document = await task.promise;
+  try {
+    if (document.numPages > MAX_PDF_PAGES) {
+      throw new Error(`PDF exceeds the ${MAX_PDF_PAGES}-page extraction limit.`);
     }
 
-    const dictionaryStart = source.lastIndexOf('<<', streamToken);
-    const dictionaryEnd = source.lastIndexOf('>>', streamToken);
-    if (dictionaryStart < 0 || dictionaryEnd < dictionaryStart) {
-      cursor = streamToken + 6;
-      continue;
-    }
-    const dictionary = source.slice(dictionaryStart, streamToken);
-    const lineEnd = source.indexOf('\n', streamToken + 6);
-    if (lineEnd < 0) break;
-    const streamStart = lineEnd + 1;
-    const declaredLength = /\/Length\s+(\d+)\b/.exec(dictionary);
-    const endMarker = source.indexOf('endstream', streamStart);
-    const streamEnd = declaredLength
-      ? streamStart + Number(declaredLength[1])
-      : endMarker;
-    if (streamEnd < streamStart || streamEnd > source.length) {
-      cursor = endMarker >= 0 ? endMarker + 9 : streamStart;
-      continue;
-    }
-
-    const rawStream = source.slice(streamStart, streamEnd);
-    cursor = endMarker >= 0 ? endMarker + 9 : streamEnd;
-    let stream: Buffer<ArrayBufferLike> = Buffer.from(rawStream, 'latin1');
-
-    // Decode the filter pipeline in the order declared by the PDF: ASCII85
-    // wrapping is removed before the underlying Flate stream is inflated.
-    try {
-      const hasAscii85 = /\/ASCII85Decode\b|\/A85\b/.test(dictionary);
-      const hasFlate = /\/FlateDecode\b|\/Fl\b/.test(dictionary);
-      if (hasAscii85) stream = decodeAscii85(stream);
-      if (hasFlate) stream = inflateSync(stream);
-      if (/\/Filter\b/.test(dictionary) && !hasAscii85 && !hasFlate) continue;
-    } catch {
-      continue;
-    }
-
-    const body = stream.toString('latin1');
-    const operatorPattern =
-      /\(((?:\\.|[^\\)])*)\)\s*Tj|<([0-9A-Fa-f\s]+)>\s*Tj|\[([\s\S]*?)\]\s*TJ/g;
-    for (const op of body.matchAll(operatorPattern)) {
-      if (op[1] !== undefined) chunks.push(decodePdfLiteral(op[1]));
-      else if (op[2] !== undefined) chunks.push(decodePdfHex(op[2]));
-      else if (op[3] !== undefined) {
-        const textToken = /\(((?:\\.|[^\\)])*)\)|<([0-9A-Fa-f\s]+)>/g;
-        for (const part of op[3].matchAll(textToken)) {
-          if (part[1] !== undefined) chunks.push(decodePdfLiteral(part[1]));
-          else if (part[2] !== undefined) chunks.push(decodePdfHex(part[2]));
-        }
+    const pageTexts: string[] = [];
+    for (let pageNumber = 1; pageNumber <= document.numPages; pageNumber += 1) {
+      const page = await document.getPage(pageNumber);
+      const content = await page.getTextContent();
+      const parts: string[] = [];
+      for (const item of content.items) {
+        if (!('str' in item)) continue;
+        if (item.str) parts.push(item.str);
+        if (item.hasEOL) parts.push('\n');
+        else parts.push(' ');
       }
-      chunks.push('\n');
+      pageTexts.push(parts.join(''));
+      page.cleanup();
     }
+
+    return { text: pageTexts.join('\n\n'), pages: document.numPages };
+  } finally {
+    await document.destroy();
   }
-  return chunks.join('');
 }
 
-/** Fallback for DOCX containers; PDF uses the stream-aware parser above. */
+/** Fallback for DOCX containers. PDF extraction is handled by PDF.js above. */
 function scanBinaryForText(buffer: Buffer): { text: string; runs: number } {
   const ascii = buffer.toString('latin1');
   const matches = ascii.match(/[ -~\n\r\t]{24,}/g) ?? [];
@@ -185,11 +83,11 @@ function scanBinaryForText(buffer: Buffer): { text: string; runs: number } {
   return { text: meaningful.join('\n'), runs: meaningful.length };
 }
 
-export function extractText(input: {
+export async function extractText(input: {
   buffer: Buffer;
   extension: string;
   fileName: string;
-}): ExtractionResult {
+}): Promise<ExtractionResult> {
   const extension = input.extension.toLowerCase();
 
   if (['txt', 'csv', 'md', 'json', 'log'].includes(extension)) {
@@ -206,25 +104,33 @@ export function extractText(input: {
   }
 
   if (extension === 'pdf') {
-    const cleaned = clean(extractPdfText(input.buffer));
-    // Avoid accepting metadata-only output as evidence text.
-    // Accept any substantial readable text. Compliance evidence can be an
-    // incident report, ticket export, audit log, contract, or complaint record;
-    // requiring policy-specific words incorrectly rejects valid evidence.
-    if (cleaned.length >= 80) {
+    try {
+      const extracted = await extractPdfText(input.buffer);
+      const cleaned = clean(extracted.text);
+      if (cleaned.length >= 80) {
+        return {
+          text: cleaned,
+          method: 'pdf-text-layer',
+          confidence: 0.9,
+          note: `${cleaned.length.toLocaleString('en-US')} characters extracted from ${extracted.pages} PDF page(s) using PDF.js. Verify against the source document before relying on it.`,
+        };
+      }
       return {
-        text: cleaned,
-        method: 'pdf-text-layer',
-        confidence: 0.8,
-        note: 'Text extracted from PDF content streams. Verify the extracted text against the original document before relying on it.',
+        text: '',
+        method: 'unavailable',
+        confidence: 0,
+        note: 'PDF.js found no reliable text layer. The file may be scanned or image-only; OCR is required before it can be analysed.',
+      };
+    } catch (error) {
+      return {
+        text: '',
+        method: 'unavailable',
+        confidence: 0,
+        note: error instanceof Error
+          ? `PDF parsing failed: ${error.message.slice(0, 240)}`
+          : 'PDF parsing failed. Please try a valid text-based PDF or an OCR-processed copy.',
       };
     }
-    return {
-      text: '',
-      method: 'unavailable',
-      confidence: 0,
-      note: 'No reliable readable text was found in the PDF content streams. The file may be scanned or use an unsupported encoding; upload a text-based PDF or OCR-processed copy.',
-    };
   }
 
   if (extension === 'docx') {
