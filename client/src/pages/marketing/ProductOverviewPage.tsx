@@ -2,7 +2,7 @@ import { AlertTriangle, ArrowRight, BadgeCheck, Calculator, TrendingUp } from 'l
 import { useMemo, useState } from 'react';
 import { Badge } from '@/components/ui/Badge';
 import { ButtonLink } from '@/components/ui/Button';
-import { DemoButton, Eyebrow, Section } from '@/components/marketing/MarketingLayout';
+import { TrialButton, Eyebrow, Section } from '@/components/marketing/MarketingLayout';
 
 /**
  * Buyer-facing product overview ("Product Asset Overview").
