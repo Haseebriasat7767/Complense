@@ -37,7 +37,7 @@ describe('PDF evidence extraction', () => {
       'The security team reviewed privileged accounts and removed unnecessary permissions.',
       'Approvals were recorded by the system owner and retained for audit review.',
     ].join(' ');
-    const result = extractText({
+    const result = await extractText({
       buffer: await createPdf(source),
       extension: 'pdf',
       fileName: 'quarterly-access-review.pdf',
@@ -49,7 +49,7 @@ describe('PDF evidence extraction', () => {
     expect(result.text).toContain('privileged accounts');
   });
 
-  it('extracts text when a PDF stream has no newline before endstream', () => {
+  it('extracts text when a PDF stream has no newline before endstream', async () => {
     const text = 'Northstar security policy requires quarterly access reviews and approved multifactor authentication for privileged production accounts.';
     const stream = `BT /F1 12 Tf (${text}) Tj ET`;
     // Minimal PDF content stream matching generators that put endstream
