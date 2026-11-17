@@ -50,8 +50,9 @@ export function requireAuth(): RequestHandler {
           Date.parse(organization.trialEndsAt) <= Date.now() &&
           !['active', 'trialing'].includes(organization.stripeSubscriptionStatus ?? ''),
         );
-        if (trialExpired) {
-          next(ApiError.forbidden('Your 14-day trial has ended. Contact the ComplyLens team to arrange continued access.'));
+        const readOnlyRequest = ['GET', 'HEAD', 'OPTIONS'].includes(req.method) || req.path.endsWith('/auth/logout');
+        if (trialExpired && !readOnlyRequest) {
+          next(ApiError.forbidden('Your 14-day trial has ended. Your workspace is read-only; contact the ComplyLens team to arrange continued access.'));
           return;
         }
         next();
