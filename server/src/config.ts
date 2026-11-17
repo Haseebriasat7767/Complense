@@ -87,6 +87,15 @@ export const config = {
   demoAccessEnabled: false,
   authRequired,
 
+  // Retained only for legacy seed-module type compatibility; no runtime seeding uses these values.
+  demo: {
+    organizationId: 'org_acmecloud',
+    organizationName: 'AcmeCloud',
+    workspaceId: 'ws_acmecloud_demo',
+    workspaceName: 'AcmeCloud Demo Workspace',
+    userEmail: 'demo@complylens.ai',
+  },
+
   session: {
     secret: configuredSessionSecret || crypto.randomBytes(32).toString('hex'),
     secretIsEphemeral: !configuredSessionSecret,
