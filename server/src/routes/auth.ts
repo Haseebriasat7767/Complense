@@ -6,6 +6,7 @@
  */
 import crypto from 'node:crypto';
 import { Router } from 'express';
+import { config } from '../config.js';
 import { hashPassword, verifyPassword } from '../auth/passwords.js';
 import { createSessionToken } from '../auth/tokens.js';
 import { requireAuth, sessionOf } from '../auth/middleware.js';
