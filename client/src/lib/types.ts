@@ -42,6 +42,8 @@ export type Organization = {
   industry: string;
   employeeCount: number;
   createdAt: string;
+  trialStartedAt?: string | null;
+  trialEndsAt?: string | null;
   settings: OrganizationSettings;
 };
 
