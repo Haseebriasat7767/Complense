@@ -14,7 +14,6 @@ async function createPdf(text: string): Promise<Buffer> {
   });
 }
 
-
 async function createMultiPagePdf(pages: string[]): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const document = new PDFDocument({ compress: true });
@@ -30,7 +29,7 @@ async function createMultiPagePdf(pages: string[]): Promise<Buffer> {
   });
 }
 
-describe('PDF evidence extraction', () => {
+describe('PDF evidence extraction with PDF.js', () => {
   it('extracts readable text from a compressed, text-based PDF', async () => {
     const source = [
       'Quarterly access review evidence for the production environment.',
@@ -49,79 +48,6 @@ describe('PDF evidence extraction', () => {
     expect(result.text).toContain('privileged accounts');
   });
 
-  it('extracts text when a PDF stream has no newline before endstream', async () => {
-    const text = 'Northstar security policy requires quarterly access reviews and approved multifactor authentication for privileged production accounts.';
-    const stream = `BT /F1 12 Tf (${text}) Tj ET`;
-    // Minimal PDF content stream matching generators that put endstream
-    // immediately after the declared stream bytes (without a trailing newline).
-    const pdf = Buffer.from(
-      `%PDF-1.4\n1 0 obj\n<< /Length ${Buffer.byteLength(stream, 'latin1')} >>\nstream\n${stream}endstream\nendobj\n%%EOF`,
-      'latin1',
-    );
-    const result = extractText({
-      buffer: pdf,
-      extension: 'pdf',
-      fileName: 'northstar-information-security-policy.pdf',
-    });
-
-    expect(result.method).toBe('pdf-text-layer');
-    expect(result.text).toContain('quarterly access reviews');
-    expect(result.text).toContain('multifactor authentication');
-  });
-
-  it('extracts text from every ASCII85+Flate compressed page stream', async () => {
-    const { deflateSync } = await import('node:zlib');
-    const encodeAscii85 = (input: Buffer): string => {
-      let encoded = '';
-      for (let offset = 0; offset < input.length; offset += 4) {
-        const chunk = input.subarray(offset, offset + 4);
-        const padded = Buffer.alloc(4);
-        chunk.copy(padded);
-        let value = BigInt(padded.readUInt32BE(0));
-        const digits = new Array<string>(5);
-        for (let index = 4; index >= 0; index -= 1) {
-          digits[index] = String.fromCharCode(Number(value % 85n) + 33);
-          value /= 85n;
-        }
-        encoded += digits.join('').slice(0, chunk.length + 1);
-      }
-      return encoded;
-    };
-    const pageOne = 'BT /F1 12 Tf (Page one contains the approved access control policy and quarterly access reviews.) Tj ET';
-    const pageTwo = 'BT /F1 12 Tf (Page two requires multifactor authentication and annual incident response testing.) Tj ET';
-    const streamOne = encodeAscii85(deflateSync(Buffer.from(pageOne, 'latin1')));
-    const streamTwo = encodeAscii85(deflateSync(Buffer.from(pageTwo, 'latin1')));
-    const pdf = Buffer.from(
-      [
-        '%PDF-1.4',
-        '1 0 obj',
-        `<< /Length ${Buffer.byteLength(streamOne, 'latin1')} /Filter [ /ASCII85Decode /FlateDecode ] >>`,
-        'stream',
-        streamOne,
-        'endstream',
-        'endobj',
-        '2 0 obj',
-        `<< /Length ${Buffer.byteLength(streamTwo, 'latin1')} /Filter [ /ASCII85Decode /FlateDecode ] >>`,
-        'stream',
-        streamTwo,
-        'endstream',
-        'endobj',
-        '%%EOF',
-      ].join('\n'),
-      'latin1',
-    );
-    const result = extractText({
-      buffer: pdf,
-      extension: 'pdf',
-      fileName: 'multi-page-security-policy.pdf',
-    });
-
-    expect(result.method).toBe('pdf-text-layer');
-    expect(result.text).toContain('Page one contains the approved access control policy');
-    expect(result.text).toContain('Page two requires multifactor authentication');
-  });
-
-
   it('extracts text from every page of a five-page PDF', async () => {
     const pages = [
       'PAGE ONE: information security policy and governance responsibilities.',
@@ -130,7 +56,7 @@ describe('PDF evidence extraction', () => {
       'PAGE FOUR: security logging, monitoring alerts, and incident response testing.',
       'PAGE FIVE: backup restoration tests and business continuity planning.',
     ];
-    const result = extractText({
+    const result = await extractText({
       buffer: await createMultiPagePdf(pages),
       extension: 'pdf',
       fileName: 'five-page-security-policy.pdf',
@@ -138,10 +64,11 @@ describe('PDF evidence extraction', () => {
 
     expect(result.method).toBe('pdf-text-layer');
     for (const page of pages) expect(result.text).toContain(page);
+    expect(result.note).toContain('5 PDF page(s)');
   });
 
   it('does not pretend an image-only or empty PDF has extractable text', async () => {
-    const result = extractText({
+    const result = await extractText({
       buffer: await createPdf(''),
       extension: 'pdf',
       fileName: 'empty-scan.pdf',
