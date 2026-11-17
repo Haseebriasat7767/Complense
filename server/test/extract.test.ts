@@ -14,6 +14,22 @@ async function createPdf(text: string): Promise<Buffer> {
   });
 }
 
+
+async function createMultiPagePdf(pages: string[]): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    const document = new PDFDocument({ compress: true });
+    const chunks: Buffer[] = [];
+    document.on('data', (chunk: Buffer) => chunks.push(chunk));
+    document.on('end', () => resolve(Buffer.concat(chunks)));
+    document.on('error', reject);
+    pages.forEach((page, index) => {
+      if (index > 0) document.addPage();
+      document.fontSize(11).text(page);
+    });
+    document.end();
+  });
+}
+
 describe('PDF evidence extraction', () => {
   it('extracts readable text from a compressed, text-based PDF', async () => {
     const source = [
@@ -103,6 +119,25 @@ describe('PDF evidence extraction', () => {
     expect(result.method).toBe('pdf-text-layer');
     expect(result.text).toContain('Page one contains the approved access control policy');
     expect(result.text).toContain('Page two requires multifactor authentication');
+  });
+
+
+  it('extracts text from every page of a five-page PDF', async () => {
+    const pages = [
+      'PAGE ONE: information security policy and governance responsibilities.',
+      'PAGE TWO: quarterly access reviews and multifactor authentication requirements.',
+      'PAGE THREE: encryption, data retention, and secure disposal requirements.',
+      'PAGE FOUR: security logging, monitoring alerts, and incident response testing.',
+      'PAGE FIVE: backup restoration tests and business continuity planning.',
+    ];
+    const result = extractText({
+      buffer: await createMultiPagePdf(pages),
+      extension: 'pdf',
+      fileName: 'five-page-security-policy.pdf',
+    });
+
+    expect(result.method).toBe('pdf-text-layer');
+    for (const page of pages) expect(result.text).toContain(page);
   });
 
   it('does not pretend an image-only or empty PDF has extractable text', async () => {
