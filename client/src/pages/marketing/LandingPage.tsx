@@ -19,7 +19,7 @@ import {
   PricingSection,
   SecuritySection,
 } from '@/components/marketing/Sections';
-import { DemoButton, Eyebrow, Section } from '@/components/marketing/MarketingLayout';
+import { TrialButton, Eyebrow, Section } from '@/components/marketing/MarketingLayout';
 
 const CAPABILITIES = [
   { label: 'Evidence Analysis', icon: Upload },
@@ -51,7 +51,7 @@ export function LandingPage() {
               into an actionable readiness plan.
             </p>
             <div className="mt-7 flex flex-col items-center justify-center gap-3 sm:flex-row">
-              <DemoButton size="lg" label="Try the Demo" className="w-full sm:w-auto" />
+              <TrialButton size="lg" label="Start 14-day free trial" className="w-full sm:w-auto" />
               <ButtonLink
                 to="/how-it-works"
                 size="lg"
@@ -63,7 +63,7 @@ export function LandingPage() {
               </ButtonLink>
             </div>
             <p className="mt-4 text-[12.5px] text-ink-500">
-              Opens a seeded sample workspace instantly. No sign-up, no API keys, no credit card.
+              Start with your own private workspace. No credit card required for 14 days.
             </p>
           </div>
 
@@ -92,7 +92,7 @@ export function LandingPage() {
           ))}
         </ul>
         <p className="mt-5 text-center text-[12px] text-ink-400">
-          This build has no customers and no testimonials — the workspace you can open is fictional demo data.
+          Create your own workspace and assess your organisation's evidence during a 14-day free trial.
         </p>
       </Section>
 
@@ -217,7 +217,7 @@ export function LandingPage() {
             full journey through to a readiness report.
           </p>
           <div className="mt-7 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <DemoButton size="lg" label="Open the demo workspace" />
+            <TrialButton size="lg" label="Start 14-day free trial" />
             <Link
               to="/documentation"
               className="text-[13.5px] font-medium text-ink-300 underline-offset-4 transition-colors hover:text-white hover:underline"
