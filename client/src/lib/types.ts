@@ -72,7 +72,7 @@ export type WorkspaceContext = {
   workspace: Workspace;
   workspaces: Workspace[];
   demoMode: boolean;
-  analysisMode: { key: 'rules-based | 'external-ai'; label: string };
+  analysisMode: { key: 'rules-based' | 'external-ai'; label: string };
 };
 
 export type MappedControlRef = {
@@ -228,7 +228,7 @@ export type DashboardData = {
   organization: Organization;
   greeting: { period: string; label: string; name: string };
   generatedAt: string;
-  analysisMode: { key: 'rules-based | 'external-ai'; label: string };
+  analysisMode: { key: 'rules-based' | 'external-ai'; label: string };
   framework: { key: FrameworkKey; name: string; shortName: string };
   metric: {
     readinessIndex: number;
@@ -446,7 +446,7 @@ export type MetaResponse = {
     categories: string[];
   }>;
   analysis: {
-    mode: 'rules-based | 'external-ai';
+    mode: 'rules-based' | 'external-ai';
     label: string;
     scoring: { weights: Record<string, number>; methodology: string };
   };
