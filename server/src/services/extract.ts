@@ -32,7 +32,7 @@ function clean(raw: string): string {
 }
 
 /** Extract page text with PDF.js, respecting PDF object graphs and font maps. */
-async function extractPdfText(buffer: Buffer): Promise<{ text: string; pages: number }> {
+async function extractPdfText(buffer: Buffer): Promise<{ text: string; pages: number; pagesWithText: number }> {
   const task = getDocument({
     data: new Uint8Array(buffer),
     useSystemFonts: true,
@@ -49,6 +49,7 @@ async function extractPdfText(buffer: Buffer): Promise<{ text: string; pages: nu
     }
 
     const pageTexts: string[] = [];
+    let pagesWithText = 0;
     for (let pageNumber = 1; pageNumber <= document.numPages; pageNumber += 1) {
       const page = await document.getPage(pageNumber);
       const content = await page.getTextContent();
@@ -59,11 +60,13 @@ async function extractPdfText(buffer: Buffer): Promise<{ text: string; pages: nu
         if (item.hasEOL) parts.push('\n');
         else parts.push(' ');
       }
-      pageTexts.push(parts.join(''));
+      const pageText = parts.join('');
+      pageTexts.push(pageText);
+      if (pageText.trim().length >= 20) pagesWithText += 1;
       page.cleanup();
     }
 
-    return { text: pageTexts.join('\n\n'), pages: document.numPages };
+    return { text: pageTexts.join('\n\n'), pages: document.numPages, pagesWithText };
   } finally {
     await document.destroy();
   }
@@ -111,8 +114,10 @@ export async function extractText(input: {
         return {
           text: cleaned,
           method: 'pdf-text-layer',
-          confidence: 0.9,
-          note: `${cleaned.length.toLocaleString('en-US')} characters extracted from ${extracted.pages} PDF page(s) using PDF.js. Verify against the source document before relying on it.`,
+          confidence: extracted.pagesWithText === extracted.pages ? 0.9 : 0.65,
+          note: extracted.pagesWithText === extracted.pages
+            ? `${cleaned.length.toLocaleString('en-US')} characters extracted from all ${extracted.pages} PDF page(s) using PDF.js. Verify against the source document before relying on it.`
+            : `${cleaned.length.toLocaleString('en-US')} characters extracted, but readable text was found on only ${extracted.pagesWithText} of ${extracted.pages} PDF page(s). ${extracted.pages - extracted.pagesWithText} page(s) appear scanned or image-only and require OCR; this upload is flagged for manual review.` ,
         };
       }
       return {
