@@ -184,7 +184,7 @@ export function MarketingFooter() {
       links: [
         { label: 'Documentation', to: '/documentation' },
         { label: 'Product overview', to: '/overview' },
-        { label: 'Demo workspace', to: '/login' },
+        { label: 'Start free trial', to: '/signup' },
       ],
     },
     {
