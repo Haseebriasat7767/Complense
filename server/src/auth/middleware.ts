@@ -45,6 +45,15 @@ export function requireAuth(): RequestHandler {
           next(ApiError.forbidden('This organisation is no longer available.'));
           return;
         }
+        const trialExpired = Boolean(
+          organization.trialEndsAt &&
+          Date.parse(organization.trialEndsAt) <= Date.now() &&
+          !['active', 'trialing'].includes(organization.stripeSubscriptionStatus ?? ''),
+        );
+        if (trialExpired) {
+          next(ApiError.forbidden('Your 14-day trial has ended. Contact the ComplyLens team to arrange continued access.'));
+          return;
+        }
         next();
       })
       .catch(next);
