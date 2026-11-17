@@ -1,7 +1,7 @@
 import { ArrowRight } from 'lucide-react';
 import { ButtonLink } from '@/components/ui/Button';
 import { DashboardPreview } from '@/components/marketing/DashboardPreview';
-import { DemoButton, Eyebrow, Section } from '@/components/marketing/MarketingLayout';
+import { TrialButton, Eyebrow, Section } from '@/components/marketing/MarketingLayout';
 import { HowItWorksSection } from '@/components/marketing/Sections';
 
 const JOURNEY = [
@@ -29,7 +29,7 @@ export function HowItWorksPage() {
             team already has and improve from there.
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
-            <DemoButton label="Try the Demo" />
+            <TrialButton label="Start 14-day free trial" />
             <ButtonLink to="/pricing" variant="secondary" iconRight={<ArrowRight className="size-4" />}>
               See pricing
             </ButtonLink>
@@ -72,7 +72,7 @@ export function HowItWorksPage() {
             The demo workspace already contains the state described above — 92% readiness on SOC 2 with two critical gaps.
           </p>
           <div className="mt-6 flex justify-center">
-            <DemoButton size="lg" label="Open the demo workspace" />
+            <TrialButton size="lg" label="Start 14-day free trial" />
           </div>
         </div>
         <div className="mt-12">
