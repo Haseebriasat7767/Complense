@@ -1,6 +1,6 @@
 import { ArrowRight, BadgeCheck } from 'lucide-react';
 import { ButtonLink } from '@/components/ui/Button';
-import { DemoButton, Eyebrow, Section } from '@/components/marketing/MarketingLayout';
+import { TrialButton, Eyebrow, Section } from '@/components/marketing/MarketingLayout';
 import { FeaturesGrid } from '@/components/marketing/Sections';
 
 const DEEP_DIVES = [
@@ -56,7 +56,7 @@ export function FeaturesPage() {
             the distance between the two.
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
-            <DemoButton label="Try the Demo" />
+            <TrialButton label="Start 14-day free trial" />
             <ButtonLink to="/how-it-works" variant="secondary" iconRight={<ArrowRight className="size-4" />}>
               See How It Works
             </ButtonLink>
