@@ -42,6 +42,8 @@ export function organizationDto(organization: Organization) {
     industry: organization.industry,
     employeeCount: organization.employeeCount,
     createdAt: organization.createdAt,
+    trialStartedAt: organization.trialStartedAt ?? null,
+    trialEndsAt: organization.trialEndsAt ?? null,
     subscriptionStatus: organization.stripeSubscriptionStatus ?? null,
     settings: organization.settings,
   };
