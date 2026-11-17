@@ -67,6 +67,25 @@ describe('PDF evidence extraction with PDF.js', () => {
     expect(result.note).toContain('5 PDF page(s)');
   });
 
+  it('flags PDFs with pages that have no text layer for manual review', async () => {
+    const result = await extractText({
+      buffer: await createMultiPagePdf([
+        'PAGE ONE: information security policy and governance responsibilities.',
+        '',
+        'PAGE THREE: security logging and incident response requirements.',
+      ]),
+      extension: 'pdf',
+      fileName: 'partially-scanned-policy.pdf',
+    });
+
+    expect(result.method).toBe('pdf-text-layer');
+    expect(result.text).toContain('PAGE ONE');
+    expect(result.text).toContain('PAGE THREE');
+    expect(result.confidence).toBeLessThan(0.8);
+    expect(result.note).toContain('only 2 of 3 PDF page(s)');
+    expect(result.note).toContain('require OCR');
+  });
+
   it('does not pretend an image-only or empty PDF has extractable text', async () => {
     const result = await extractText({
       buffer: await createPdf(''),
