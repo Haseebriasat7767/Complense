@@ -2,7 +2,7 @@
  * HTTP integration tests.
  *
  * Boots the real Express app (in-memory store, no external services) on an
- * ephemeral port and exercises the demo journey the product promises: sign in,
+ * ephemeral port and exercises an authenticated customer workspace: sign in,
  * read the dashboard, inspect a partially covered control, list findings,
  * generate a readiness report and download the PDF.
  */
@@ -11,13 +11,16 @@ import type { AddressInfo } from 'node:net';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { attachErrorHandling, createApp } from '../src/app.js';
 import { config } from '../src/config.js';
-import { DEMO_WORKSPACE_LABEL } from '../src/domain/evidence-seed.js';
+import { createSessionToken } from '../src/auth/tokens.js';
+import { buildDemoSeed } from '../src/store/seed.js';
 import { CONTROL_LIBRARY } from '../src/domain/controls.js';
 import { closeStore, getStore, initStore } from '../src/store/index.js';
 
 let server: http.Server;
 let base: string;
 let token: string;
+const TEST_EMAIL = 'qa-test@example.com';
+const TEST_PASSWORD = 'DemoPass123!';
 
 async function get(path: string, authenticated = true): Promise<Response> {
   return fetch(`${base}${path}`, {
@@ -27,6 +30,21 @@ async function get(path: string, authenticated = true): Promise<Response> {
 
 beforeAll(async () => {
   await initStore();
+  const seed = await buildDemoSeed();
+  const now = new Date().toISOString();
+  const organization = {
+    ...seed.organization,
+    name: 'QA Test Organisation',
+    slug: 'qa-test-organisation',
+    trialStartedAt: now,
+    trialEndsAt: new Date(Date.parse(now) + 14 * 24 * 60 * 60 * 1000).toISOString(),
+  };
+  const workspace = { ...seed.workspace, name: 'QA Test Workspace', isDemo: false };
+  const user = { ...seed.owner, email: TEST_EMAIL, name: 'QA Test Owner', jobTitle: 'Security Owner', isDemoUser: false };
+  await getStore().createAccount({ organization, workspace, user });
+  for (const evidence of seed.evidence) {
+    await getStore().createEvidence({ ...evidence, source: 'upload' });
+  }
   const app = createApp();
   app.get('/__test/client-ip', (req, res) => res.json({ ip: req.ip }));
   attachErrorHandling(app);
@@ -38,7 +56,7 @@ beforeAll(async () => {
   const response = await fetch(`${base}/api/auth/login`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ email: 'demo@complylens.ai', password: 'DemoPass123!' }),
+    body: JSON.stringify({ email: TEST_EMAIL, password: TEST_PASSWORD }),
   });
   expect(response.status).toBe(200);
   const payload = (await response.json()) as { token: string };
@@ -59,22 +77,20 @@ describe('health and metadata', () => {
     expect(payload.store.kind).toBe('memory');
   });
 
-  it('seeds the requested AcmeCloud organization and workspace labels', async () => {
+  it('creates a private customer organisation and workspace', async () => {
     const payload = (await (await get('/api/context')).json()) as {
       organization: { name: string };
       workspace: { name: string; isDemo: boolean };
     };
-    expect(config.demo.organizationName).toBe('AcmeCloud');
-    expect(config.demo.workspaceName).toBe(DEMO_WORKSPACE_LABEL);
-    expect(payload.organization.name).toBe('AcmeCloud');
-    expect(payload.workspace.name).toBe('AcmeCloud Demo Workspace');
-    expect(payload.workspace.isDemo).toBe(true);
+    expect(payload.organization.name).toBe('QA Test Organisation');
+    expect(payload.workspace.name).toBe('QA Test Workspace');
+    expect(payload.workspace.isDemo).toBe(false);
   });
 
   it('publishes the analysis mode so the UI can disclose it', async () => {
     const payload = (await (await get('/api/meta', false)).json()) as { analysis: { mode: string; label: string } };
     expect(payload.analysis.mode).toBe('demo-analysis');
-    expect(payload.analysis.label).toContain('Demo Analysis Mode');
+    expect(payload.analysis.label).toContain('Deterministic analysis mode');
   });
 
   it('does not trust a client-supplied forwarded IP by default', async () => {
@@ -93,7 +109,7 @@ describe('authentication', () => {
     const response = await fetch(`${base}/api/auth/login`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ email: 'demo@complylens.ai', password: 'not-the-password' }),
+      body: JSON.stringify({ email: TEST_EMAIL, password: 'not-the-password' }),
     });
     expect(response.status).toBe(401);
     const payload = (await response.json()) as { error: { message: string } };
@@ -127,23 +143,23 @@ describe('authentication', () => {
     }
   });
 
-  it('rejects previously issued demo sessions when demo mode is disabled', async () => {
-    const previous = config.demoMode;
-    Object.defineProperty(config, 'demoMode', { value: false, configurable: true, writable: true });
-    try {
-      const response = await get('/api/context');
-      expect(response.status).toBe(401);
-    } finally {
-      Object.defineProperty(config, 'demoMode', { value: previous, configurable: true, writable: true });
-    }
+  it('rejects a legacy demo session token when demo access is retired', async () => {
+    const { token: legacyDemoToken } = createSessionToken({
+      sub: 'usr-demo-owner',
+      email: 'demo@complylens.ai',
+      org: 'org_acmecloud',
+      role: 'owner',
+      demo: true,
+    });
+    const response = await fetch(`${base}/api/context`, {
+      headers: { authorization: `Bearer ${legacyDemoToken}` },
+    });
+    expect(response.status).toBe(401);
   });
 
-  it('issues an instant demo session', async () => {
+  it('does not expose the retired passwordless demo entry point', async () => {
     const response = await fetch(`${base}/api/auth/demo`, { method: 'POST' });
-    expect(response.status).toBe(200);
-    const payload = (await response.json()) as { user: { isDemoUser: boolean }; workspace: { isDemo: boolean } };
-    expect(payload.user.isDemoUser).toBe(true);
-    expect(payload.workspace.isDemo).toBe(true);
+    expect(response.status).toBe(404);
   });
 
   it('answers a malformed session token with 401, never a server error', async () => {
@@ -176,7 +192,7 @@ describe('authentication', () => {
         body: JSON.stringify({ email }),
       }).then(async (response) => ({ status: response.status, body: await response.json() }));
 
-    const known = await request('demo@complylens.ai');
+    const known = await request(TEST_EMAIL);
     const unknown = await request('nobody-here@example.com');
 
     expect(known.status).toBe(200);
