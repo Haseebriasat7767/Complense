@@ -17,7 +17,7 @@ export const PRODUCT = {
   name: 'ComplyLens AI',
   tagline: 'Know what’s missing before the auditor does.',
   version: '0.1.0',
-  stage: 'MVP — demo ready',
+  stage: 'MVP — free trial',
 };
 
 metaRouter.get(
@@ -59,7 +59,7 @@ metaRouter.get('/meta', (_req, res) => {
       label:
         analysisMode() === 'external-ai'
           ? 'AI-assisted analysis enabled'
-          : 'Demo Analysis Mode — deterministic local analysis, no external API required',
+          : 'Deterministic analysis mode — rules-based assessment, no external API required',
       scoring: { weights: SCORE_WEIGHTS, methodology: SCORE_METHODOLOGY },
     },
     uploads: {
