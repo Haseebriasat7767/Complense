@@ -16,22 +16,22 @@ const FEATURES = [
   ['Gap analysis', 'Risk-rated findings with filtering by framework, risk, status, category, owner and priority'],
   ['Remediation guidance', 'Suggested fix, owner and timeline per finding, clearly labelled as generated guidance'],
   ['Readiness reporting', 'Server-rendered PDF with cover, executive summary, findings, remediation and evidence inventory'],
-  ['Auth and tenancy', 'Sign-up, log in, forgot password, demo entry, protected routes, organisation-scoped data'],
-  ['Settings', 'Profile, organisation, workspace, framework preferences, security and demo billing pages'],
+  ['Auth and tenancy', 'Sign-up, log in, protected routes, trial dates and organisation-scoped data'],
+  ['Settings', 'Profile, organisation, workspace, framework preferences, security and trial status'],
   ['Documentation', 'README, /docs set and in-app documentation covering architecture to deployment'],
 ];
 
 const TECH = [
   ['Frontend', 'React 19, TypeScript, Vite, Tailwind CSS v4, React Router, Recharts, Lucide'],
   ['Backend', 'Node.js 20+, Express 4, TypeScript (ESM), Multer, PDFKit'],
-  ['Data', 'In-memory demo store by default; MongoDB via Mongoose when MONGODB_URI is set'],
+  ['Data', 'Supabase PostgreSQL for hosted deployments; in-memory adapter for local development and tests'],
   ['Analysis', 'Deterministic signal-matching engine with an optional OpenAI-compatible narrative layer'],
   ['Security', 'scrypt hashing, HS256 session tokens, rate limiting, security headers, server-side validation'],
-  ['Deployment', 'Single Node process, health endpoint, Vercel-ready static client with a separate API service'],
+  ['Deployment', 'Vercel multi-service deployment: Vite frontend and containerised Express API'],
 ];
 
 const OPPORTUNITIES = [
-  'Sell as a source-code asset with a documented architecture and a working demo',
+  'Sell as a source-code asset with a documented architecture and a working hosted preview',
   'Subscription SaaS with the three plans already designed into the product',
   'White-label readiness assessment for audit firms and managed security providers',
   'Evidence automation add-ons (GitHub, AWS, Google Workspace, Microsoft 365, Jira)',
@@ -202,12 +202,9 @@ export function ProductOverviewPage() {
           <div>
             <h2 className="text-xl tracking-tight">Architecture in one paragraph</h2>
             <p className="mt-3 text-[13.5px] leading-relaxed text-ink-600">
-              A single Express process serves the JSON API and — in production — the built React client, so there is one
-              origin, one port and no CORS configuration. Domain logic lives in{' '}
+              Vercel deploys the React client and Express API as separate services on one public origin. Domain logic lives in{' '}
               <code className="rounded border border-ink-200 bg-ink-100 px-1.5 py-0.5 font-mono text-[12px]">server/src/domain</code>{' '}
-              and is pure: given a control library and evidence records it returns assessments, mappings, findings and a
-              readiness index. Routes only orchestrate; the store is behind an interface with in-memory and MongoDB
-              implementations; PDF reports are rendered server-side with PDFKit.
+              and deterministically maps a control library against evidence records to produce assessments, mappings, findings and a readiness index. The store abstraction uses Supabase PostgreSQL in the hosted environment and an in-memory adapter for local development and tests. PDF reports are rendered server-side with PDFKit.
             </p>
             <pre className="mt-4 overflow-x-auto scroll-area rounded-lg border border-ink-200 bg-ink-900 px-4 py-3.5 font-mono text-[11.5px] leading-relaxed text-ink-100">{`npm install
 npm run dev        # development, http://localhost:4000
@@ -215,9 +212,10 @@ npm run build      # client/dist + server/dist
 npm start          # production
 
 # optional
-MONGODB_URI=mongodb://...      # persistent store
+SUPABASE_URL=https://...       # hosted PostgreSQL project
+SUPABASE_SECRET_KEY=...        # server-only secret
 SESSION_SECRET=<long random>   # stable sessions
-AI_PROVIDER=openai-compatible  # optional narrative layer`}</pre>
+AI_PROVIDER=none               # deterministic rules-based analysis by default`}</pre>
           </div>
         </div>
       </Section>
