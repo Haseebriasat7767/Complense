@@ -23,6 +23,8 @@ export function SettingsPage() {
   const workspace = context?.workspace ?? null;
   const user = context?.user ?? null;
   const canEditOrganization = user?.role === 'owner' || user?.role === 'admin';
+  const trialEnd = organization?.trialEndsAt ? new Date(organization.trialEndsAt) : null;
+  const trialDaysRemaining = trialEnd ? Math.max(0, Math.ceil((trialEnd.getTime() - Date.now()) / 86_400_000)) : null;
 
   const [organizationForm, setOrganizationForm] = useState({
     name: '',
@@ -248,7 +250,7 @@ export function SettingsPage() {
               </div>
               <div className="rounded-lg border border-ink-200 px-3.5 py-3">
                 <dt className="text-ink-500">Type</dt>
-                <dd className="mt-0.5 text-ink-800">{workspace?.isDemo ? 'Demo workspace (sample data)' : 'Customer workspace'}</dd>
+                <dd className="mt-0.5 text-ink-800">{workspace?.isDemo ? 'Organisation workspace' : 'Customer workspace'}</dd>
               </div>
             </dl>
             <Button
@@ -274,8 +276,8 @@ export function SettingsPage() {
                 onChange={(event) => setSettingsForm({ ...settingsForm, defaultFramework: event.target.value as FrameworkKey })}
                 disabled={!canEditOrganization}
               >
-                <option value="soc2">SOC 2 — Trust Services Criteria (28 demo controls)</option>
-                <option value="iso27001">ISO/IEC 27001 — Annex A (22 demo controls)</option>
+                <option value="soc2">SOC 2 — Trust Services Criteria (28 controls)</option>
+                <option value="iso27001">ISO/IEC 27001 — Annex A (22 controls)</option>
               </Select>
             </Field>
             <ButtonLink to="/app/frameworks" variant="secondary">
@@ -447,44 +449,39 @@ export function SettingsPage() {
       </TabPanel>
 
       <TabPanel id="billing" active={active} className="space-y-5">
-        <InlineAlert tone="info" title="Billing setup is pending">
-          Your 14-day trial does not require a payment card. Online subscription checkout will be enabled before paid plans are launched.
+        <InlineAlert tone="info" title="No payment card required">
+          Your 14-day trial starts when your organisation account is created. Paid checkout is not enabled yet; payment details will be collected only when paid plans are launched.
         </InlineAlert>
         <Card>
           <CardHeader
-            title="Your plan"
-            description="Trial access for your organisation"
-            actions={<Badge tone="info" size="sm">14-day trial</Badge>}
+            title="Trial status"
+            description="Your organisation's current access period"
+            actions={<Badge tone={trialDaysRemaining === null ? 'outline' : trialDaysRemaining > 0 ? 'info' : 'danger'} size="sm">
+              {trialDaysRemaining === null ? 'Date unavailable' : trialDaysRemaining > 0 ? `${trialDaysRemaining} days remaining` : 'Trial ended'}
+            </Badge>}
           />
-          <CardContent className="grid gap-4 lg:grid-cols-3">
-            {[
-              { name: 'Starter', price: '$49', detail: '1 framework · 1 workspace · 25 documents' },
-              { name: 'Growth', price: '$149', detail: 'Both frameworks · 3 workspaces · unlimited documents', current: true },
-              { name: 'Business', price: '$499', detail: 'Unlimited workspaces · SSO · priority support' },
-            ].map((plan) => (
-              <div
-                key={plan.name}
-                className={`rounded-xl border px-4 py-4 ${plan.current ? 'border-brand-200 bg-brand-50/40' : 'border-ink-200'}`}
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <p className="text-[13.5px] font-semibold text-ink-900">{plan.name}</p>
-                  {plan.current ? <Badge tone="brand" size="sm">Current</Badge> : null}
-                </div>
-                <p className="mt-2 text-2xl font-semibold text-ink-900">{plan.price}</p>
-                <p className="text-[12px] text-ink-500">per month, demo pricing</p>
-                <p className="mt-2 text-[12.5px] text-ink-600">{plan.detail}</p>
-              </div>
-            ))}
-          </CardContent>
-          <CardContent className="border-t border-ink-200">
-            <div className="flex flex-wrap items-center gap-3">
-              <ButtonLink to="/pricing" variant="secondary">
-                Compare plans
-              </ButtonLink>
-              <p className="text-[12.5px] text-ink-500">
-                Your organisation: {organization?.name ?? '—'}. No payment card is required during the trial.
+          <CardContent className="grid gap-4 sm:grid-cols-2">
+            <div className="rounded-lg border border-ink-200 px-3.5 py-3">
+              <p className="text-[12px] text-ink-500">Trial started</p>
+              <p className="mt-1 text-[14px] font-medium text-ink-900">
+                {organization?.trialStartedAt ? new Date(organization.trialStartedAt).toLocaleDateString() : 'Not available'}
               </p>
             </div>
+            <div className="rounded-lg border border-ink-200 px-3.5 py-3">
+              <p className="text-[12px] text-ink-500">Trial ends</p>
+              <p className="mt-1 text-[14px] font-medium text-ink-900">
+                {trialEnd ? trialEnd.toLocaleDateString() : 'Not available'}
+              </p>
+            </div>
+          </CardContent>
+          <CardContent className="border-t border-ink-200">
+            <p className="text-[13px] leading-relaxed text-ink-600">
+              {trialDaysRemaining === null
+                ? 'Trial dates are not available for this account. Contact support for assistance.'
+                : trialDaysRemaining > 0
+                  ? 'You can use your private workspace during the trial. No payment method is collected.'
+                  : 'Your trial period has ended. Contact the ComplyLens team to discuss continued access.'}
+            </p>
           </CardContent>
         </Card>
       </TabPanel>
