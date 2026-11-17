@@ -76,7 +76,6 @@ const defaultUploadMb = isServerless ? 4 : 10;
 export const config = {
   nodeEnv,
   isProduction: nodeEnv === 'production',
-  isPreviewDeployment,
   isTest: nodeEnv === 'test',
   port: num('PORT', 4000),
   host: str('HOST', '0.0.0.0'),
@@ -85,11 +84,9 @@ export const config = {
   // trusting user-supplied X-Forwarded-For values on direct deployments.
   trustProxyHops: nonNegativeInt('TRUST_PROXY_HOPS', 0),
 
-  /** Demo mode is the default: seeded AcmeCloud workspace, instant demo login. */
-  demoMode: bool('DEMO_MODE', nodeEnv === 'production' ? false : !authRequired),
-  // Demo access is allowed only on Vercel Preview when explicitly enabled.
-  // It remains disabled on Production regardless of environment variables.
-  demoAccessEnabled: isPreviewDeployment && bool('DEMO_ACCESS_ENABLED', false),
+  // Demo workspaces and passwordless demo access are retired.
+  demoMode: false,
+  demoAccessEnabled: false,
   authRequired,
 
   session: {
@@ -152,21 +149,13 @@ export const config = {
       .filter(Boolean),
   },
 
-  /** Demo workspace + organisation labels (fictional). */
-  demo: {
-    organizationId: 'org_acmecloud',
-    organizationName: 'AcmeCloud',
-    workspaceId: 'ws_acmecloud_demo',
-    workspaceName: 'AcmeCloud Demo Workspace',
-    userEmail: 'demo@complylens.ai',
-  },
 } as const;
 
 export type AppConfig = typeof config;
 
 // Production must never start with passwordless demo access enabled or
 // authentication disabled, even if an environment variable is misconfigured.
-if (config.isProduction && !config.isPreviewDeployment && (!config.authRequired || config.demoMode || config.demoAccessEnabled)) {
+if (config.isProduction && (!config.authRequired || config.demoMode || config.demoAccessEnabled)) {
   throw new Error('Production requires AUTH_REQUIRED=true and DEMO_MODE=false. Disable demo access and require authenticated sessions before starting ComplyLens.');
 }
 
