@@ -140,12 +140,13 @@ function extractPdfText(buffer: Buffer): string {
     cursor = endMarker >= 0 ? endMarker + 9 : streamEnd;
     let stream: Buffer<ArrayBufferLike> = Buffer.from(rawStream, 'latin1');
 
-    // Decode filters in reverse order: Flate first, then ASCII85.
+    // Decode the filter pipeline in the order declared by the PDF: ASCII85
+    // wrapping is removed before the underlying Flate stream is inflated.
     try {
       const hasAscii85 = /\/ASCII85Decode\b|\/A85\b/.test(dictionary);
       const hasFlate = /\/FlateDecode\b|\/Fl\b/.test(dictionary);
-      if (hasFlate) stream = inflateSync(stream);
       if (hasAscii85) stream = decodeAscii85(stream);
+      if (hasFlate) stream = inflateSync(stream);
       if (/\/Filter\b/.test(dictionary) && !hasAscii85 && !hasFlate) continue;
     } catch {
       continue;
