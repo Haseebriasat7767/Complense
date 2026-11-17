@@ -62,6 +62,31 @@ afterAll(async () => {
 });
 
 describe('the complete authentication journey', () => {
+  it('creates a new private workspace with an exact 14-day card-free trial', async () => {
+    const response = await fetch(`${base}/api/auth/signup`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        name: 'New Trial Owner',
+        email: 'new-trial@example.com',
+        password: 'StrongTrialPassword123!',
+        organizationName: 'New Trial Organisation',
+      }),
+    });
+    expect(response.status).toBe(201);
+    const payload = (await response.json()) as {
+      organization: { name: string; trialStartedAt: string; trialEndsAt: string };
+      workspace: { name: string; isDemo: boolean };
+      user: { isDemoUser: boolean };
+    };
+    expect(payload.organization.name).toBe('New Trial Organisation');
+    expect(Date.parse(payload.organization.trialEndsAt) - Date.parse(payload.organization.trialStartedAt)).toBe(14 * 24 * 60 * 60 * 1000);
+    expect(payload.workspace.name).toBe('Compliance Workspace');
+    expect(payload.workspace.isDemo).toBe(false);
+    expect(payload.user.isDemoUser).toBe(false);
+    expect(payload).not.toHaveProperty('paymentMethod');
+  });
+
   it('TEST 1: account login succeeds', async () => {
     const response = await login(TEST_EMAIL, TEST_PASSWORD);
     expect(response.status).toBe(200);
