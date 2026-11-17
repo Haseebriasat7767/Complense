@@ -266,7 +266,7 @@ npm start                   # serves API + built client on :4000`}</Code>
 
             <div className="mt-10 flex flex-wrap items-center gap-3 rounded-xl border border-ink-200 bg-ink-50 px-4 py-4">
               <p className="flex-1 text-[13px] text-ink-600">
-                Prefer to click through it instead of reading it? The demo workspace is one click away.
+                Prefer to try it instead of reading? Create your own workspace with a 14-day free trial.
               </p>
               <TrialButton label="Start 14-day free trial" />
             </div>
