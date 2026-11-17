@@ -89,7 +89,7 @@ describe('health and metadata', () => {
 
   it('publishes the analysis mode so the UI can disclose it', async () => {
     const payload = (await (await get('/api/meta', false)).json()) as { analysis: { mode: string; label: string } };
-    expect(payload.analysis.mode).toBe('demo-analysis');
+    expect(payload.analysis.mode).toBe('rules-based');
     expect(payload.analysis.label).toContain('Deterministic analysis mode');
   });
 
@@ -297,7 +297,7 @@ describe('reports', () => {
     expect(report.summary.controlsByStatus.missing.length).toBe(1);
     expect(report.summary.controlsByStatus.needsReview.length).toBe(5);
     expect(report.summary.disclaimer).toContain(
-      'This report is an AI-generated preliminary readiness assessment. It is not a certification, audit opinion, or substitute for professional compliance advice.',
+      'This report is an automatically generated preliminary readiness assessment. It is not a certification, audit opinion, or substitute for professional compliance advice.',
     );
 
     const pdf = await fetch(`${base}/api/reports/${report.id}/pdf`, {
