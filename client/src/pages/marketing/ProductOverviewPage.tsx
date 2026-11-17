@@ -232,7 +232,7 @@ AI_PROVIDER=none               # deterministic rules-based analysis by default`}
                 'No customer testimonials, logos, revenue or traction claims appear anywhere in the product.',
                 'The control libraries are demonstration datasets, not licensed reproductions of AICPA or ISO text.',
                 'AI assistance is optional. The default analysis is deterministic and runs locally with no API key.',
-                'MongoDB persistence and AI providers are implemented but optional — the app never fails without them.',
+                'Hosted records persist in Supabase PostgreSQL. Paid checkout is not yet enabled; AI-provider integration is optional and disabled in the QA release.',
               ].map((item) => (
                 <li key={item} className="flex items-start gap-2.5 text-[13.5px] leading-relaxed text-ink-600">
                   <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-ink-300" aria-hidden="true" />
