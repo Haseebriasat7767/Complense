@@ -439,12 +439,12 @@ export const FAQ_ITEMS = [
   {
     question: 'What frameworks are supported?',
     answer:
-      'The MVP ships a demo control library for SOC 2 (AICPA Trust Services Criteria) and ISO/IEC 27001:2022 Annex A: 28 SOC 2 criteria and 22 ISO 27001 Annex A controls across 14 categories. The libraries are demonstration data and can be replaced with a licensed control set — the analysis engine reads from a single control library module.',
+      'The MVP includes a starter reference set for SOC 2 and ISO/IEC 27001:2022 Annex A: 28 SOC 2 criteria and 22 ISO 27001 control mappings across 14 categories. It is not a licensed reproduction of either standard; customers should validate coverage against their licensed standard and auditor guidance.',
   },
   {
     question: 'Can I use it without an AI API?',
     answer:
-      'Yes — that is the default. ComplyLens ships with a deterministic analysis engine that runs entirely on your server and needs no external service. The interface reports "Demo Analysis Mode". If you configure an OpenAI-compatible provider and explicitly allow external calls, the product uses it to improve report wording; the assessment itself stays deterministic so results never change between runs.',
+      'Yes — that is the default. ComplyLens ships with a deterministic analysis engine that runs entirely on your server and needs no external service. The interface reports "Rules-based analysis". If you configure an OpenAI-compatible provider and explicitly allow external calls, the product uses it to improve report wording; the assessment itself stays deterministic so results never change between runs.',
   },
   {
     question: 'What happens to uploaded evidence?',
