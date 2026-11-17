@@ -54,6 +54,8 @@ function bool(name: string, fallback: boolean): boolean {
 }
 
 const nodeEnv = str('NODE_ENV', str('VERCEL') ? 'production' : 'development');
+const vercelEnvironment = str('VERCEL_ENV').toLowerCase();
+const isPreviewDeployment = vercelEnvironment === 'preview';
 const authRequired = bool('AUTH_REQUIRED', nodeEnv === 'production');
 const configuredSessionSecret = str('SESSION_SECRET');
 
@@ -84,6 +86,9 @@ export const config = {
 
   /** Demo mode is the default: seeded AcmeCloud workspace, instant demo login. */
   demoMode: bool('DEMO_MODE', nodeEnv === 'production' ? false : !authRequired),
+  // Demo access is allowed only on Vercel Preview when explicitly enabled.
+  // It remains disabled on Production regardless of environment variables.
+  demoAccessEnabled: isPreviewDeployment && bool('DEMO_ACCESS_ENABLED', false),
   authRequired,
 
   session: {
@@ -160,7 +165,7 @@ export type AppConfig = typeof config;
 
 // Production must never start with passwordless demo access enabled or
 // authentication disabled, even if an environment variable is misconfigured.
-if (config.isProduction && (!config.authRequired || config.demoMode)) {
+if (config.isProduction && (!config.authRequired || config.demoMode || config.demoAccessEnabled)) {
   throw new Error('Production requires AUTH_REQUIRED=true and DEMO_MODE=false. Disable demo access and require authenticated sessions before starting ComplyLens.');
 }
 
