@@ -5,7 +5,7 @@
  * how the Vercel serverless function and the container deployment both boot
  * it) and walks the exact path the browser takes:
  *
- *   POST /api/auth/login → token → GET /api/context → GET /api/dashboard
+ *   POST /api/auth/signup → token → GET /api/context → GET /api/dashboard
  *
  * Each `it` below is numbered to match the auth audit checklist.
  */
@@ -14,10 +14,11 @@ import type { AddressInfo } from 'node:net';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { attachErrorHandling, createApp } from '../src/app.js';
 import { createSessionToken } from '../src/auth/tokens.js';
-import { closeStore, initStore } from '../src/store/index.js';
+import { closeStore, getStore, initStore } from '../src/store/index.js';
+import { buildDemoSeed } from '../src/store/seed.js';
 
-const DEMO_EMAIL = 'demo@complylens.ai';
-const DEMO_PASSWORD = 'DemoPass123!';
+const TEST_EMAIL = 'qa-test@example.com';
+const TEST_PASSWORD = 'DemoPass123!';
 
 let server: http.Server;
 let base: string;
@@ -32,6 +33,21 @@ async function login(email: string, password: string) {
 
 beforeAll(async () => {
   await initStore();
+  const seed = await buildDemoSeed();
+  const now = new Date().toISOString();
+  const organization = {
+    ...seed.organization,
+    name: 'QA Test Organisation',
+    slug: 'qa-test-organisation',
+    trialStartedAt: now,
+    trialEndsAt: new Date(Date.parse(now) + 14 * 24 * 60 * 60 * 1000).toISOString(),
+  };
+  const workspace = { ...seed.workspace, name: 'QA Test Workspace', isDemo: false };
+  const user = { ...seed.owner, email: TEST_EMAIL, name: 'QA Test Owner', jobTitle: 'Security Owner', isDemoUser: false };
+  await getStore().createAccount({ organization, workspace, user });
+  for (const evidence of seed.evidence) {
+    await getStore().createEvidence({ ...evidence, source: 'upload' });
+  }
   const app = createApp();
   attachErrorHandling(app);
   server = http.createServer(app);
@@ -46,12 +62,12 @@ afterAll(async () => {
 });
 
 describe('the complete authentication journey', () => {
-  it('TEST 1: demo login succeeds', async () => {
-    const response = await login(DEMO_EMAIL, DEMO_PASSWORD);
+  it('TEST 1: account login succeeds', async () => {
+    const response = await login(TEST_EMAIL, TEST_PASSWORD);
     expect(response.status).toBe(200);
   });
 
-  it('TEST 2: demo login returns a valid, well-formed session token', async () => {
+  it('TEST 2: account login returns a valid, well-formed session token', async () => {
     const response = await login(DEMO_EMAIL, DEMO_PASSWORD);
     const payload = (await response.json()) as { token: string; expiresAt: string; user: { email: string } };
 
@@ -81,8 +97,8 @@ describe('the complete authentication journey', () => {
       workspace: { name: string };
       user: { email: string } | null;
     };
-    expect(payload.organization.name).toBe('AcmeCloud');
-    expect(payload.workspace.name).toBe('AcmeCloud Demo Workspace');
+    expect(payload.organization.name).toBe('QA Test Organisation');
+    expect(payload.workspace.name).toBe('QA Test Workspace');
     expect(payload.user?.email).toBe(DEMO_EMAIL);
   });
 
