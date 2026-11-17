@@ -230,7 +230,7 @@ AI_PROVIDER=none               # deterministic rules-based analysis by default`}
                 'Zero users, zero customers and zero revenue. There is no billing integration and no paid API usage.',
                 'New workspaces start empty and are populated only with documents uploaded by that organisation.',
                 'No customer testimonials, logos, revenue or traction claims appear anywhere in the product.',
-                'The control libraries are demonstration datasets, not licensed reproductions of AICPA or ISO text.',
+                'The starter control reference set is illustrative and is not a licensed reproduction of AICPA or ISO text.',
                 'AI assistance is optional. The default analysis is deterministic and runs locally with no API key.',
                 'Hosted records persist in Supabase PostgreSQL. Paid checkout is not yet enabled; AI-provider integration is optional and disabled in the QA release.',
               ].map((item) => (
