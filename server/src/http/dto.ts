@@ -159,7 +159,7 @@ export const DISCLAIMERS = {
   short: 'Preliminary readiness analysis. Not a certification, audit opinion or legal advice.',
   full: FRAMEWORK_DISCLAIMER,
   report:
-    'This report is an AI-generated preliminary readiness assessment. It is not a certification, audit opinion, or substitute for professional compliance advice.',
+    'This report is an automatically generated preliminary readiness assessment. It is not a certification, audit opinion, or substitute for professional compliance advice.',
   demoData:
-    'All organisations, users and documents in the sample workspace are fictional demo data.',
+    'ComplyLens does not preload customer evidence. Any sample files used for testing are fictional and must not be treated as evidence from a real organisation.',
 };
