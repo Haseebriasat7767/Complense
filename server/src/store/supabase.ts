@@ -129,7 +129,7 @@ export class SupabaseStore implements Store {
 
   async init(): Promise<void> {
     await this.verifyRequiredTables();
-    if (!config.demoMode) {
+    if (!config.demoMode && !config.demoAccessEnabled) {
       logger.info('Supabase store ready; demo seeding is disabled');
       return;
     }
