@@ -1,9 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { ArrowRight, Menu, X } from 'lucide-react';
-import { Button, ButtonLink } from '@/components/ui/Button';
-import { useToast } from '@/components/ui/Toast';
-import { useSession } from '@/lib/session';
+import { ButtonLink } from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
 
 export const NAV_LINKS = [
@@ -14,31 +12,11 @@ export const NAV_LINKS = [
   { to: '/faq', label: 'FAQ' },
 ];
 
-/** Opens the seeded demo workspace from any marketing surface. */
-export function useDemoEntry() {
-  const { startDemo, loading } = useSession();
-  const toast = useToast();
-
-  const start = async (): Promise<boolean> => {
-    try {
-      await startDemo();
-      return true;
-    } catch (error) {
-      toast.error(
-        'Demo workspace unavailable',
-        error instanceof Error ? error.message : 'Please try again in a moment.',
-      );
-      return false;
-    }
-  };
-
-  return { start, loading };
-}
-
-export function DemoButton({
+/** Clear entry point for new users to start their no-card free trial. */
+export function TrialButton({
   size = 'md',
   variant = 'primary',
-  label = 'Try the Demo',
+  label = 'Start free trial',
   className,
   fullWidth,
 }: {
@@ -48,23 +26,17 @@ export function DemoButton({
   className?: string;
   fullWidth?: boolean;
 }) {
-  const { start, loading } = useDemoEntry();
-  const navigate = useNavigate();
-
   return (
-    <Button
+    <ButtonLink
+      to="/signup"
       size={size}
       variant={variant}
-      loading={loading}
       fullWidth={fullWidth}
       className={className}
       iconRight={<ArrowRight className="size-4" aria-hidden="true" />}
-      onClick={async () => {
-        if (await start()) navigate('/app/dashboard');
-      }}
     >
       {label}
-    </Button>
+    </ButtonLink>
   );
 }
 
@@ -141,7 +113,7 @@ export function MarketingLayout() {
             <ButtonLink to="/login" variant="ghost" size="sm">
               Log in
             </ButtonLink>
-            <DemoButton size="sm" label="Try Demo" />
+            <TrialButton size="sm" />
           </div>
           <button
             type="button"
@@ -177,7 +149,7 @@ export function MarketingLayout() {
               </NavLink>
             </nav>
             <div className="mt-4 flex flex-col gap-2">
-              <DemoButton fullWidth label="Try the Demo" />
+              <TrialButton fullWidth />
               <ButtonLink to="/login" variant="secondary" fullWidth>
                 Log in
               </ButtonLink>
