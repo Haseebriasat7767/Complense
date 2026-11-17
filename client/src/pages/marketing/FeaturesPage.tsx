@@ -15,7 +15,7 @@ const DEEP_DIVES = [
   },
   {
     title: 'Control library',
-    body: 'A read-only demo library of 28 SOC 2 criteria and 22 ISO 27001 Annex A controls across 14 categories, each with a description, risk level, required evidence and a readiness status.',
+    body: 'A curated starter reference set of 28 SOC 2 criteria and 22 ISO 27001 Annex A control mappings across 14 categories. It is not a licensed reproduction of either standard; validate coverage against your licensed materials and auditor guidance.',
     points: [
       'Passed, Partial, Missing and Needs review statuses',
       'Control detail with evidence found, evidence missing and analysis notes',
