@@ -206,10 +206,10 @@ export function AppShell() {
             >
               <span className="min-w-0">
                 <span className="block truncate text-[12.5px] font-medium text-ink-900">
-                  {context?.organization.name ?? 'AcmeCloud'}
+                  {context?.organization.name ?? 'Your organisation'}
                 </span>
                 <span className="block truncate text-[11px] text-ink-500">
-                  {context?.workspace.name ?? 'AcmeCloud Demo Workspace'}
+                  {context?.workspace.name ?? 'Compliance Workspace'}
                 </span>
               </span>
               <ChevronDown className="size-3.5 shrink-0 text-ink-400" aria-hidden="true" />
@@ -230,7 +230,7 @@ export function AppShell() {
                   {context?.workspace.isDemo ? 'Demo Workspace' : 'Live workspace'}
                 </Badge>
                 <p className="mt-2 text-[11.5px] leading-relaxed text-ink-500">
-                  Sample organisations, users and documents are fictional and labelled as demo data throughout.
+                  This is your organisation's private compliance workspace.
                 </p>
               </div>
             </>
