@@ -11,7 +11,6 @@ import type {
   AuditEvent, EvidenceInput, EvidenceRecord, Organization, RemediationEvent, RemediationRecord, ReportRecord, User, Workspace,
 } from '../domain/types.js';
 import type { NewAccount, Store } from './store.js';
-import { buildDemoSeed, logSeedSummary } from './seed.js';
 
 type Row = Record<string, any>;
 function makeId(prefix: string): string { return `${prefix}-${crypto.randomBytes(8).toString('hex')}`; }
@@ -129,22 +128,7 @@ export class SupabaseStore implements Store {
 
   async init(): Promise<void> {
     await this.verifyRequiredTables();
-    if (!config.demoMode && !config.demoAccessEnabled) {
-      logger.info('Supabase store ready; demo seeding is disabled');
-      return;
-    }
-    const seed = await buildDemoSeed();
-    const existing = await this.one<Organization>('organizations', { id: `eq.${seed.organization.id}` });
-    if (!existing) {
-      await this.insert('organizations', seed.organization);
-      await this.insert('workspaces', seed.workspace);
-      await this.insert('users', seed.owner);
-      await this.insert('users', seed.member);
-      for (const record of seed.evidence) await this.insert('evidence', record);
-      await logSeedSummary('supabase', seed);
-    } else {
-      logger.info('Supabase store ready');
-    }
+    logger.info('Supabase store ready; demo workspace seeding has been retired');
   }
 
   async health() {
