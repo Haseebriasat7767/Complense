@@ -89,8 +89,8 @@ export function AppShell() {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
 
-  const displayName = context?.user?.name ?? 'Demo user';
-  const displayEmail = context?.user?.email ?? 'demo@complylens.ai';
+  const displayName = context?.user?.name ?? 'Account';
+  const displayEmail = context?.user?.email ?? '';
 
   const handleSignOut = async () => {
     await logout();
@@ -393,6 +393,13 @@ export function AppShell() {
           </div>
         </header>
 
+        {context?.organization.trialEndsAt ? (
+          <div className="border-b border-ink-200 bg-brand-50/60 px-4 py-2.5 text-center text-[12.5px] text-ink-700">
+            {Date.parse(context.organization.trialEndsAt) > Date.now()
+              ? `Free trial · ${Math.max(1, Math.ceil((Date.parse(context.organization.trialEndsAt) - Date.now()) / 86400000))} days remaining · No credit card required`
+              : 'Your 14-day trial has ended. Contact us to arrange access to a paid plan.'}
+          </div>
+        ) : null}
         <main className="flex-1 px-3 py-5 sm:px-5 sm:py-6 lg:px-7 lg:py-8">
           <div className="mx-auto w-full max-w-[1320px]">
             <Outlet />
