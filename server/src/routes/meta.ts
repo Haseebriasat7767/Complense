@@ -84,6 +84,6 @@ metaRouter.get('/frameworks', (_req, res) => {
       readinessLabel: framework.readinessLabel,
       categories: categoriesForFramework(framework.key),
     })),
-    status: 'demo-ready',
+    status: 'trial-ready',
   });
 });
