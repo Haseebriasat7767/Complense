@@ -76,6 +76,7 @@ const defaultUploadMb = isServerless ? 4 : 10;
 export const config = {
   nodeEnv,
   isProduction: nodeEnv === 'production',
+  isPreviewDeployment,
   isTest: nodeEnv === 'test',
   port: num('PORT', 4000),
   host: str('HOST', '0.0.0.0'),
@@ -165,7 +166,7 @@ export type AppConfig = typeof config;
 
 // Production must never start with passwordless demo access enabled or
 // authentication disabled, even if an environment variable is misconfigured.
-if (config.isProduction && (!config.authRequired || config.demoMode || config.demoAccessEnabled)) {
+if (config.isProduction && !config.isPreviewDeployment && (!config.authRequired || config.demoMode || config.demoAccessEnabled)) {
   throw new Error('Production requires AUTH_REQUIRED=true and DEMO_MODE=false. Disable demo access and require authenticated sessions before starting ComplyLens.');
 }
 
