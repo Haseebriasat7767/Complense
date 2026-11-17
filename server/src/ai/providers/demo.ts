@@ -34,14 +34,27 @@ export function demoSummary(input: { content: string; fileName: string; category
     (rule) => rule.keyword,
   );
 
+  // Build a compact summary from across the document, not just its opening
+  // lines. Ignore page labels, document-control boilerplate and test notices.
   const sentences = input.content
-    .split(/\n|(?<=\.)\s+/)
-    .map((line) => line.trim())
-    .filter((line) => line.length > 40 && !line.toLowerCase().startsWith('demo data'))
-    .slice(0, 2);
+    .replace(/\bPage\s+\d+\b/gi, ' ')
+    .split(/(?<=[.!?])\s+|\n+/)
+    .map((part) => part.replace(/\s+/g, ' ').trim())
+    .filter((part) =>
+      part.length >= 55 &&
+      /[a-z]{3}/i.test(part) &&
+      !/^(northstar digital services|document control:|test document notice|important:)/i.test(part) &&
+      !/fictional|solely to test|not an independently verified/i.test(part),
+    );
 
-  const summary = sentences.length
-    ? `${input.category} evidence. ${sentences.join(' ')}`.slice(0, 320)
+  const selected: string[] = [];
+  if (sentences.length > 0) selected.push(sentences[0] as string);
+  if (sentences.length > 2) selected.push(sentences[Math.floor(sentences.length / 2)] as string);
+  if (sentences.length > 1) selected.push(sentences[sentences.length - 1] as string);
+
+  const detail = [...new Set(selected)].join(' ');
+  const summary = detail
+    ? `${input.category} evidence across the document: ${detail}`.slice(0, 320)
     : `${input.category} evidence submitted for analysis. Text extraction produced limited content, so mapping confidence may be reduced.`;
 
   return { summary, keywords };
