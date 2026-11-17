@@ -327,7 +327,7 @@ export function renderReportPdf(report: ReportRecord): PDFKit.PDFDocument {
       .fontSize(7.5)
       .fillColor(COLORS.muted)
       .text(
-        'ComplyLens AI · preliminary readiness assessment · not a certification, audit opinion or legal advice · Demo Data workspace',
+        'ComplyLens AI · preliminary readiness assessment · not a certification, audit opinion or legal advice · Private workspace',
         PAGE.margins.left,
         footerY,
         { width: contentWidth - 60 },
