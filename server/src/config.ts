@@ -54,8 +54,6 @@ function bool(name: string, fallback: boolean): boolean {
 }
 
 const nodeEnv = str('NODE_ENV', str('VERCEL') ? 'production' : 'development');
-const vercelEnvironment = str('VERCEL_ENV').toLowerCase();
-const isPreviewDeployment = vercelEnvironment === 'preview';
 const authRequired = bool('AUTH_REQUIRED', nodeEnv === 'production');
 const configuredSessionSecret = str('SESSION_SECRET');
 
