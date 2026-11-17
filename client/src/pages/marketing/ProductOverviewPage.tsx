@@ -228,9 +228,9 @@ AI_PROVIDER=openai-compatible  # optional narrative layer`}</pre>
             <h2 className="text-xl tracking-tight">Current MVP status — stated honestly</h2>
             <ul className="mt-5 space-y-3">
               {[
-                'Working end-to-end demo: landing → demo workspace → evidence → analysis → mapping → control detail → gap analysis → report PDF.',
+                'Working end-to-end workflow: account signup → private workspace → evidence → analysis → mapping → control detail → gap analysis → report PDF.',
                 'Zero users, zero customers and zero revenue. There is no billing integration and no paid API usage.',
-                'All workspace data is fictional sample data for the demo organisation "AcmeCloud", labelled as demo data in the UI.',
+                'New workspaces start empty and are populated only with documents uploaded by that organisation.',
                 'No customer testimonials, logos, revenue or traction claims appear anywhere in the product.',
                 'The control libraries are demonstration datasets, not licensed reproductions of AICPA or ISO text.',
                 'AI assistance is optional. The default analysis is deterministic and runs locally with no API key.',
