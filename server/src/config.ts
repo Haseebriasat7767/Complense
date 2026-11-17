@@ -185,6 +185,6 @@ export function isExternalAiEnabled(): boolean {
 }
 
 /** Human-readable analysis mode used by the UI banner. */
-export function analysisMode(): 'demo-analysis' | 'external-ai' {
-  return isExternalAiEnabled() ? 'external-ai' : 'demo-analysis';
+export function analysisMode(): 'rules-based | 'external-ai' {
+  return isExternalAiEnabled() ? 'external-ai' : 'rules-based;
 }
