@@ -73,7 +73,7 @@ function contextPayload(): WorkspaceContext {
     workspace,
     workspaces: [workspace],
     demoMode: true,
-    analysisMode: { key: 'demo-analysis', label: 'Demo Analysis Mode' },
+    analysisMode: { key: 'rules-based', label: 'Demo Analysis Mode' },
   };
 }
 
