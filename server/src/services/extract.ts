@@ -100,40 +100,64 @@ function decodeAscii85(input: Buffer): Buffer {
 }
 
 function extractPdfText(buffer: Buffer): string {
+  // PDF stream lengths are byte counts, not character counts. Latin1 keeps a
+  // one-to-one byte mapping so /Length can locate each stream precisely.
   const source = buffer.toString('latin1');
   const chunks: string[] = [];
-  // Read PDF streams and decompress Flate streams where possible. Only parse
-  // text-showing operators inside streams, never document metadata dictionaries.
-  // Accept PDFs that place endstream directly after the declared stream bytes, as well as files with a delimiter newline.
-  const streamPattern = /<<([\s\S]*?)>>\s*stream\r?\n([\s\S]*?)(?:\r?\n)?endstream/g;
-  for (const match of source.matchAll(streamPattern)) {
-    const dictionary = match[1] ?? '';
-    const rawStream = match[2] ?? '';
+  let cursor = 0;
+
+  while (cursor < source.length) {
+    const streamToken = source.indexOf('stream', cursor);
+    if (streamToken < 0) break;
+    const before = source[streamToken - 1] ?? '';
+    const after = source[streamToken + 6] ?? '';
+    if ((before && !/[\s>]/.test(before)) || (after && !/[\r\n\s]/.test(after))) {
+      cursor = streamToken + 6;
+      continue;
+    }
+
+    const dictionaryStart = source.lastIndexOf('<<', streamToken);
+    const dictionaryEnd = source.lastIndexOf('>>', streamToken);
+    if (dictionaryStart < 0 || dictionaryEnd < dictionaryStart) {
+      cursor = streamToken + 6;
+      continue;
+    }
+    const dictionary = source.slice(dictionaryStart, streamToken);
+    const lineEnd = source.indexOf('\n', streamToken + 6);
+    if (lineEnd < 0) break;
+    const streamStart = lineEnd + 1;
+    const declaredLength = /\/Length\s+(\d+)\b/.exec(dictionary);
+    const endMarker = source.indexOf('endstream', streamStart);
+    const streamEnd = declaredLength
+      ? streamStart + Number(declaredLength[1])
+      : endMarker;
+    if (streamEnd < streamStart || streamEnd > source.length) {
+      cursor = endMarker >= 0 ? endMarker + 9 : streamStart;
+      continue;
+    }
+
+    const rawStream = source.slice(streamStart, streamEnd);
+    cursor = endMarker >= 0 ? endMarker + 9 : streamEnd;
     let stream: Buffer<ArrayBufferLike> = Buffer.from(rawStream, 'latin1');
-    // Many generated PDFs (including ReportLab exports) apply ASCII85 before
-    // Flate compression. Decode filters in reverse stream order before parsing.
+
+    // Decode filters in reverse order: Flate first, then ASCII85.
     try {
-      if (/\/ASCII85Decode\b|\/A85\b/.test(dictionary)) {
-        stream = decodeAscii85(stream);
-      }
-      if (/\/FlateDecode\b|\/Fl\b/.test(dictionary)) {
-        stream = inflateSync(stream);
-      } else if (/\/Filter\b/.test(dictionary) && !/\/ASCII85Decode\b|\/A85\b/.test(dictionary)) {
-        continue;
-      }
+      const hasAscii85 = /\/ASCII85Decode\b|\/A85\b/.test(dictionary);
+      const hasFlate = /\/FlateDecode\b|\/Fl\b/.test(dictionary);
+      if (hasFlate) stream = inflateSync(stream);
+      if (hasAscii85) stream = decodeAscii85(stream);
+      if (/\/Filter\b/.test(dictionary) && !hasAscii85 && !hasFlate) continue;
     } catch {
       continue;
     }
+
     const body = stream.toString('latin1');
-    // Capture literal strings used by Tj and TJ text-showing operators.
     const operatorPattern =
       /\(((?:\\.|[^\\)])*)\)\s*Tj|<([0-9A-Fa-f\s]+)>\s*Tj|\[([\s\S]*?)\]\s*TJ/g;
     for (const op of body.matchAll(operatorPattern)) {
-      if (op[1] !== undefined) {
-        chunks.push(decodePdfLiteral(op[1]));
-      } else if (op[2] !== undefined) {
-        chunks.push(decodePdfHex(op[2]));
-      } else if (op[3] !== undefined) {
+      if (op[1] !== undefined) chunks.push(decodePdfLiteral(op[1]));
+      else if (op[2] !== undefined) chunks.push(decodePdfHex(op[2]));
+      else if (op[3] !== undefined) {
         const textToken = /\(((?:\\.|[^\\)])*)\)|<([0-9A-Fa-f\s]+)>/g;
         for (const part of op[3].matchAll(textToken)) {
           if (part[1] !== undefined) chunks.push(decodePdfLiteral(part[1]));
