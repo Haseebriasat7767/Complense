@@ -59,15 +59,18 @@ describe('production SESSION_SECRET enforcement', () => {
     expect(parsed.secretIsEphemeral).toBe(false);
   });
 
-  it('rejects passwordless demo access in production even with a session secret', () => {
+  it('ignores DEMO_MODE=true in production and keeps passwordless demo access disabled', () => {
     const result = runWithEnv({
       NODE_ENV: 'production',
       SESSION_SECRET: 'a-long-randomly-generated-production-secret-value-123456',
       AUTH_REQUIRED: 'true',
       DEMO_MODE: 'true',
     });
-    expect(result.status).not.toBe(0);
-    expect(result.stderr).toContain('Production requires AUTH_REQUIRED=true and DEMO_MODE=false');
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain('CONFIG_OK');
+    const [, json] = result.stdout.trim().split(' ');
+    const parsed = JSON.parse(json) as { demoMode: boolean };
+    expect(parsed.demoMode).toBe(false);
   });
 
   it('rejects disabled authentication in production even if demo mode is false', () => {
