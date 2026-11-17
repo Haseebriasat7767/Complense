@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { BadgeCheck, GitCompareArrows, Sparkles, TriangleAlert } from 'lucide-react';
-import { Logo, useDemoEntry } from '@/components/marketing/MarketingLayout';
+import { Logo } from '@/components/marketing/MarketingLayout';
 import { ButtonLink } from '@/components/ui/Button';
 
 export function AuthLayout({
