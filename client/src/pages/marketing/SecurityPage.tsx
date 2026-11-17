@@ -1,5 +1,5 @@
 import { ShieldAlert } from 'lucide-react';
-import { DemoButton, Eyebrow, Section } from '@/components/marketing/MarketingLayout';
+import { TrialButton, Eyebrow, Section } from '@/components/marketing/MarketingLayout';
 import { SecuritySection } from '@/components/marketing/Sections';
 
 const DATA_HANDLING = [
@@ -33,7 +33,7 @@ export function SecurityPage() {
             implementation in this codebase — and what it does not claim.
           </p>
           <div className="mt-6">
-            <DemoButton label="Try the Demo" />
+            <TrialButton label="Start 14-day free trial" />
           </div>
         </div>
       </Section>
