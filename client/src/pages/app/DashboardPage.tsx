@@ -69,7 +69,7 @@ export function DashboardPage() {
             </Badge>
             <Badge tone={data.analysisMode.key === 'external-ai' ? 'brand' : 'neutral'} size="sm">
               <Sparkles className="size-3" aria-hidden="true" />
-              {data.analysisMode.key === 'external-ai' ? 'AI-assisted analysis' : 'Demo Analysis Mode'}
+              {data.analysisMode.key === 'external-ai' ? 'AI-assisted analysis' : 'Rules-based analysis'}
             </Badge>
             {isDemo ? <DemoDataBadge /> : null}
             <span className="text-[12px] text-ink-500">Updated {relativeTime(data.generatedAt)}</span>
@@ -101,7 +101,7 @@ export function DashboardPage() {
       {!hasEvidence ? (
         <EmptyState
           title="No evidence in this workspace yet"
-          description="Upload your policies, procedures and records — or load the labelled sample document set — to run the first readiness assessment. Nothing is scored until evidence exists."
+          description="Upload your organisation’s policies, procedures and records to run the first readiness assessment. Nothing is scored until your evidence has been analysed."
           icon={<Upload className="size-5" aria-hidden="true" />}
           action={
             <ButtonLink to="/app/evidence" variant="primary" iconLeft={<Upload className="size-4" />}>
