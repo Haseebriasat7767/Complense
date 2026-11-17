@@ -65,7 +65,7 @@ workspaceRouter.get(
       organization: organizationDto(organization),
       workspace: workspaceDto(workspace),
       workspaces: workspaces.map(workspaceDto),
-      demoMode: config.demoMode,
+      demoMode: config.demoMode || config.demoAccessEnabled,
       analysisMode: { key: analysisMode(), label: modeLabel() },
     });
   }),

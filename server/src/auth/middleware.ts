@@ -8,6 +8,7 @@
  */
 import type { NextFunction, Request, RequestHandler, Response } from 'express';
 import { ApiError } from '../http/errors.js';
+import { config } from '../config.js';
 import { getStore } from '../store/index.js';
 import { verifySessionToken, type SessionClaims } from './tokens.js';
 
@@ -31,6 +32,10 @@ export function requireAuth(): RequestHandler {
       next(error);
       return;
     }
+    if (session.demo && !config.demoMode) {
+      next(ApiError.unauthorized('Demo sessions are disabled for this deployment. Sign in with a real account.'));
+      return;
+    }
     req.session = session;
     // Organisation-level authorisation: the org must exist and be active.
     getStore()
@@ -38,6 +43,16 @@ export function requireAuth(): RequestHandler {
       .then((organization) => {
         if (!organization) {
           next(ApiError.forbidden('This organisation is no longer available.'));
+          return;
+        }
+        const trialExpired = Boolean(
+          organization.trialEndsAt &&
+          Date.parse(organization.trialEndsAt) <= Date.now() &&
+          !['active', 'trialing'].includes(organization.stripeSubscriptionStatus ?? ''),
+        );
+        const readOnlyRequest = ['GET', 'HEAD', 'OPTIONS'].includes(req.method) || req.path.endsWith('/auth/logout');
+        if (trialExpired && !readOnlyRequest) {
+          next(ApiError.forbidden('Your 14-day trial has ended. Your workspace is read-only; contact the ComplyLens team to arrange continued access.'));
           return;
         }
         next();

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { CreditCard, Building2, Bell, Lock, Layers, UserRound, FolderKanban } from 'lucide-react';
-import { Badge, DemoDataBadge } from '@/components/ui/Badge';
+import { Badge } from '@/components/ui/Badge';
 import { Button, ButtonLink } from '@/components/ui/Button';
 import { Card, CardContent, CardHeader } from '@/components/ui/Card';
 import { InlineAlert } from '@/components/ui/Feedback';
@@ -23,6 +23,8 @@ export function SettingsPage() {
   const workspace = context?.workspace ?? null;
   const user = context?.user ?? null;
   const canEditOrganization = user?.role === 'owner' || user?.role === 'admin';
+  const trialEnd = organization?.trialEndsAt ? new Date(organization.trialEndsAt) : null;
+  const trialDaysRemaining = trialEnd ? Math.max(0, Math.ceil((trialEnd.getTime() - Date.now()) / 86_400_000)) : null;
 
   const [organizationForm, setOrganizationForm] = useState({
     name: '',
@@ -96,9 +98,8 @@ export function SettingsPage() {
   };
 
   const readOnlyNotice = (
-    <InlineAlert tone="info" title="Demo workspace">
-      This build runs on a shared demo workspace. Configuration changes apply to your current session and are stored with the
-      workspace, so they reset when the demo is re-seeded.
+    <InlineAlert tone="info" title="Your organisation workspace">
+      Your evidence, findings and reports are scoped to your organisation. Settings saved here apply to your workspace.
     </InlineAlert>
   );
 
@@ -107,7 +108,6 @@ export function SettingsPage() {
       <PageHeader
         title="Settings"
         subtitle="Profile, organisation, workspace, framework preferences, security and notification defaults."
-        meta={<DemoDataBadge />}
       />
 
       <Tabs
@@ -147,9 +147,7 @@ export function SettingsPage() {
             </Field>
             <div className="sm:col-span-2">
               <InlineAlert tone="neutral" title="Profile editing">
-                Profile editing, password rotation and session management for the demo personas are documented in the{' '}
-                <span className="font-medium">Help</span> section. Create your own account from the sign-up screen to use a
-                personal profile.
+                Profile editing and self-service password changes are not available in this release. Use the account email you registered with when contacting support.
               </InlineAlert>
             </div>
           </CardContent>
@@ -233,7 +231,7 @@ export function SettingsPage() {
         <Card>
           <CardHeader title="Workspace" description="Workspaces separate evidence, findings and reports" />
           <CardContent className="space-y-4">
-            <Field label="Workspace name" htmlFor="workspace-name" hint="Rename the demo workspace to match your environment.">
+            <Field label="Workspace name" htmlFor="workspace-name" hint="Give this workspace a name your team will recognise.">
               <Input
                 id="workspace-name"
                 value={workspaceName}
@@ -252,7 +250,7 @@ export function SettingsPage() {
               </div>
               <div className="rounded-lg border border-ink-200 px-3.5 py-3">
                 <dt className="text-ink-500">Type</dt>
-                <dd className="mt-0.5 text-ink-800">{workspace?.isDemo ? 'Demo workspace (sample data)' : 'Customer workspace'}</dd>
+                <dd className="mt-0.5 text-ink-800">{workspace?.isDemo ? 'Organisation workspace' : 'Customer workspace'}</dd>
               </div>
             </dl>
             <Button
@@ -278,8 +276,8 @@ export function SettingsPage() {
                 onChange={(event) => setSettingsForm({ ...settingsForm, defaultFramework: event.target.value as FrameworkKey })}
                 disabled={!canEditOrganization}
               >
-                <option value="soc2">SOC 2 — Trust Services Criteria (28 demo controls)</option>
-                <option value="iso27001">ISO/IEC 27001 — Annex A (22 demo controls)</option>
+                <option value="soc2">SOC 2 — Trust Services Criteria (28 controls)</option>
+                <option value="iso27001">ISO/IEC 27001 — Annex A (22 controls)</option>
               </Select>
             </Field>
             <ButtonLink to="/app/frameworks" variant="secondary">
@@ -303,7 +301,7 @@ export function SettingsPage() {
         <Card>
           <CardHeader
             title="Notifications"
-            description="Delivery is disabled in the demo — preferences are stored to show how the workspace is configured."
+            description="Email delivery is not enabled yet. You can save preferences for when notifications become available."
           />
           <CardContent className="divide-y divide-ink-100">
             <Toggle
@@ -359,7 +357,7 @@ export function SettingsPage() {
           <CardContent className="divide-y divide-ink-100">
             <Toggle
               label="Require multi-factor authentication"
-              description="Intended default for all members. The demo personas are pre-authenticated."
+              description="Multi-factor authentication enforcement is not available in this release."
               checked={settingsForm.mfaRequired}
               onChange={(checked) => setSettingsForm({ ...settingsForm, mfaRequired: checked })}
             />
@@ -431,7 +429,7 @@ export function SettingsPage() {
         </Card>
 
         <Card>
-          <CardHeader title="How this build handles data" description="Practical guarantees in the demo deployment" />
+          <CardHeader title="Implemented security safeguards" description="Current application safeguards; these do not represent a security certification." />
           <CardContent className="grid gap-2 text-[12.5px] text-ink-600 sm:grid-cols-2">
             {[
               'Passwords are hashed with scrypt; tokens are short-lived HS256 JWTs.',
@@ -451,44 +449,39 @@ export function SettingsPage() {
       </TabPanel>
 
       <TabPanel id="billing" active={active} className="space-y-5">
-        <InlineAlert tone="info" title="Demo pricing — billing is not connected">
-          No payment provider is configured in this build. Plan cards below are illustrative and no card is ever charged.
+        <InlineAlert tone="info" title="No payment card required">
+          Your 14-day trial starts when your organisation account is created. Paid checkout is not enabled yet; payment details will be collected only when paid plans are launched.
         </InlineAlert>
         <Card>
           <CardHeader
-            title="Plan"
-            description="Demo pricing for the hosted product"
-            actions={<Badge tone="brand" size="sm">Demo pricing</Badge>}
+            title="Trial status"
+            description="Your organisation's current access period"
+            actions={<Badge tone={trialDaysRemaining === null ? 'outline' : trialDaysRemaining > 0 ? 'info' : 'danger'} size="sm">
+              {trialDaysRemaining === null ? 'Date unavailable' : trialDaysRemaining > 0 ? `${trialDaysRemaining} days remaining` : 'Trial ended'}
+            </Badge>}
           />
-          <CardContent className="grid gap-4 lg:grid-cols-3">
-            {[
-              { name: 'Starter', price: '$49', detail: '1 framework · 1 workspace · 25 documents' },
-              { name: 'Growth', price: '$149', detail: 'Both frameworks · 3 workspaces · unlimited documents', current: true },
-              { name: 'Business', price: '$499', detail: 'Unlimited workspaces · SSO · priority support' },
-            ].map((plan) => (
-              <div
-                key={plan.name}
-                className={`rounded-xl border px-4 py-4 ${plan.current ? 'border-brand-200 bg-brand-50/40' : 'border-ink-200'}`}
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <p className="text-[13.5px] font-semibold text-ink-900">{plan.name}</p>
-                  {plan.current ? <Badge tone="brand" size="sm">Current</Badge> : null}
-                </div>
-                <p className="mt-2 text-2xl font-semibold text-ink-900">{plan.price}</p>
-                <p className="text-[12px] text-ink-500">per month, demo pricing</p>
-                <p className="mt-2 text-[12.5px] text-ink-600">{plan.detail}</p>
-              </div>
-            ))}
-          </CardContent>
-          <CardContent className="border-t border-ink-200">
-            <div className="flex flex-wrap items-center gap-3">
-              <ButtonLink to="/pricing" variant="secondary">
-                Compare plans
-              </ButtonLink>
-              <p className="text-[12.5px] text-ink-500">
-                Usage on this workspace: {organization?.name ?? 'AcmeCloud'} · demo account · users 0, revenue $0.
+          <CardContent className="grid gap-4 sm:grid-cols-2">
+            <div className="rounded-lg border border-ink-200 px-3.5 py-3">
+              <p className="text-[12px] text-ink-500">Trial started</p>
+              <p className="mt-1 text-[14px] font-medium text-ink-900">
+                {organization?.trialStartedAt ? new Date(organization.trialStartedAt).toLocaleDateString() : 'Not available'}
               </p>
             </div>
+            <div className="rounded-lg border border-ink-200 px-3.5 py-3">
+              <p className="text-[12px] text-ink-500">Trial ends</p>
+              <p className="mt-1 text-[14px] font-medium text-ink-900">
+                {trialEnd ? trialEnd.toLocaleDateString() : 'Not available'}
+              </p>
+            </div>
+          </CardContent>
+          <CardContent className="border-t border-ink-200">
+            <p className="text-[13px] leading-relaxed text-ink-600">
+              {trialDaysRemaining === null
+                ? 'Trial dates are not available for this account. Contact support for assistance.'
+                : trialDaysRemaining > 0
+                  ? 'You can use your private workspace during the trial. No payment method is collected.'
+                  : 'Your trial period has ended. Contact the ComplyLens team to discuss continued access.'}
+            </p>
           </CardContent>
         </Card>
       </TabPanel>

@@ -2,7 +2,7 @@ import { AlertTriangle, ArrowRight, BadgeCheck, Calculator, TrendingUp } from 'l
 import { useMemo, useState } from 'react';
 import { Badge } from '@/components/ui/Badge';
 import { ButtonLink } from '@/components/ui/Button';
-import { DemoButton, Eyebrow, Section } from '@/components/marketing/MarketingLayout';
+import { TrialButton, Eyebrow, Section } from '@/components/marketing/MarketingLayout';
 
 /**
  * Buyer-facing product overview ("Product Asset Overview").
@@ -16,22 +16,22 @@ const FEATURES = [
   ['Gap analysis', 'Risk-rated findings with filtering by framework, risk, status, category, owner and priority'],
   ['Remediation guidance', 'Suggested fix, owner and timeline per finding, clearly labelled as generated guidance'],
   ['Readiness reporting', 'Server-rendered PDF with cover, executive summary, findings, remediation and evidence inventory'],
-  ['Auth and tenancy', 'Sign-up, log in, forgot password, demo entry, protected routes, organisation-scoped data'],
-  ['Settings', 'Profile, organisation, workspace, framework preferences, security and demo billing pages'],
+  ['Auth and tenancy', 'Sign-up, log in, protected routes, trial dates and organisation-scoped data'],
+  ['Settings', 'Profile, organisation, workspace, framework preferences, security and trial status'],
   ['Documentation', 'README, /docs set and in-app documentation covering architecture to deployment'],
 ];
 
 const TECH = [
   ['Frontend', 'React 19, TypeScript, Vite, Tailwind CSS v4, React Router, Recharts, Lucide'],
   ['Backend', 'Node.js 20+, Express 4, TypeScript (ESM), Multer, PDFKit'],
-  ['Data', 'In-memory demo store by default; MongoDB via Mongoose when MONGODB_URI is set'],
+  ['Data', 'Supabase PostgreSQL for hosted deployments; in-memory adapter for local development and tests'],
   ['Analysis', 'Deterministic signal-matching engine with an optional OpenAI-compatible narrative layer'],
   ['Security', 'scrypt hashing, HS256 session tokens, rate limiting, security headers, server-side validation'],
-  ['Deployment', 'Single Node process, health endpoint, Vercel-ready static client with a separate API service'],
+  ['Deployment', 'Vercel multi-service deployment: Vite frontend and containerised Express API'],
 ];
 
 const OPPORTUNITIES = [
-  'Sell as a source-code asset with a documented architecture and a working demo',
+  'Sell as a source-code asset with a documented architecture and a working hosted preview',
   'Subscription SaaS with the three plans already designed into the product',
   'White-label readiness assessment for audit firms and managed security providers',
   'Evidence automation add-ons (GitHub, AWS, Google Workspace, Microsoft 365, Jira)',
@@ -60,18 +60,18 @@ export function ProductOverviewPage() {
           <Eyebrow>Product overview</Eyebrow>
           <h1 className="mt-3 text-3xl tracking-tight sm:text-4xl">ComplyLens AI — Product Overview</h1>
           <p className="mt-4 text-[15.5px] leading-relaxed text-ink-500">
-            A demo-first SaaS MVP for compliance readiness and gap analysis: upload evidence, map it to SOC 2 and ISO
-            27001 controls, prioritise the gaps and generate a professional readiness report.
+            A SaaS MVP for compliance readiness and gap analysis: upload evidence, map it to SOC 2 and ISO 27001 controls,
+            prioritise the gaps and generate a professional readiness report.
           </p>
           <div className="mt-5 flex flex-wrap gap-2">
-            <Badge tone="neutral">Stage: MVP / demo</Badge>
+            <Badge tone="neutral">Stage: MVP / free trial</Badge>
             <Badge tone="neutral">Users: 0</Badge>
             <Badge tone="neutral">Customers: 0</Badge>
             <Badge tone="neutral">Revenue: $0</Badge>
             <Badge tone="brand">No paid APIs required</Badge>
           </div>
           <div className="mt-6 flex flex-wrap gap-3">
-            <DemoButton label="Open the demo workspace" />
+            <TrialButton label="Start 14-day free trial" />
             <ButtonLink to="/documentation" variant="secondary" iconRight={<ArrowRight className="size-4" />}>
               Read the documentation
             </ButtonLink>
@@ -165,7 +165,7 @@ export function ProductOverviewPage() {
               Calculated as assumed hours × assumed hourly cost × assumed time reduction, less the budget you entered. Actual savings, product fit, and pricing have not been independently validated.
             </p>
             <div className="mt-5">
-              <DemoButton label="Test the workflow with demo data" />
+              <TrialButton label="Start your own assessment" />
             </div>
           </div>
         </div>
@@ -202,12 +202,9 @@ export function ProductOverviewPage() {
           <div>
             <h2 className="text-xl tracking-tight">Architecture in one paragraph</h2>
             <p className="mt-3 text-[13.5px] leading-relaxed text-ink-600">
-              A single Express process serves the JSON API and — in production — the built React client, so there is one
-              origin, one port and no CORS configuration. Domain logic lives in{' '}
+              Vercel deploys the React client and Express API as separate services on one public origin. Domain logic lives in{' '}
               <code className="rounded border border-ink-200 bg-ink-100 px-1.5 py-0.5 font-mono text-[12px]">server/src/domain</code>{' '}
-              and is pure: given a control library and evidence records it returns assessments, mappings, findings and a
-              readiness index. Routes only orchestrate; the store is behind an interface with in-memory and MongoDB
-              implementations; PDF reports are rendered server-side with PDFKit.
+              and deterministically maps a control library against evidence records to produce assessments, mappings, findings and a readiness index. The store abstraction uses Supabase PostgreSQL in the hosted environment and an in-memory adapter for local development and tests. PDF reports are rendered server-side with PDFKit.
             </p>
             <pre className="mt-4 overflow-x-auto scroll-area rounded-lg border border-ink-200 bg-ink-900 px-4 py-3.5 font-mono text-[11.5px] leading-relaxed text-ink-100">{`npm install
 npm run dev        # development, http://localhost:4000
@@ -215,9 +212,10 @@ npm run build      # client/dist + server/dist
 npm start          # production
 
 # optional
-MONGODB_URI=mongodb://...      # persistent store
+SUPABASE_URL=https://...       # hosted PostgreSQL project
+SUPABASE_SECRET_KEY=...        # server-only secret
 SESSION_SECRET=<long random>   # stable sessions
-AI_PROVIDER=openai-compatible  # optional narrative layer`}</pre>
+AI_PROVIDER=none               # deterministic rules-based analysis by default`}</pre>
           </div>
         </div>
       </Section>
@@ -228,13 +226,13 @@ AI_PROVIDER=openai-compatible  # optional narrative layer`}</pre>
             <h2 className="text-xl tracking-tight">Current MVP status — stated honestly</h2>
             <ul className="mt-5 space-y-3">
               {[
-                'Working end-to-end demo: landing → demo workspace → evidence → analysis → mapping → control detail → gap analysis → report PDF.',
+                'Working end-to-end workflow: account signup → private workspace → evidence → analysis → mapping → control detail → gap analysis → report PDF.',
                 'Zero users, zero customers and zero revenue. There is no billing integration and no paid API usage.',
-                'All workspace data is fictional sample data for the demo organisation "AcmeCloud", labelled as demo data in the UI.',
+                'New workspaces start empty and are populated only with documents uploaded by that organisation.',
                 'No customer testimonials, logos, revenue or traction claims appear anywhere in the product.',
-                'The control libraries are demonstration datasets, not licensed reproductions of AICPA or ISO text.',
+                'The starter control reference set is illustrative and is not a licensed reproduction of AICPA or ISO text.',
                 'AI assistance is optional. The default analysis is deterministic and runs locally with no API key.',
-                'MongoDB persistence and AI providers are implemented but optional — the app never fails without them.',
+                'Hosted records persist in Supabase PostgreSQL. Paid checkout is not yet enabled; AI-provider integration is optional and disabled in the QA release.',
               ].map((item) => (
                 <li key={item} className="flex items-start gap-2.5 text-[13.5px] leading-relaxed text-ink-600">
                   <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-ink-300" aria-hidden="true" />

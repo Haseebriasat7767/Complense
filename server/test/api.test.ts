@@ -2,7 +2,7 @@
  * HTTP integration tests.
  *
  * Boots the real Express app (in-memory store, no external services) on an
- * ephemeral port and exercises the demo journey the product promises: sign in,
+ * ephemeral port and exercises an authenticated customer workspace: sign in,
  * read the dashboard, inspect a partially covered control, list findings,
  * generate a readiness report and download the PDF.
  */
@@ -11,12 +11,16 @@ import type { AddressInfo } from 'node:net';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { attachErrorHandling, createApp } from '../src/app.js';
 import { config } from '../src/config.js';
-import { DEMO_WORKSPACE_LABEL } from '../src/domain/evidence-seed.js';
-import { closeStore, initStore } from '../src/store/index.js';
+import { createSessionToken } from '../src/auth/tokens.js';
+import { buildDemoSeed } from '../src/store/seed.js';
+import { CONTROL_LIBRARY } from '../src/domain/controls.js';
+import { closeStore, getStore, initStore } from '../src/store/index.js';
 
 let server: http.Server;
 let base: string;
 let token: string;
+const TEST_EMAIL = 'qa-test@example.com';
+const TEST_PASSWORD = 'DemoPass123!';
 
 async function get(path: string, authenticated = true): Promise<Response> {
   return fetch(`${base}${path}`, {
@@ -26,6 +30,21 @@ async function get(path: string, authenticated = true): Promise<Response> {
 
 beforeAll(async () => {
   await initStore();
+  const seed = await buildDemoSeed();
+  const now = new Date().toISOString();
+  const organization = {
+    ...seed.organization,
+    name: 'QA Test Organisation',
+    slug: 'qa-test-organisation',
+    trialStartedAt: now,
+    trialEndsAt: new Date(Date.parse(now) + 14 * 24 * 60 * 60 * 1000).toISOString(),
+  };
+  const workspace = { ...seed.workspace, name: 'QA Test Workspace', isDemo: false };
+  const user = { ...seed.owner, email: TEST_EMAIL, name: 'QA Test Owner', jobTitle: 'Security Owner', isDemoUser: false };
+  await getStore().createAccount({ organization, workspace, user });
+  for (const evidence of seed.evidence) {
+    await getStore().createEvidence({ ...evidence, source: 'upload' });
+  }
   const app = createApp();
   app.get('/__test/client-ip', (req, res) => res.json({ ip: req.ip }));
   attachErrorHandling(app);
@@ -37,7 +56,7 @@ beforeAll(async () => {
   const response = await fetch(`${base}/api/auth/login`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ email: 'demo@complylens.ai', password: 'DemoPass123!' }),
+    body: JSON.stringify({ email: TEST_EMAIL, password: TEST_PASSWORD }),
   });
   expect(response.status).toBe(200);
   const payload = (await response.json()) as { token: string };
@@ -58,22 +77,20 @@ describe('health and metadata', () => {
     expect(payload.store.kind).toBe('memory');
   });
 
-  it('seeds the requested AcmeCloud organization and workspace labels', async () => {
+  it('creates a private customer organisation and workspace', async () => {
     const payload = (await (await get('/api/context')).json()) as {
       organization: { name: string };
       workspace: { name: string; isDemo: boolean };
     };
-    expect(config.demo.organizationName).toBe('AcmeCloud');
-    expect(config.demo.workspaceName).toBe(DEMO_WORKSPACE_LABEL);
-    expect(payload.organization.name).toBe('AcmeCloud');
-    expect(payload.workspace.name).toBe('AcmeCloud Demo Workspace');
-    expect(payload.workspace.isDemo).toBe(true);
+    expect(payload.organization.name).toBe('QA Test Organisation');
+    expect(payload.workspace.name).toBe('QA Test Workspace');
+    expect(payload.workspace.isDemo).toBe(false);
   });
 
   it('publishes the analysis mode so the UI can disclose it', async () => {
     const payload = (await (await get('/api/meta', false)).json()) as { analysis: { mode: string; label: string } };
-    expect(payload.analysis.mode).toBe('demo-analysis');
-    expect(payload.analysis.label).toContain('Demo Analysis Mode');
+    expect(payload.analysis.mode).toBe('rules-based');
+    expect(payload.analysis.label).toContain('Deterministic analysis mode');
   });
 
   it('does not trust a client-supplied forwarded IP by default', async () => {
@@ -92,7 +109,7 @@ describe('authentication', () => {
     const response = await fetch(`${base}/api/auth/login`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ email: 'demo@complylens.ai', password: 'not-the-password' }),
+      body: JSON.stringify({ email: TEST_EMAIL, password: 'not-the-password' }),
     });
     expect(response.status).toBe(401);
     const payload = (await response.json()) as { error: { message: string } };
@@ -109,12 +126,40 @@ describe('authentication', () => {
     expect(response.status).toBe(401);
   });
 
-  it('issues an instant demo session', async () => {
+  it('rejects seeded demo credentials when demo mode is disabled', async () => {
+    const previous = config.demoMode;
+    Object.defineProperty(config, 'demoMode', { value: false, configurable: true, writable: true });
+    try {
+      const response = await fetch(`${base}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ email: 'demo@complylens.ai', password: 'DemoPass123!' }),
+      });
+      expect(response.status).toBe(401);
+      const payload = (await response.json()) as { error: { message: string } };
+      expect(payload.error.message).toBe('Email or password is incorrect.');
+    } finally {
+      Object.defineProperty(config, 'demoMode', { value: previous, configurable: true, writable: true });
+    }
+  });
+
+  it('rejects a legacy demo session token when demo access is retired', async () => {
+    const { token: legacyDemoToken } = createSessionToken({
+      sub: 'usr-demo-owner',
+      email: 'demo@complylens.ai',
+      org: 'org_acmecloud',
+      role: 'owner',
+      demo: true,
+    });
+    const response = await fetch(`${base}/api/context`, {
+      headers: { authorization: `Bearer ${legacyDemoToken}` },
+    });
+    expect(response.status).toBe(401);
+  });
+
+  it('does not expose the retired passwordless demo entry point', async () => {
     const response = await fetch(`${base}/api/auth/demo`, { method: 'POST' });
-    expect(response.status).toBe(200);
-    const payload = (await response.json()) as { user: { isDemoUser: boolean }; workspace: { isDemo: boolean } };
-    expect(payload.user.isDemoUser).toBe(true);
-    expect(payload.workspace.isDemo).toBe(true);
+    expect([401, 403, 404]).toContain(response.status);
   });
 
   it('answers a malformed session token with 401, never a server error', async () => {
@@ -147,7 +192,7 @@ describe('authentication', () => {
         body: JSON.stringify({ email }),
       }).then(async (response) => ({ status: response.status, body: await response.json() }));
 
-    const known = await request('demo@complylens.ai');
+    const known = await request(TEST_EMAIL);
     const unknown = await request('nobody-here@example.com');
 
     expect(known.status).toBe(200);
@@ -172,10 +217,10 @@ describe('readiness workspace', () => {
       findings: { critical: number; total: number };
       priorityFindings: Array<{ controlCode: string }>;
     };
-    expect(payload.metric.readinessIndex).toBe(92);
-    expect(payload.counts).toMatchObject({ total: 28, passed: 18, needsAttention: 4, missing: 2 });
+    expect(payload.metric.readinessIndex).toBe(94);
+    expect(payload.counts).toMatchObject({ total: 28, passed: 18, needsAttention: 4, missing: 1 });
     expect(payload.findings.total).toBe(10);
-    expect(payload.findings.critical).toBe(2);
+    expect(payload.findings.critical).toBe(1);
     expect(payload.priorityFindings.length).toBeGreaterThanOrEqual(3);
   });
 
@@ -207,7 +252,7 @@ describe('readiness workspace', () => {
       items: Array<{ key: string; readinessIndex: number }>;
     };
     const indexes = Object.fromEntries(payload.items.map((item) => [item.key, item.readinessIndex]));
-    expect(indexes).toEqual({ soc2: 92, iso27001: 78 });
+    expect(indexes).toEqual({ soc2: 94, iso27001: 84 });
   });
 });
 
@@ -244,15 +289,15 @@ describe('reports', () => {
         };
       };
     };
-    expect(report.scoreIndex).toBe(92);
+    expect(report.scoreIndex).toBe(94);
 
     // The report carries the per-status control lists used by PDF sections 4-7.
     expect(report.summary.controlsByStatus.passed.length).toBe(18);
     expect(report.summary.controlsByStatus.needsAttention.length).toBe(4);
-    expect(report.summary.controlsByStatus.missing.length).toBe(2);
-    expect(report.summary.controlsByStatus.needsReview.length).toBe(4);
+    expect(report.summary.controlsByStatus.missing.length).toBe(1);
+    expect(report.summary.controlsByStatus.needsReview.length).toBe(5);
     expect(report.summary.disclaimer).toContain(
-      'This report is an AI-generated preliminary readiness assessment. It is not a certification, audit opinion, or substitute for professional compliance advice.',
+      'This report is an automatically generated preliminary readiness assessment. It is not a certification, audit opinion, or substitute for professional compliance advice.',
     );
 
     const pdf = await fetch(`${base}/api/reports/${report.id}/pdf`, {
@@ -263,6 +308,78 @@ describe('reports', () => {
     const buffer = Buffer.from(await pdf.arrayBuffer());
     expect(buffer.subarray(0, 5).toString()).toBe('%PDF-');
     expect(buffer.byteLength).toBeGreaterThan(10_000);
+  });
+});
+
+describe('persistent remediation API', () => {
+  it('requires authentication before listing remediation plans', async () => {
+    const response = await get('/api/remediations', false);
+    expect(response.status).toBe(401);
+  });
+
+  it('creates, lists, updates and audits a remediation plan', async () => {
+    const control = CONTROL_LIBRARY[0]!;
+    const createdResponse = await fetch(`${base}/api/remediations`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+      body: JSON.stringify({
+        controlId: control.id,
+        controlCode: control.code,
+        title: 'QA remediation persistence check',
+        description: 'Temporary test plan',
+        owner: 'QA',
+        priority: 'high',
+        requiredProof: 'Approved test evidence',
+      }),
+    });
+    expect(createdResponse.status).toBe(201);
+    const { remediation } = (await createdResponse.json()) as {
+      remediation: { id: string; controlId: string; status: string; createdBy: string };
+    };
+    expect(remediation.controlId).toBe(control.id);
+    expect(remediation.status).toBe('open');
+    expect(remediation.createdBy.length).toBeGreaterThan(0);
+
+    const listed = (await (await get('/api/remediations')).json()) as {
+      items: Array<{ id: string }>;
+    };
+    expect(listed.items.some((item) => item.id === remediation.id)).toBe(true);
+
+    const firstEvents = (await (await get(`/api/remediations/${remediation.id}/events`)).json()) as {
+      items: Array<{ action: string }>;
+    };
+    expect(firstEvents.items.map((item) => item.action)).toEqual(['created']);
+
+    const updatedResponse = await fetch(`${base}/api/remediations/${remediation.id}`, {
+      method: 'PATCH',
+      headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+      body: JSON.stringify({ status: 'in_progress', owner: 'IT Operations' }),
+    });
+    expect(updatedResponse.status).toBe(200);
+    const updated = (await updatedResponse.json()) as {
+      remediation: { status: string; owner: string };
+    };
+    expect(updated.remediation).toMatchObject({ status: 'in_progress', owner: 'IT Operations' });
+
+    const finalEvents = (await (await get(`/api/remediations/${remediation.id}/events`)).json()) as {
+      items: Array<{ action: string }>;
+    };
+    expect(finalEvents.items).toHaveLength(2);
+    expect(finalEvents.items.map((item) => item.action)).toContain('updated');
+  });
+
+  it('rejects a control id/code mismatch', async () => {
+    const control = CONTROL_LIBRARY[0]!;
+    const response = await fetch(`${base}/api/remediations`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+      body: JSON.stringify({
+        controlId: control.id,
+        controlCode: 'NOT-A-REAL-CONTROL',
+        title: 'Invalid remediation',
+      }),
+    });
+    expect(response.status).toBe(400);
   });
 });
 
@@ -359,6 +476,14 @@ describe('input validation', () => {
     expect(uploaded.status).toBe(201);
     const { evidence } = (await uploaded.json()) as { evidence: { id: string; frameworkKeys: string[] } };
     expect(evidence.frameworkKeys).toEqual(['soc2']);
+
+    const context = (await (await get('/api/context')).json()) as {
+      user: { id: string } | null;
+      organization: { id: string };
+    };
+    const persisted = await getStore().getEvidence(evidence.id, context.organization.id);
+    expect(context.user?.id).toBeTruthy();
+    expect(persisted?.createdByUser).toBe(context.user?.id);
 
     const detail = (await (await get(`/api/evidence/${evidence.id}`)).json()) as {
       mapping: Array<{ frameworkKey: string }>;

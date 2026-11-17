@@ -23,6 +23,7 @@ function runWithEnv(env: Record<string, string | undefined>) {
     env: {
       ...process.env,
       ...env,
+      AUTH_REQUIRED: env.AUTH_REQUIRED ?? 'true',
       // Guarantee a clean slate regardless of the outer shell's environment.
       SESSION_SECRET: env.SESSION_SECRET ?? '',
       NODE_ENV: env.NODE_ENV ?? '',
@@ -40,7 +41,7 @@ describe('production SESSION_SECRET enforcement', () => {
     expect(result.status).not.toBe(0);
     expect(result.stdout).not.toContain('CONFIG_OK');
     // The error must actually explain what to do, not just fail silently.
-    expect(result.stderr).toContain('SESSION_SECRET is required in production');
+    expect(result.stderr).toContain('SESSION_SECRET is required when AUTH_REQUIRED=true in production');
     expect(result.stderr.toLowerCase()).toContain('set a long random session_secret');
   });
 
@@ -56,6 +57,31 @@ describe('production SESSION_SECRET enforcement', () => {
     const parsed = JSON.parse(json) as { isProduction: boolean; secretIsEphemeral: boolean };
     expect(parsed.isProduction).toBe(true);
     expect(parsed.secretIsEphemeral).toBe(false);
+  });
+
+  it('ignores DEMO_MODE=true in production and keeps passwordless demo access disabled', () => {
+    const result = runWithEnv({
+      NODE_ENV: 'production',
+      SESSION_SECRET: 'a-long-randomly-generated-production-secret-value-123456',
+      AUTH_REQUIRED: 'true',
+      DEMO_MODE: 'true',
+    });
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain('CONFIG_OK');
+    const [, json] = result.stdout.trim().split(' ');
+    const parsed = JSON.parse(json) as { demoMode: boolean };
+    expect(parsed.demoMode).toBe(false);
+  });
+
+  it('rejects disabled authentication in production even if demo mode is false', () => {
+    const result = runWithEnv({
+      NODE_ENV: 'production',
+      SESSION_SECRET: 'a-long-randomly-generated-production-secret-value-123456',
+      AUTH_REQUIRED: 'false',
+      DEMO_MODE: 'false',
+    });
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain('Production requires AUTH_REQUIRED=true and DEMO_MODE=false');
   });
 
   it('never prints the configured secret value anywhere in stdout/stderr', () => {

@@ -1,9 +1,8 @@
 /**
- * In-memory store — the zero-setup default.
+ * In-memory store for local development and automated tests.
  *
- * Everything lives in process memory and is discarded on restart. It is the
- * right store for the demo, for evaluating the product, and for running the
- * test suite. Set SUPABASE_URL and SUPABASE_SECRET_KEY to use the persistent store.
+ * Everything lives in process memory and is discarded on restart. Customer
+ * workspaces are created only through the authenticated signup flow.
  */
 import crypto from 'node:crypto';
 import type {
@@ -18,7 +17,6 @@ import type {
   Workspace,
 } from '../domain/types.js';
 import type { NewAccount, Store } from './store.js';
-import { buildDemoSeed, logSeedSummary } from './seed.js';
 
 function id(prefix: string): string {
   return `${prefix}-${crypto.randomBytes(8).toString('hex')}`;
@@ -40,15 +38,7 @@ export class MemoryStore implements Store {
   private audit: AuditEvent[] = [];
 
   async init(): Promise<void> {
-    const seed = await buildDemoSeed();
-    this.organizations.set(seed.organization.id, seed.organization);
-    this.workspaces.set(seed.workspace.id, seed.workspace);
-    for (const user of [seed.owner, seed.member]) {
-      this.users.set(user.id, user);
-      this.usersByEmail.set(user.email.toLowerCase(), user.id);
-    }
-    for (const record of seed.evidence) this.evidence.set(record.id, record);
-    await logSeedSummary('memory', seed);
+    // Start empty. Every workspace belongs to an account created via signup.
   }
 
   async health() {
@@ -56,8 +46,8 @@ export class MemoryStore implements Store {
       ok: true,
       kind: this.kind,
       detail: this.diagnostic
-        ? `Supabase configured but unavailable: ${this.diagnostic}. In-memory demo data resets on restart.`
-        : `In-memory demo store — ${this.evidence.size} evidence records, ${this.users.size} users. Data resets on restart.`,
+        ? `Supabase configured but unavailable: ${this.diagnostic}. In-memory data resets on restart.`
+        : 'In-memory development store — data resets on restart.',
     };
   }
 

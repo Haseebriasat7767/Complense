@@ -170,9 +170,9 @@ export function buildReportSummary(input: {
       missing: counts.missing,
       needsReview: counts.needsReview,
     })),
-    conductedBy: `${organization.name} — internal readiness review (Demo Data)`,
+    conductedBy: `${organization.name} — internal readiness review`,
     analysisMode,
-    disclaimer: `This report is an AI-generated preliminary readiness assessment. It is not a certification, audit opinion, or substitute for professional compliance advice. ${FRAMEWORK_DISCLAIMER}`,
+    disclaimer: `This report is an automatically generated preliminary readiness assessment. It is not a certification, audit opinion, or substitute for professional compliance advice. ${FRAMEWORK_DISCLAIMER}`,
   };
 }
 

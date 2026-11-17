@@ -1,13 +1,13 @@
 import { ArrowRight } from 'lucide-react';
 import { ButtonLink } from '@/components/ui/Button';
 import { DashboardPreview } from '@/components/marketing/DashboardPreview';
-import { DemoButton, Eyebrow, Section } from '@/components/marketing/MarketingLayout';
+import { TrialButton, Eyebrow, Section } from '@/components/marketing/MarketingLayout';
 import { HowItWorksSection } from '@/components/marketing/Sections';
 
 const JOURNEY = [
-  { step: 'Open the demo', detail: 'One click issues a session for the seeded AcmeCloud demo workspace — no sign-up.' },
+  { step: 'Create your workspace', detail: 'Sign up with your work email and create a private workspace for your organisation.' },
   { step: 'Review the dashboard', detail: 'Readiness index, controls reviewed, passed, needs attention and critical gaps.' },
-  { step: 'Open Evidence', detail: 'Ten sample documents with analysis statuses, categories and extracted text previews.' },
+  { step: 'Upload evidence', detail: 'Add your own PDF, DOCX, TXT or CSV evidence files.' },
   { step: 'Run an analysis', detail: 'Re-analyze a document and watch its mapping and status update deterministically.' },
   { step: 'Inspect the mapping', detail: 'See which controls each document supports, with per-control confidence.' },
   { step: 'Read a control', detail: 'Evidence found, evidence missing, analysis note and the recommended action.' },
@@ -29,7 +29,7 @@ export function HowItWorksPage() {
             team already has and improve from there.
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
-            <DemoButton label="Try the Demo" />
+            <TrialButton label="Start 14-day free trial" />
             <ButtonLink to="/pricing" variant="secondary" iconRight={<ArrowRight className="size-4" />}>
               See pricing
             </ButtonLink>
@@ -43,10 +43,9 @@ export function HowItWorksPage() {
         <div className="grid gap-8 lg:grid-cols-[1fr_1.1fr]">
           <div>
             <Eyebrow>The full journey</Eyebrow>
-            <h2 className="mt-3 text-2xl tracking-tight">What the demo walkthrough looks like</h2>
+            <h2 className="mt-3 text-2xl tracking-tight">What your assessment journey looks like</h2>
             <p className="mt-3 text-[14.5px] leading-relaxed text-ink-500">
-              Every step below works with no configuration: no API key, no database, no paid service. Data is held in
-              memory, so a restart returns the demo workspace to its seeded state.
+              Your workspace is created for your organisation. Upload real evidence, review proposed mappings, and work through the gaps.
             </p>
           </div>
           <ol className="surface divide-y divide-ink-200">
@@ -67,12 +66,12 @@ export function HowItWorksPage() {
 
       <Section>
         <div className="mx-auto max-w-2xl text-center">
-          <h2 className="text-2xl tracking-tight">Want to see it first?</h2>
+          <h2 className="text-2xl tracking-tight">Ready to assess your organisation?</h2>
           <p className="mt-3 text-[14.5px] text-ink-500">
-            The demo workspace already contains the state described above — 92% readiness on SOC 2 with two critical gaps.
+            Start a 14-day free trial with your own evidence. No credit card is required.
           </p>
           <div className="mt-6 flex justify-center">
-            <DemoButton size="lg" label="Open the demo workspace" />
+            <TrialButton size="lg" label="Start 14-day free trial" />
           </div>
         </div>
         <div className="mt-12">

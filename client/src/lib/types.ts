@@ -42,6 +42,8 @@ export type Organization = {
   industry: string;
   employeeCount: number;
   createdAt: string;
+  trialStartedAt?: string | null;
+  trialEndsAt?: string | null;
   settings: OrganizationSettings;
 };
 
@@ -61,7 +63,7 @@ export type SessionPayload = {
   organization: Organization;
   workspace: Workspace | null;
   workspaces: Workspace[];
-  persistence: 'memory' | 'mongodb';
+  persistence: 'memory' | 'supabase';
 };
 
 export type WorkspaceContext = {
@@ -70,7 +72,7 @@ export type WorkspaceContext = {
   workspace: Workspace;
   workspaces: Workspace[];
   demoMode: boolean;
-  analysisMode: { key: 'demo-analysis' | 'external-ai'; label: string };
+  analysisMode: { key: 'rules-based' | 'external-ai'; label: string };
 };
 
 export type MappedControlRef = {
@@ -226,7 +228,7 @@ export type DashboardData = {
   organization: Organization;
   greeting: { period: string; label: string; name: string };
   generatedAt: string;
-  analysisMode: { key: 'demo-analysis' | 'external-ai'; label: string };
+  analysisMode: { key: 'rules-based' | 'external-ai'; label: string };
   framework: { key: FrameworkKey; name: string; shortName: string };
   metric: {
     readinessIndex: number;
@@ -444,7 +446,7 @@ export type MetaResponse = {
     categories: string[];
   }>;
   analysis: {
-    mode: 'demo-analysis' | 'external-ai';
+    mode: 'rules-based' | 'external-ai';
     label: string;
     scoring: { weights: Record<string, number>; methodology: string };
   };
@@ -455,3 +457,45 @@ export type MetaResponse = {
 };
 
 export type ApiErrorShape = { error: { code: string; message: string; details?: unknown } };
+
+
+export type RemediationStatus =
+  | 'open'
+  | 'in_progress'
+  | 'blocked'
+  | 'ready_for_review'
+  | 'verified'
+  | 'dismissed';
+
+export type RemediationPriority = 'critical' | 'high' | 'medium' | 'low';
+
+export type RemediationRecord = {
+  id: string;
+  organizationId: string;
+  workspaceId: string;
+  controlId: string;
+  controlCode: string;
+  title: string;
+  description: string;
+  owner: string;
+  dueDate: string | null;
+  status: RemediationStatus;
+  priority: RemediationPriority;
+  requiredProof: string;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+  verifiedBy: string | null;
+  verifiedAt: string | null;
+};
+
+export type RemediationEvent = {
+  id: string;
+  organizationId: string;
+  workspaceId: string;
+  remediationId: string;
+  actorId: string;
+  action: string;
+  detail: string;
+  at: string;
+};

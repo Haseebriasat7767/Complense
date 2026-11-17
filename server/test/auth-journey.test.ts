@@ -5,7 +5,7 @@
  * how the Vercel serverless function and the container deployment both boot
  * it) and walks the exact path the browser takes:
  *
- *   POST /api/auth/login → token → GET /api/context → GET /api/dashboard
+ *   POST /api/auth/signup → token → GET /api/context → GET /api/dashboard
  *
  * Each `it` below is numbered to match the auth audit checklist.
  */
@@ -14,10 +14,11 @@ import type { AddressInfo } from 'node:net';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { attachErrorHandling, createApp } from '../src/app.js';
 import { createSessionToken } from '../src/auth/tokens.js';
-import { closeStore, initStore } from '../src/store/index.js';
+import { closeStore, getStore, initStore } from '../src/store/index.js';
+import { buildDemoSeed } from '../src/store/seed.js';
 
-const DEMO_EMAIL = 'demo@complylens.ai';
-const DEMO_PASSWORD = 'DemoPass123!';
+const TEST_EMAIL = 'qa-test@example.com';
+const TEST_PASSWORD = 'DemoPass123!';
 
 let server: http.Server;
 let base: string;
@@ -32,6 +33,21 @@ async function login(email: string, password: string) {
 
 beforeAll(async () => {
   await initStore();
+  const seed = await buildDemoSeed();
+  const now = new Date().toISOString();
+  const organization = {
+    ...seed.organization,
+    name: 'QA Test Organisation',
+    slug: 'qa-test-organisation',
+    trialStartedAt: now,
+    trialEndsAt: new Date(Date.parse(now) + 14 * 24 * 60 * 60 * 1000).toISOString(),
+  };
+  const workspace = { ...seed.workspace, name: 'QA Test Workspace', isDemo: false };
+  const user = { ...seed.owner, email: TEST_EMAIL, name: 'QA Test Owner', jobTitle: 'Security Owner', isDemoUser: false };
+  await getStore().createAccount({ organization, workspace, user });
+  for (const evidence of seed.evidence) {
+    await getStore().createEvidence({ ...evidence, source: 'upload' });
+  }
   const app = createApp();
   attachErrorHandling(app);
   server = http.createServer(app);
@@ -46,24 +62,49 @@ afterAll(async () => {
 });
 
 describe('the complete authentication journey', () => {
-  it('TEST 1: demo login succeeds', async () => {
-    const response = await login(DEMO_EMAIL, DEMO_PASSWORD);
+  it('creates a new private workspace with an exact 14-day card-free trial', async () => {
+    const response = await fetch(`${base}/api/auth/signup`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        name: 'New Trial Owner',
+        email: 'new-trial@example.com',
+        password: 'StrongTrialPassword123!',
+        organizationName: 'New Trial Organisation',
+      }),
+    });
+    expect(response.status).toBe(201);
+    const payload = (await response.json()) as {
+      organization: { name: string; trialStartedAt: string; trialEndsAt: string };
+      workspace: { name: string; isDemo: boolean };
+      user: { isDemoUser: boolean };
+    };
+    expect(payload.organization.name).toBe('New Trial Organisation');
+    expect(Date.parse(payload.organization.trialEndsAt) - Date.parse(payload.organization.trialStartedAt)).toBe(14 * 24 * 60 * 60 * 1000);
+    expect(payload.workspace.name).toBe('Compliance Workspace');
+    expect(payload.workspace.isDemo).toBe(false);
+    expect(payload.user.isDemoUser).toBe(false);
+    expect(payload).not.toHaveProperty('paymentMethod');
+  });
+
+  it('TEST 1: account login succeeds', async () => {
+    const response = await login(TEST_EMAIL, TEST_PASSWORD);
     expect(response.status).toBe(200);
   });
 
-  it('TEST 2: demo login returns a valid, well-formed session token', async () => {
-    const response = await login(DEMO_EMAIL, DEMO_PASSWORD);
+  it('TEST 2: account login returns a valid, well-formed session token', async () => {
+    const response = await login(TEST_EMAIL, TEST_PASSWORD);
     const payload = (await response.json()) as { token: string; expiresAt: string; user: { email: string } };
 
     expect(typeof payload.token).toBe('string');
     // header.payload.signature — a real HS256 JWT-shaped token, not a stub.
     expect(payload.token.split('.')).toHaveLength(3);
     expect(new Date(payload.expiresAt).getTime()).toBeGreaterThan(Date.now());
-    expect(payload.user.email).toBe(DEMO_EMAIL);
+    expect(payload.user.email).toBe(TEST_EMAIL);
   });
 
   it('TEST 3: the returned token authenticates a subsequent request', async () => {
-    const { token } = (await (await login(DEMO_EMAIL, DEMO_PASSWORD)).json()) as { token: string };
+    const { token } = (await (await login(TEST_EMAIL, TEST_PASSWORD)).json()) as { token: string };
     const response = await fetch(`${base}/api/dashboard`, {
       headers: { authorization: `Bearer ${token}` },
     });
@@ -71,7 +112,7 @@ describe('the complete authentication journey', () => {
   });
 
   it('TEST 4: GET /api/context succeeds using the returned token', async () => {
-    const { token } = (await (await login(DEMO_EMAIL, DEMO_PASSWORD)).json()) as { token: string };
+    const { token } = (await (await login(TEST_EMAIL, TEST_PASSWORD)).json()) as { token: string };
     const response = await fetch(`${base}/api/context`, {
       headers: { authorization: `Bearer ${token}` },
     });
@@ -81,13 +122,13 @@ describe('the complete authentication journey', () => {
       workspace: { name: string };
       user: { email: string } | null;
     };
-    expect(payload.organization.name).toBe('AcmeCloud');
-    expect(payload.workspace.name).toBe('AcmeCloud Demo Workspace');
-    expect(payload.user?.email).toBe(DEMO_EMAIL);
+    expect(payload.organization.name).toBe('QA Test Organisation');
+    expect(payload.workspace.name).toBe('QA Test Workspace');
+    expect(payload.user?.email).toBe(TEST_EMAIL);
   });
 
   it('TEST 5: GET /api/dashboard succeeds using the returned token', async () => {
-    const { token } = (await (await login(DEMO_EMAIL, DEMO_PASSWORD)).json()) as { token: string };
+    const { token } = (await (await login(TEST_EMAIL, TEST_PASSWORD)).json()) as { token: string };
     const response = await fetch(`${base}/api/dashboard`, {
       headers: { authorization: `Bearer ${token}` },
     });
@@ -97,7 +138,7 @@ describe('the complete authentication journey', () => {
   });
 
   it('TEST 6: an invalid password returns 401, not a successful session', async () => {
-    const response = await login(DEMO_EMAIL, 'wrong-password');
+    const response = await login(TEST_EMAIL, 'wrong-password');
     expect(response.status).toBe(401);
     const payload = (await response.json()) as { error: { code: string } };
     expect(payload.error.code).toBe('unauthorized');
@@ -124,7 +165,7 @@ describe('the complete authentication journey', () => {
     // whose exp already elapsed. This proves expiry is actually enforced, not
     // just structurally present in the payload.
     const { token: expiredToken } = createSessionToken(
-      { sub: 'usr-demo-owner', email: DEMO_EMAIL, org: 'org_acmecloud', role: 'owner', demo: true },
+      { sub: 'usr-demo-owner', email: TEST_EMAIL, org: 'org_acmecloud', role: 'owner', demo: false },
       -1, // ttlHours: expired one hour ago
     );
     const response = await fetch(`${base}/api/dashboard`, {
@@ -136,7 +177,7 @@ describe('the complete authentication journey', () => {
   });
 
   it('a tampered signature is rejected even with otherwise well-formed claims', async () => {
-    const { token } = (await (await login(DEMO_EMAIL, DEMO_PASSWORD)).json()) as { token: string };
+    const { token } = (await (await login(TEST_EMAIL, TEST_PASSWORD)).json()) as { token: string };
     const [header, body] = token.split('.');
     const response = await fetch(`${base}/api/dashboard`, {
       headers: { authorization: `Bearer ${header}.${body}.tampered-signature-value` },
@@ -145,7 +186,7 @@ describe('the complete authentication journey', () => {
   });
 
   it('TEST 10 (server side): POST /api/auth/logout succeeds so the client can safely discard its token', async () => {
-    const { token } = (await (await login(DEMO_EMAIL, DEMO_PASSWORD)).json()) as { token: string };
+    const { token } = (await (await login(TEST_EMAIL, TEST_PASSWORD)).json()) as { token: string };
     const response = await fetch(`${base}/api/auth/logout`, {
       method: 'POST',
       headers: { authorization: `Bearer ${token}` },
@@ -159,7 +200,7 @@ describe('the complete authentication journey', () => {
   });
 
   it('TEST 11 (server side): a still-valid token keeps working across repeated requests, exactly like a page refresh', async () => {
-    const { token } = (await (await login(DEMO_EMAIL, DEMO_PASSWORD)).json()) as { token: string };
+    const { token } = (await (await login(TEST_EMAIL, TEST_PASSWORD)).json()) as { token: string };
 
     // Simulates the dashboard reloading /api/context and /api/dashboard again
     // after a browser refresh, using only the token persisted in localStorage.
@@ -172,9 +213,9 @@ describe('the complete authentication journey', () => {
   });
 
   it('the login response never includes the password or the raw signing secret', async () => {
-    const response = await login(DEMO_EMAIL, DEMO_PASSWORD);
+    const response = await login(TEST_EMAIL, TEST_PASSWORD);
     const text = await response.text();
     expect(text.toLowerCase()).not.toContain('password');
-    expect(text).not.toContain(DEMO_PASSWORD);
+    expect(text).not.toContain(TEST_PASSWORD);
   });
 });

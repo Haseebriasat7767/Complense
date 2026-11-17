@@ -55,10 +55,10 @@ const TERMS: LegalSection[] = [
     ],
   },
   {
-    heading: '2. Demo build and sample data',
+    heading: '2. Free trial and workspace data',
     body: [
-      'This build ships with a fictional sample organisation, fictional users and synthetic documents, all labelled as demo data. Any resemblance to a real company is coincidental.',
-      'Pricing shown in the application is demonstration pricing. No payment provider is connected and no charges are made.',
+      'Each account creates its own organisation and private workspace. The 14-day trial does not require a payment card.',
+      'Paid subscription checkout and card collection are not enabled in this trial release. No payment is collected during the free trial.',
     ],
   },
   {

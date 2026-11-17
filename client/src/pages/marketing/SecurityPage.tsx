@@ -1,11 +1,11 @@
 import { ShieldAlert } from 'lucide-react';
-import { DemoButton, Eyebrow, Section } from '@/components/marketing/MarketingLayout';
+import { TrialButton, Eyebrow, Section } from '@/components/marketing/MarketingLayout';
 import { SecuritySection } from '@/components/marketing/Sections';
 
 const DATA_HANDLING = [
   {
     title: 'What is stored',
-    body: 'Organisation, user, workspace, evidence metadata and the extracted text of uploaded documents (or the seeded demo text). Passwords are stored only as scrypt hashes.',
+    body: 'Organisation, user, workspace, evidence metadata and extracted text from uploaded documents. Passwords are stored only as scrypt hashes.',
   },
   {
     title: 'What is not stored',
@@ -13,7 +13,7 @@ const DATA_HANDLING = [
   },
   {
     title: 'Where it lives',
-    body: 'Without configuration, everything lives in the server process memory and disappears on restart. Set MONGODB_URI to persist to your own MongoDB deployment.',
+    body: 'The hosted application uses Supabase PostgreSQL for persistent records. Local development and automated tests can use an in-memory store.',
   },
   {
     title: 'Who can read it',
@@ -33,7 +33,7 @@ export function SecurityPage() {
             implementation in this codebase — and what it does not claim.
           </p>
           <div className="mt-6">
-            <DemoButton label="Try the Demo" />
+            <TrialButton label="Start 14-day free trial" />
           </div>
         </div>
       </Section>
@@ -67,13 +67,13 @@ export function SecurityPage() {
       <Section className="border-t border-ink-200 bg-ink-50/50">
         <h2 className="text-xl tracking-tight">Deployment hardening checklist</h2>
         <p className="mt-2 text-[13.5px] text-ink-500">
-          What to do before putting this in front of real evidence:
+          Operational checks to complete before inviting customers to upload real evidence:
         </p>
         <ul className="mt-5 grid gap-3 sm:grid-cols-2">
           {[
             'Set SESSION_SECRET to a long random value so sessions survive restarts and cannot be forged.',
-            'Set AUTH_REQUIRED=true and DEMO_MODE=false to disable passwordless demo entry.',
-            'Point MONGODB_URI at a database with authentication, TLS and backups enabled.',
+            'Passwordless demo access is disabled; authenticated accounts are required.',
+            'Keep SUPABASE_URL and SUPABASE_SECRET_KEY scoped to the intended Supabase project; the server key must remain server-side and must never be exposed in the browser.',
             'Terminate TLS at a trusted reverse proxy; set TRUST_PROXY_HOPS to the exact trusted proxy count (default 0).',
             'Leave AI_ALLOW_EXTERNAL=false unless you have a data-processing agreement covering evidence text.',
             'Review the upload limits and allowed file types for your evidence types.',

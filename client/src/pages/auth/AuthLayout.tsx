@@ -1,11 +1,8 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { BadgeCheck, GitCompareArrows, Sparkles, TriangleAlert } from 'lucide-react';
-import { Logo, useDemoEntry } from '@/components/marketing/MarketingLayout';
-import { Button, ButtonLink } from '@/components/ui/Button';
-import { useToast } from '@/components/ui/Toast';
-import { useSession } from '@/lib/session';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Logo } from '@/components/marketing/MarketingLayout';
+import { ButtonLink } from '@/components/ui/Button';
 
 export function AuthLayout({
   title,
@@ -48,8 +45,7 @@ export function AuthLayout({
             Know what’s missing before the auditor does.
           </h2>
           <p className="mt-4 max-w-md text-[14px] leading-relaxed text-ink-300">
-            The demo workspace is pre-populated with a fictional company, sample evidence, mapped controls and open
-            findings — so you can follow the whole journey in a couple of minutes.
+            Start with your own organisation and evidence. Your workspace is private to your team, with 14 days to explore the product before choosing a paid plan.
           </p>
 
           <ul className="mt-8 space-y-3">
@@ -69,12 +65,9 @@ export function AuthLayout({
           </ul>
 
           <div className="mt-10 max-w-md rounded-xl border border-white/10 bg-white/5 p-4">
-            <p className="text-[12px] font-medium tracking-wide text-ink-300 uppercase">Demo credentials</p>
-            <p className="mt-2 font-mono text-[12.5px] text-white">demo@complylens.ai</p>
-            <p className="font-mono text-[12.5px] text-white">DemoPass123!</p>
-            <p className="mt-2 text-[11.5px] text-ink-400">
-              Or use “Continue with Demo” — no credentials are required.
-            </p>
+            <p className="text-[12px] font-medium tracking-wide text-ink-300 uppercase">Free trial</p>
+            <p className="mt-2 text-[15px] font-semibold text-white">14 days · No credit card</p>
+            <p className="mt-2 text-[11.5px] text-ink-400">Your trial starts when you create your account. Billing can be added later.</p>
           </div>
         </div>
       </aside>
@@ -82,49 +75,6 @@ export function AuthLayout({
   );
 }
 
-/** Shared demo-entry button used across the auth screens. */
-export function DemoEntryPanel({ compact = false }: { compact?: boolean }) {
-  const { start, loading } = useDemoEntry();
-  const navigate = useNavigate();
-  const [params] = useSearchParams();
-  const toast = useToast();
-  const { refresh } = useSession();
-
-  const open = async () => {
-    const ok = await start();
-    if (!ok) return;
-    await refresh();
-    const redirect = params.get('redirect');
-    toast.success('Demo workspace opened', 'Exploring fictional sample data for the AcmeCloud demo organisation.');
-    navigate(redirect && redirect.startsWith('/app') ? redirect : '/app/dashboard', { replace: true });
-  };
-
-  return (
-    <div className={compact ? '' : 'rounded-xl border border-ink-200 bg-ink-50/70 px-4 py-4'}>
-      <div className="flex items-center justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-[13px] font-medium text-ink-900">Demo mode</p>
-          <p className="mt-0.5 text-[12px] text-ink-500">
-            Skip authentication and open the seeded demo workspace immediately.
-          </p>
-        </div>
-      </div>
-      <Button
-        variant="primary"
-        fullWidth
-        className="mt-3"
-        loading={loading}
-        onClick={() => void open()}
-        iconLeft={<Sparkles className="size-4" aria-hidden="true" />}
-      >
-        Continue with Demo
-      </Button>
-      <p className="mt-2 text-[11.5px] leading-relaxed text-ink-500">
-        Demo data only — fictional organisation, fictional users and synthetic documents.
-      </p>
-    </div>
-  );
-}
 
 export function AuthDivider() {
   return (

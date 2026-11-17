@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main, fix/production-ready-release]
+
+permissions:
+  contents: write
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Synchronise lockfile for QA release branch
+        if: github.ref == 'refs/heads/fix/production-ready-release'
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+      - name: Commit lockfile correction
+        if: github.ref == 'refs/heads/fix/production-ready-release'
+        run: |
+          if git diff --quiet -- package-lock.json; then
+            echo "Lockfile already in sync."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package-lock.json
+          git commit -m "Sync lockfile for PDF extraction dependencies"
+          git push
+      - name: Install committed lockfile
+        run: npm ci
+      - name: Audit production dependencies (release gate)
+        run: npm audit --omit=dev --audit-level=low
+      - name: Run tests
+        run: npm test
+      - name: Build production bundles
+        run: npm run build

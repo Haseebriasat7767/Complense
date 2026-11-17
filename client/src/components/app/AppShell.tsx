@@ -89,8 +89,8 @@ export function AppShell() {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
 
-  const displayName = context?.user?.name ?? 'Demo user';
-  const displayEmail = context?.user?.email ?? 'demo@complylens.ai';
+  const displayName = context?.user?.name ?? 'Account';
+  const displayEmail = context?.user?.email ?? '';
 
   const handleSignOut = async () => {
     await logout();
@@ -206,10 +206,10 @@ export function AppShell() {
             >
               <span className="min-w-0">
                 <span className="block truncate text-[12.5px] font-medium text-ink-900">
-                  {context?.organization.name ?? 'AcmeCloud'}
+                  {context?.organization.name ?? 'Your organisation'}
                 </span>
                 <span className="block truncate text-[11px] text-ink-500">
-                  {context?.workspace.name ?? 'AcmeCloud Demo Workspace'}
+                  {context?.workspace.name ?? 'Compliance Workspace'}
                 </span>
               </span>
               <ChevronDown className="size-3.5 shrink-0 text-ink-400" aria-hidden="true" />
@@ -230,7 +230,7 @@ export function AppShell() {
                   {context?.workspace.isDemo ? 'Demo Workspace' : 'Live workspace'}
                 </Badge>
                 <p className="mt-2 text-[11.5px] leading-relaxed text-ink-500">
-                  Sample organisations, users and documents are fictional and labelled as demo data throughout.
+                  This is your organisation's private compliance workspace.
                 </p>
               </div>
             </>
@@ -321,7 +321,7 @@ export function AppShell() {
             <div className="ml-auto flex items-center gap-1.5">
               <Badge tone={context?.analysisMode.key === 'external-ai' ? 'brand' : 'outline'} size="sm" className="hidden md:inline-flex">
                 <Sparkles className="size-3" aria-hidden="true" />
-                {context?.analysisMode.key === 'external-ai' ? 'AI-assisted' : 'Demo Analysis Mode'}
+                {context?.analysisMode.key === 'external-ai' ? 'AI-assisted' : 'Rules-based analysis'}
               </Badge>
 
               <NotificationsMenu />
@@ -393,6 +393,13 @@ export function AppShell() {
           </div>
         </header>
 
+        {context?.organization.trialEndsAt ? (
+          <div className="border-b border-ink-200 bg-brand-50/60 px-4 py-2.5 text-center text-[12.5px] text-ink-700">
+            {Date.parse(context.organization.trialEndsAt) > Date.now()
+              ? `Free trial · ${Math.max(1, Math.ceil((Date.parse(context.organization.trialEndsAt) - Date.now()) / 86400000))} days remaining · No credit card required`
+              : 'Your 14-day trial has ended. Contact us to arrange access to a paid plan.'}
+          </div>
+        ) : null}
         <main className="flex-1 px-3 py-5 sm:px-5 sm:py-6 lg:px-7 lg:py-8">
           <div className="mx-auto w-full max-w-[1320px]">
             <Outlet />

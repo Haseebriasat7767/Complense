@@ -1,9 +1,9 @@
 /**
  * Runtime configuration.
  *
- * Every value is optional: with an empty environment ComplyLens boots in
- * DEMO MODE on an in-memory store with the deterministic local analysis
- * engine. Nothing throws because a key is missing.
+ * Local development and tests default to the deterministic demo mode. Production
+ * defaults to authenticated access and must use a healthy Supabase store; unsafe
+ * production combinations fail during startup.
  */
 import { existsSync } from 'node:fs';
 import path from 'node:path';
@@ -54,7 +54,7 @@ function bool(name: string, fallback: boolean): boolean {
 }
 
 const nodeEnv = str('NODE_ENV', str('VERCEL') ? 'production' : 'development');
-const authRequired = bool('AUTH_REQUIRED', false);
+const authRequired = bool('AUTH_REQUIRED', nodeEnv === 'production');
 const configuredSessionSecret = str('SESSION_SECRET');
 
 // A stateless session token must use the same signing secret on every
@@ -82,9 +82,19 @@ export const config = {
   // trusting user-supplied X-Forwarded-For values on direct deployments.
   trustProxyHops: nonNegativeInt('TRUST_PROXY_HOPS', 0),
 
-  /** Demo mode is the default: seeded AcmeCloud workspace, instant demo login. */
-  demoMode: bool('DEMO_MODE', !authRequired),
+  // Demo workspaces and passwordless demo access are retired.
+  demoMode: false,
+  demoAccessEnabled: false,
   authRequired,
+
+  // Retained only for legacy seed-module type compatibility; no runtime seeding uses these values.
+  demo: {
+    organizationId: 'org_acmecloud',
+    organizationName: 'AcmeCloud',
+    workspaceId: 'ws_acmecloud_demo',
+    workspaceName: 'AcmeCloud Demo Workspace',
+    userEmail: 'demo@complylens.ai',
+  },
 
   session: {
     secret: configuredSessionSecret || crypto.randomBytes(32).toString('hex'),
@@ -146,17 +156,15 @@ export const config = {
       .filter(Boolean),
   },
 
-  /** Demo workspace + organisation labels (fictional). */
-  demo: {
-    organizationId: 'org_acmecloud',
-    organizationName: 'AcmeCloud',
-    workspaceId: 'ws_acmecloud_demo',
-    workspaceName: 'AcmeCloud Demo Workspace',
-    userEmail: 'demo@complylens.ai',
-  },
 } as const;
 
 export type AppConfig = typeof config;
+
+// Production must never start with passwordless demo access enabled or
+// authentication disabled, even if an environment variable is misconfigured.
+if (config.isProduction && (!config.authRequired || config.demoMode || config.demoAccessEnabled)) {
+  throw new Error('Production requires AUTH_REQUIRED=true and DEMO_MODE=false. Disable demo access and require authenticated sessions before starting ComplyLens.');
+}
 
 // Production deployments must provide a persistent signing key. Vercel can
 // execute different requests on different instances, so an ephemeral key is
@@ -177,6 +185,6 @@ export function isExternalAiEnabled(): boolean {
 }
 
 /** Human-readable analysis mode used by the UI banner. */
-export function analysisMode(): 'demo-analysis' | 'external-ai' {
-  return isExternalAiEnabled() ? 'external-ai' : 'demo-analysis';
+export function analysisMode(): 'rules-based' | 'external-ai' {
+  return isExternalAiEnabled() ? 'external-ai' : 'rules-based';
 }

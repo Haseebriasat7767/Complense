@@ -14,5 +14,6 @@ process.stdout.write(
   `CONFIG_OK ${JSON.stringify({
     isProduction: config.isProduction,
     secretIsEphemeral: config.session.secretIsEphemeral,
+    demoMode: config.demoMode,
   })}\n`,
 );

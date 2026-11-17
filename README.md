@@ -4,7 +4,7 @@
 
 ComplyLens AI is a demo-first compliance readiness workspace. You upload the evidence your team already has, it maps that evidence to SOC 2 and ISO/IEC 27001 controls, shows you exactly which controls are missing or only partially covered, ranks the resulting gaps by risk with a suggested fix/owner/timeline, and produces a branded PDF readiness report.
 
-It runs end to end with **zero API keys, zero paid services and zero configuration**: `npm install && npm run dev`.
+The local demo runs without external API keys: `npm ci && npm run dev`. A production deployment requires a healthy Supabase PostgreSQL database and server-only credentials; optional external AI is disabled unless explicitly configured.
 
 > **Read this first.** ComplyLens AI produces a *preliminary readiness assessment* from the evidence you provide. It is **not** a certification body, an auditor, an audit opinion, a legal service, or a substitute for professional compliance advice. Nothing in this repository claims that any organisation is SOC 2 certified or ISO 27001 certified.
 
@@ -67,7 +67,7 @@ npm run dev
 #      analyst@complylens.ai / AnalystPass123!  (member)
 ```
 
-No `.env` file is required. Copy `.env.example` to `.env` only if you want to change ports, persist to MongoDB, or enable an optional AI provider.
+No `.env` file is required for the local demo. Production must be configured with Supabase credentials, a persistent session secret, and authenticated access; see [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
 
 ### Seeded demo workspace
 
@@ -120,7 +120,7 @@ Everything is optional — see `.env.example` for the annotated version.
 | `AUTH_REQUIRED` | `false` | `true` requires a real sign-in for `/api/*` app routes |
 | `SESSION_SECRET` | random per boot | HS256 signing secret — **set this in production** |
 | `SESSION_TTL_HOURS` | `12` | Session lifetime |
-| `MONGODB_URI` / `MONGODB_DB` | empty / `complylens` | Optional persistence; empty uses the in-memory demo store |
+| `SUPABASE_URL` | empty | Required in production; Supabase project URL (server only) |\n| `SUPABASE_SECRET_KEY` | empty | Required in production; Supabase secret key (server only; never expose to the browser) |\n| `AUTH_REQUIRED` | `false` | Must be `true` in production |\n| `DEMO_MODE` | derived from auth setting | Must be `false` in production |
 | `AI_PROVIDER`, `AI_API_KEY`, `AI_BASE_URL`, `AI_MODEL`, `AI_ALLOW_EXTERNAL`, `AI_TIMEOUT_MS` | `none` | Optional narrative provider. External calls happen only when the provider is `openai-compatible`, a key exists **and** `AI_ALLOW_EXTERNAL=true` |
 | `MAX_UPLOAD_MB` | `10` | Upload size limit (enforced server-side) |
 | `ALLOWED_UPLOAD_TYPES` | `pdf,docx,txt,csv` | Allowed extensions (enforced server-side) |
@@ -153,7 +153,7 @@ Details: [`docs/AI-ABSTRACTION.md`](docs/AI-ABSTRACTION.md) and [`docs/ARCHITECT
 | --- | --- |
 | Web client | React 19, TypeScript, Vite 7, Tailwind CSS v4 (CSS-first tokens), React Router 7, Recharts, lucide-react, self-hosted Inter |
 | API | Node 20+, Express 4, TypeScript, multer (memory storage), pdfkit |
-| Data | In-memory demo store by default; MongoDB (mongoose) when `MONGODB_URI` is set |
+| Data | Supabase PostgreSQL in production; in-memory store only for local development and automated tests |
 | Auth | HS256 JWT sessions, scrypt password hashing, organisation-scoped queries |
 | Build | npm workspaces (`client`, `server`), one process serves both in dev and production |
 
@@ -174,7 +174,7 @@ Complense/
 │  ├─ src/routes/             # HTTP endpoints (mounted under /api)
 │  ├─ src/ai/                 # AI abstraction (deterministic default + optional provider)
 │  ├─ src/pdf/                # readiness report renderer (pdfkit)
-│  ├─ src/store/              # in-memory store + optional MongoDB store
+│  ├─ src/store/              # Supabase production store + in-memory development/test store
 │  ├─ src/dev/vite.ts         # mounts the Vite dev server inside Express
 │  └─ test/                   # engine + HTTP integration tests (vitest)
 ├─ docs/                      # architecture, API, database, AI, deployment, security, roadmap
@@ -195,7 +195,7 @@ npm run build          # client -> client/dist, server -> server/dist
 NODE_ENV=production SESSION_SECRET="<long-random-string>" npm start
 ```
 
-**C — Vercel** (one public URL, almost zero configuration): Vercel serves `client/dist` from its CDN and routes `/api/*` to a single function that runs the *same* Express app (`api/index.mjs`); `vercel.json` holds the build, rewrites, SPA fallback and headers. Import the repo, optionally set `SESSION_SECRET`, deploy.
+**C — Vercel** (the configured production platform): `vercel.json` defines separate client and server services. The client is built with Vite; API requests are routed to the server service, which runs the Express application and connects to Supabase. Production environment variables are mandatory; see [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
 
 ```bash
 npm run build && npm run verify:deploy   # verifies the Vercel shape end to end locally
@@ -203,7 +203,7 @@ npm run build && npm run verify:deploy   # verifies the Vercel shape end to end 
 
 Health check: `GET /api/health` → `{"status":"ok", ...}`.
 
-On Vercel the default upload limit becomes 4 MB (the platform's request-body ceiling) and the in-memory store is per instance — set `MONGODB_URI` to persist. For a split deployment (static client on Vercel, API elsewhere) build with `VITE_API_BASE_URL=https://api.example.com` and set `CORS_ORIGINS` on the API. Step-by-step instructions, environment tables and troubleshooting: [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
+On Vercel the application defaults to a 4 MB upload limit. Production evidence, reports and remediation data are stored in Supabase; if Supabase is unavailable or misconfigured, production startup now fails rather than silently falling back to volatile memory. Step-by-step configuration and troubleshooting: [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
 
 ---
 
@@ -228,7 +228,7 @@ Full detail, including what this demo deliberately does **not** implement (SSO, 
 | --- | --- |
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Process model, request flow, module responsibilities, design decisions |
 | [`docs/API.md`](docs/API.md) | Every endpoint with parameters, request/response shapes and examples |
-| [`docs/DATABASE.md`](docs/DATABASE.md) | Entities, fields, relationships, in-memory vs MongoDB behaviour |
+| [`docs/DATABASE.md`](docs/DATABASE.md) | Supabase PostgreSQL schema, relationships, persistence and access model |
 | [`docs/AI-ABSTRACTION.md`](docs/AI-ABSTRACTION.md) | Provider interface, deterministic fallback, configuration, safety rules |
 | [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) | Single-service and split deployments, Vercel/Railway/Docker, env vars, troubleshooting |
 | [`docs/SECURITY.md`](docs/SECURITY.md) | Threat model, implemented controls, limits, responsible disclosure |
@@ -238,7 +238,7 @@ Full detail, including what this demo deliberately does **not** implement (SSO, 
 
 ## Known limitations
 
-- The demo store is **in-memory**: restarting the server resets uploads, generated reports and settings changes. Set `MONGODB_URI` to persist them. On a serverless host (Vercel) each instance keeps its own copy until it is recycled, so demo figures stay deterministic but user uploads are per instance.
+- The in-memory store is for local development/tests only. Production requires Supabase and fails closed if the database cannot be reached. Uploaded evidence is stored as extracted text/metadata in Supabase; application-layer field encryption, malware scanning and OCR are not implemented.
 - Uploads are limited to 10 MB in a container deployment and 4 MB on Vercel (platform request-body ceiling). The UI reads the effective limit from the API.
 - PDF/DOCX extraction is a lightweight in-memory scan: documents without a reliable text layer are marked **needs review** (or **failed**) instead of being guessed at. OCR is roadmap work, not present.
 - The report is a readiness assessment snapshot, not a certification, audit opinion or control-attestation report (no SOC 2 §4 opinion language, no ISO certification claims).
@@ -259,14 +259,14 @@ GitHub / AWS / Google Workspace / Microsoft 365 / Slack / Jira integrations, aut
 Released as a demo project; see `package.json` (`UNLICENSED`). Do not use the output of this software as evidence of compliance, and do not represent a readiness report as a certification or an audit opinion.
 
 
-## Supabase persistent database (migration branch)
+## Supabase production database
 
-Production persistence uses Supabase PostgreSQL through the server-side Data API. Apply `supabase/migrations/20261009000100_initial_schema.sql` using the Supabase SQL Editor or the Supabase CLI migration workflow.
+Production persistence uses Supabase PostgreSQL through the server-side Data API. The ordered SQL migrations in `supabase/migrations/` define the production schema, evidence-uploader attribution, remediation tables, permissions and billing metadata. The live project's migration history must remain aligned with these files.
 
 Configure these **server-only** Vercel Production environment variables:
 - `SUPABASE_URL`: your Supabase project URL (for example, `https://your-project-ref.supabase.co`)
 - `SUPABASE_SECRET_KEY`: the project's secret API key (`sb_secret_...`). A legacy `SUPABASE_SERVICE_ROLE_KEY` is accepted temporarily for compatibility.
 
-Never use a secret key in a `VITE_*` variable or browser code. Redeploy after changing environment variables. The migration enables RLS and intentionally creates no public policies; all data requests must go through the ComplyLens server, which must enforce organization/workspace authorization. Existing MongoDB records are not automatically copied to Supabase.
+Never use a secret key in a `VITE_*` variable or browser code. Redeploy after changing environment variables. The migrations enable RLS, revoke direct table privileges from public browser roles, and intentionally create no public policies; all data requests must go through the ComplyLens server, which must enforce organization/workspace authorization. Records in any legacy store are not automatically copied to Supabase.
 
-Local demo/test mode may use MemoryStore when Supabase variables are absent. Production startup fails if Supabase is not configured or the schema/database cannot be reached.
+Local development and automated tests may use MemoryStore when Supabase variables are absent. Production startup fails if Supabase is not configured or the schema/database cannot be reached; there is no production in-memory fallback.

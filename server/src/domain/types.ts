@@ -181,6 +181,8 @@ export type Organization = {
   industry: string;
   employeeCount: number;
   createdAt: string;
+  trialStartedAt?: string;
+  trialEndsAt?: string;
   stripeCustomerId?: string;
   stripeSubscriptionId?: string;
   stripeSubscriptionStatus?: string;

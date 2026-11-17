@@ -17,7 +17,6 @@ import {
 } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { ButtonLink } from '@/components/ui/Button';
-import { api, authToken } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { Eyebrow, Section } from './MarketingLayout';
 
@@ -205,7 +204,7 @@ export function FrameworksSection() {
                 <p className="mt-0.5 text-[12px] text-ink-400">{framework.version}</p>
               </div>
               <Badge tone="pass" size="sm">
-                Ready for demo
+                Assessment available
               </Badge>
             </div>
             <p className="mt-3 text-[13.5px] leading-relaxed text-ink-500">{framework.description}</p>
@@ -219,7 +218,7 @@ export function FrameworksSection() {
                 <dd className="metric-value mt-1 text-lg">{framework.categories}</dd>
               </div>
               <div>
-                <dt className="text-[11px] tracking-wide text-ink-400 uppercase">Demo score</dt>
+                <dt className="text-[11px] tracking-wide text-ink-400 uppercase">Illustrative score</dt>
                 <dd className="metric-value mt-1 text-lg text-brand-700">{framework.readiness}%</dd>
               </div>
             </dl>
@@ -228,8 +227,7 @@ export function FrameworksSection() {
       </div>
 
       <p className="mt-4 text-[12.5px] text-ink-500">
-        Framework support in this build is a readiness assessment against a demo control library. ComplyLens does not
-        certify organisations or issue audit opinions.
+        The scores shown above are illustrative examples, not customer results. The control set is a starter reference library, not a licensed reproduction of either standard. ComplyLens does not certify organisations or issue audit opinions.
       </p>
     </Section>
   );
@@ -333,9 +331,9 @@ export const PRICING_PLANS: PricingPlan[] = [
       'Up to 50 evidence documents',
       'Deterministic gap analysis',
       'Readiness report PDF',
-      'Email support (demo)',
+      'In-app product documentation',
     ],
-    cta: 'Try Demo',
+    cta: 'Start free trial',
   },
   {
     name: 'Growth',
@@ -347,9 +345,9 @@ export const PRICING_PLANS: PricingPlan[] = [
       'Evidence-to-control mapping view',
       'Remediation planning with owners',
       'Report history and snapshots',
-      'Priority support (demo)',
+      'Additional report history and snapshots',
     ],
-    cta: 'Try Demo',
+    cta: 'Start free trial',
     highlighted: true,
   },
   {
@@ -361,54 +359,28 @@ export const PRICING_PLANS: PricingPlan[] = [
       'Vendor and subprocessor evidence packs',
       'Scheduled assessments (roadmap)',
       'SSO and audit trail (roadmap)',
-      'Guided implementation session (demo)',
+      'Onboarding support (planned)',
     ],
-    cta: 'Try Demo',
+    cta: 'Start free trial',
   },
 ] as const;
 
 export function PricingSection({ heading = true }: { heading?: boolean }) {
-  const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
-  const [billingMessage, setBillingMessage] = useState<string | null>(null);
-
-  const checkout = async (plan: PricingPlan) => {
-    setBillingMessage(null);
-    if (!authToken()) {
-      window.location.assign('/login?next=/pricing');
-      return;
-    }
-    setLoadingPlan(plan.name);
-    try {
-      const result = await api.post<{ url: string }>('/billing/checkout', {
-        plan: plan.name.toLowerCase(),
-      });
-      window.location.assign(result.url);
-    } catch (error) {
-      setBillingMessage(error instanceof Error ? error.message : 'Unable to start checkout.');
-      setLoadingPlan(null);
-    }
-  };
-
   return (
     <Section id="pricing">
       {heading ? (
         <div className="max-w-2xl">
           <Eyebrow>Pricing</Eyebrow>
-          <h2 className="mt-3 text-2xl tracking-tight sm:text-3xl">Simple plans, secure checkout</h2>
+          <h2 className="mt-3 text-2xl tracking-tight sm:text-3xl">Indicative plans for different team sizes</h2>
           <p className="mt-3 text-[15px] leading-relaxed text-ink-500">
-            Choose a plan and complete payment securely through Stripe. Your organisation is upgraded after Stripe confirms the subscription.
+            These are proposed plan tiers and prices. Paid subscriptions are not enabled yet; start with the 14-day card-free trial.
           </p>
         </div>
       ) : null}
-
       <div className="mt-6 flex items-center gap-3">
-        <Badge tone="info">Stripe billing</Badge>
-        <span className="text-[12.5px] text-ink-500">Subscriptions are processed by Stripe; ComplyLens never receives card details.</span>
+        <Badge tone="info">Planned pricing</Badge>
+        <span className="text-[12.5px] text-ink-500">The trial is free for 14 days and does not require a payment card. Paid checkout will be added before paid plans launch.</span>
       </div>
-      {billingMessage ? (
-        <p role="alert" className="mt-4 text-[13px] text-red-700">{billingMessage}</p>
-      ) : null}
-
       <div className="mt-8 grid gap-5 lg:grid-cols-3">
         {PRICING_PLANS.map((plan) => (
           <div
@@ -420,16 +392,14 @@ export function PricingSection({ heading = true }: { heading?: boolean }) {
           >
             {plan.highlighted ? (
               <span className="absolute -top-3 left-5">
-                <Badge tone="brand" size="sm">
-                  Most popular
-                </Badge>
+                <Badge tone="brand" size="sm">Most popular</Badge>
               </span>
             ) : null}
             <h3 className="text-[15px] font-semibold text-ink-900">{plan.name}</h3>
             <p className="mt-1 min-h-10 text-[13px] text-ink-500">{plan.tagline}</p>
             <p className="mt-4 flex items-baseline gap-1">
               <span className="metric-value text-3xl">${plan.price}</span>
-              <span className="text-[13px] text-ink-500">/month</span>
+              <span className="text-[13px] text-ink-500">/month, planned</span>
             </p>
             <ul className="mt-5 flex-1 space-y-2 border-t border-ink-200 pt-4">
               {plan.features.map((feature) => (
@@ -440,18 +410,9 @@ export function PricingSection({ heading = true }: { heading?: boolean }) {
               ))}
             </ul>
             <div className="mt-5">
-              <button
-                type="button"
-                onClick={() => checkout(plan)}
-                disabled={loadingPlan !== null}
-                className={cn(
-                  'inline-flex w-full items-center justify-center rounded-lg px-4 py-2.5 text-[13px] font-semibold transition',
-                  plan.highlighted ? 'bg-ink-900 text-white hover:bg-ink-800' : 'border border-ink-300 bg-white text-ink-800 hover:bg-ink-50',
-                  loadingPlan === plan.name && 'cursor-wait opacity-70',
-                )}
-              >
-                {loadingPlan === plan.name ? 'Opening Stripe…' : `Subscribe to ${plan.name}`}
-              </button>
+              <ButtonLink to="/signup" variant={plan.highlighted ? "primary" : "secondary"}>
+                Start 14-day trial
+              </ButtonLink>
             </div>
           </div>
         ))}
@@ -478,12 +439,12 @@ export const FAQ_ITEMS = [
   {
     question: 'What frameworks are supported?',
     answer:
-      'The MVP ships a demo control library for SOC 2 (AICPA Trust Services Criteria) and ISO/IEC 27001:2022 Annex A: 28 SOC 2 criteria and 22 ISO 27001 Annex A controls across 14 categories. The libraries are demonstration data and can be replaced with a licensed control set — the analysis engine reads from a single control library module.',
+      'The MVP includes a starter reference set for SOC 2 and ISO/IEC 27001:2022 Annex A: 28 SOC 2 criteria and 22 ISO 27001 control mappings across 14 categories. It is not a licensed reproduction of either standard; customers should validate coverage against their licensed standard and auditor guidance.',
   },
   {
     question: 'Can I use it without an AI API?',
     answer:
-      'Yes — that is the default. ComplyLens ships with a deterministic analysis engine that runs entirely on your server and needs no external service. The interface reports "Demo Analysis Mode". If you configure an OpenAI-compatible provider and explicitly allow external calls, the product uses it to improve report wording; the assessment itself stays deterministic so results never change between runs.',
+      'Yes — that is the default. ComplyLens ships with a deterministic analysis engine that runs entirely on your server and needs no external service. The interface reports "Rules-based analysis". If you configure an OpenAI-compatible provider and explicitly allow external calls, the product uses it to improve report wording; the assessment itself stays deterministic so results never change between runs.',
   },
   {
     question: 'What happens to uploaded evidence?',

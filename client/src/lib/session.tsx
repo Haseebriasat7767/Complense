@@ -1,8 +1,7 @@
 /**
  * Session context.
  *
- * Demo mode: "Try the Demo" requests a session for the seeded demo workspace —
- * no credentials, no sign-up. Real accounts use the same context.
+ * Authenticated customer sessions and their organisation workspaces.
  */
 import {
   createContext,
@@ -22,7 +21,6 @@ type SessionState = {
   ready: boolean;
   loading: boolean;
   error: string | null;
-  startDemo: () => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
   signup: (input: {
     name: string;
@@ -30,7 +28,6 @@ type SessionState = {
     password: string;
     organizationName: string;
     jobTitle?: string;
-    seedDemo?: boolean;
   }) => Promise<{ persistence: string }>;
   logout: () => Promise<void>;
   refresh: () => Promise<void>;
@@ -108,19 +105,6 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     [loadContext],
   );
 
-  const startDemo = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const payload = await api.post<SessionPayload>('/api/auth/demo', undefined, { auth: false });
-      await apply(payload);
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'The demo workspace could not be opened.');
-      throw caught;
-    } finally {
-      setLoading(false);
-    }
-  }, [apply]);
 
   const login = useCallback(
     async (email: string, password: string) => {
@@ -182,14 +166,13 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       ready,
       loading,
       error,
-      startDemo,
       login,
       signup,
       logout,
       refresh: loadContext,
       setWorkspace,
     }),
-    [session, context, ready, loading, error, startDemo, login, signup, logout, loadContext, setWorkspace],
+    [session, context, ready, loading, error, login, signup, logout, loadContext, setWorkspace],
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;

@@ -1,107 +1,95 @@
 # Security
 
-This document describes what the demo MVP actually implements, what it deliberately does not, and how to harden it for real use. It is written to be verifiable against the code — nothing here is aspirational.
+This document describes the implemented security model and the remaining limitations. It is not a certification or an independent security assessment.
 
----
+## Production security baseline
 
-## Implemented controls
+### Authentication and sessions
 
-### Authentication
+- Passwords are stored using scrypt with a per-user random salt and constant-time verification.
+- Session tokens are HS256-signed and expire server-side.
+- Production requires `AUTH_REQUIRED=true`, `DEMO_MODE=false` and a stable `SESSION_SECRET`; unsafe combinations fail during startup.
+- Seeded demo users cannot sign in through the password endpoint when demo mode is disabled, and previously issued demo sessions are rejected by protected routes.
+- Production configuration must set `AUTH_REQUIRED=true` and `DEMO_MODE=false`.
+- Bearer tokens are sent in the Authorization header; query-string tokens are rejected.
+- Failed login and password-reset responses avoid revealing whether an account exists.
+- Password reset email delivery is not implemented; the endpoint explicitly discloses that no email was sent.
 
-| Control | Implementation |
+### Authorization and tenant isolation
+
+- Protected API routes require a valid session.
+- Evidence, reports, remediations and related events are queried with organization/workspace constraints.
+- Resource ownership is checked before updates and deletes.
+- Settings writes are role-restricted.
+- Supabase RLS is enabled on all eight application tables.
+- The current database design revokes all direct table privileges from `PUBLIC`, `anon` and `authenticated`; the server accesses the Data API using a server-only Supabase secret key.
+- Since the server secret role bypasses RLS, application-level tenant scoping is mandatory. A database administrator should periodically review the grants, policies and route/store scoping together.
+
+### Production persistence
+
+- Supabase PostgreSQL is the required production store.
+- Production startup verifies all required application tables and aborts if credentials or database access are missing.
+- Production does not silently fall back to MemoryStore.
+- MemoryStore is restricted to local development and automated tests.
+- Supabase secret credentials must never be placed in browser code or `VITE_*` variables.
+
+### Input, uploads and errors
+
+- Request bodies and query parameters are validated and size-limited.
+- Uploads have server-side extension and size checks; file bytes are processed in memory and are not written to the application filesystem.
+- Unsupported formats and oversized requests receive structured errors.
+- PDF/DOCX text extraction is heuristic. Image-only/scanned PDFs are not OCR-processed and must not be represented as analyzed evidence.
+- API errors use stable response envelopes and do not return stack traces or filesystem paths to clients.
+
+### Browser and transport controls
+
+- Security headers include `X-Content-Type-Options: nosniff`, a restrictive referrer policy, a permissions policy and frame protections.
+- CORS is same-origin by default; split deployments require an explicit origin allowlist.
+- No browser-side Supabase secret is used.
+
+### Abuse controls
+
+- Authentication and API routes have fixed-window rate limits.
+- The limiter is process-local; it is not a shared distributed limiter across multiple instances.
+
+## Evidence and privacy handling
+
+Evidence uploads are parsed in memory and extracted text/metadata are persisted in Supabase PostgreSQL. This application does not add field-level/application-layer encryption for evidence content. Do not upload highly sensitive customer records until the data-processing, retention, access and encryption requirements have been reviewed for the intended customer.
+
+If an external AI provider is configured, evidence-derived content may be sent outside the application infrastructure. External AI calls require an explicit provider, API key and `AI_ALLOW_EXTERNAL=true`; keep external AI disabled unless the customer has approved the provider and its data-processing terms.
+
+Deleting evidence removes the application's stored evidence record. Retention preferences do not currently trigger an automated purge job.
+
+## Known gaps — not yet implemented
+
+| Gap | Impact / required work |
 | --- | --- |
-| Password storage | `scrypt` with a per-user random salt (`server/src/auth/passwords.ts`); format `scrypt$<salt>$<hash>`; constant-time comparison |
-| Session tokens | HS256 JWT signed with `SESSION_SECRET`, `sub`/`email`/`org`/`role`/`demo` claims, server-enforced expiry (`SESSION_TTL_HOURS`, default 12h) |
-| Token transport | `Authorization: Bearer <token>` only; query-string tokens are rejected to avoid leaking credentials through URLs, logs or referrers |
-| Failed login | Single generic message for unknown accounts and wrong passwords: `"Email or password is incorrect."` |
-| Demo sessions | Issued by `POST /api/auth/demo` with a real signed token — protected routes behave exactly as for a paying account |
-| Sign-out | Client clears the stored session; tokens are short-lived and server-validated on every request |
+| MFA enforcement | Stored preference is not MFA; add TOTP/WebAuthn enrolment and login enforcement |
+| SSO / SAML / OIDC | No enterprise identity federation |
+| Refresh-token rotation and server-side revocation | A stolen token can remain valid until expiry |
+| Field-level evidence encryption and key rotation | Extracted content is not separately encrypted by the application |
+| Malware scanning / content disarm | Uploads are validated by type and size, not scanned in an isolated worker |
+| OCR | Scanned/image-only PDFs require manual review |
+| Immutable audit history/export | Events are stored but not append-only or tamper-evident |
+| Distributed rate limiting | Current fixed-window counters are process-local |
+| Automated retention/deletion | Retention settings do not trigger scheduled purges |
+| Password reset delivery | No email delivery provider is configured |
+| Independent penetration test | No third-party security assessment has been completed |
+| Legal/privacy readiness | DPA, subprocessors, retention, residency and customer contractual requirements need review |
 
-### Authorisation
+## Security release checklist
 
-- Every session route runs `requireAuth()`, which verifies the token **and** confirms the organisation still exists.
-- Token parsing is defensive: non-base64, non-JSON, wrongly-signed, expired, or claim-less tokens all produce a clean `401` (a malformed token can never reach a handler or surface as a `500`). Regression-tested in `server/test/api.test.ts`.
-- The password-reset endpoint returns an identical body for known and unknown addresses and records the attempt in the audit log, so it cannot be used for account enumeration.
-- All store queries are scoped by `organizationId` (`sessionOf(req)`), so a token from one organisation cannot read or mutate another organisation's evidence, controls, findings, reports or settings. `assertSameOrganization()` guards any resource that carries an organisation id.
-- Settings writes (`PATCH /api/organization`) additionally require the `owner` or `admin` role; members get `403`.
+Before processing real customer evidence:
 
-### Input handling
+- Verify production environment settings without exposing secret values.
+- Confirm production health reports `store.kind=supabase`.
+- Confirm every application table has RLS enabled and no unintended public/anonymous grants.
+- Test two separate organizations and verify no cross-tenant reads, writes, report downloads or remediation access.
+- Test malformed, oversized, encrypted, image-only and text-based PDFs.
+- Verify persistence across refresh, logout/login and a new server instance.
+- Review Supabase security/performance advisors and runtime error logs.
+- Complete a privacy/data-processing review and independent security assessment appropriate to the customer data.
 
-- Request bodies are validated by helpers in `server/src/http/validate.ts` (required strings with length limits, e-mail and password rules, enums, booleans, clamped integers, size limits for query strings).
-- Uploads: extension allowlist (`ALLOWED_UPLOAD_TYPES`) and size limit (`MAX_UPLOAD_MB`, default 10 MB) enforced server-side by multer before the handler runs; unsupported media returns `415`, oversized uploads return `413`.
-- Uploads are held in memory (`multer.memoryStorage()`) and are **never written to disk**; only extracted text and metadata are stored. PDF/DOCX extraction is heuristic (not OCR), and a re-analysis request cannot improve the original extraction.
-- JSON bodies are capped at 1 MB; malformed JSON returns a structured `400 invalid_json` and oversized JSON returns `413 payload_too_large`.
+## Responsible disclosure
 
-### Output and error handling
-
-- Errors are returned as a stable envelope: `{ error: { code, message } }` (with `details` only when present). `errorHandler` logs unexpected errors server-side and returns a safe message — never a stack trace, database error or file path.
-- Unknown API routes return a structured `404` rather than falling through to the SPA shell.
-- `X-Powered-By` is disabled.
-
-### Transport and browser hardening
-
-Set by `securityHeaders()` on every response:
-
-| Header | Value |
-| --- | --- |
-| `X-Content-Type-Options` | `nosniff` |
-| `Referrer-Policy` | `strict-origin-when-cross-origin` |
-| `Permissions-Policy` | `camera=(), microphone=(), geolocation=()` |
-| `Cross-Origin-Opener-Policy` | `same-origin` |
-| `X-Frame-Options` | `SAMEORIGIN` (production only) |
-
-`CORS_ORIGINS` (empty by default) enables an explicit allowlist for split deployments; no wildcard-with-credentials combination is possible because cookies are never used.
-
-### Abuse protection
-
-- Fixed-window limiters: 30 authentication attempts per 10 minutes and 600 requests/minute across `/api`, keyed by Express `req.ip`, with `X-RateLimit-*` and `Retry-After` headers (`server/src/http/security.ts`). `TRUST_PROXY_HOPS` defaults to `0`; set it to the exact count of trusted proxies only, or clients may spoof forwarded IP headers. Both limiters are single-instance only — see hardening below.
-
-### Secrets
-
-- All secrets come from environment variables and are read in one place (`server/src/config.ts`). `.env` is loaded from the repo root, is git-ignored, and `.env.example` documents every variable.
-- Nothing secret is exposed to the frontend: the client bundle only knows the API base URL (and only if `VITE_API_BASE_URL` is set).
-- The app boots without any keys; a missing AI key degrades to the deterministic engine rather than failing.
-
----
-
-## Deliberately not implemented (honest scope)
-
-| Gap | Impact | Recommended next step |
-| --- | --- | --- |
-| Real MFA enforcement | `mfaRequired` is a stored preference only | TOTP or WebAuthn enrolment + enforcement on login |
-| SSO / SAML / OIDC | Not present | Add an identity provider integration (roadmap) |
-| Refresh-token rotation & revocation list | A stolen token is valid until it expires | Short-lived access tokens + refresh tokens, or server-side session store |
-| Encrypted-at-rest evidence storage | Demo keeps text in memory / plain Mongo documents | Use a KMS-backed encrypted store, field-level encryption for extracted text |
-| Antivirus / content disinfection of uploads | Only extension + size are checked | Scan uploads in a sandboxed worker before analysis |
-| Immutable audit log export | Events are recorded but cannot be exported or made append-only | Append-only store with hash chaining and export UI |
-| CSRF protection | Not needed today (no cookie auth) | Required if cookies are introduced |
-| Distributed rate limiting | Per-process limiter | Redis-backed limiter for multi-instance deployments |
-| Data residency / DPA / sub-processor review | Out of scope for a demo | Legal review before handling real customer evidence |
-| Penetration testing | Not performed | Independent review before production use |
-
----
-
-## Threat model summary
-
-| Threat | Mitigation in this build |
-| --- | --- |
-| Cross-organisation data access | Organisation scoping on every query + `assertSameOrganization` |
-| Credential stuffing / brute force | Rate limiting, generic error messages, scrypt hashing |
-| Token theft via XSS | No cookies, no `dangerouslySetInnerHTML`, React escaping, evidence text rendered as text |
-| Malicious uploads | Extension + size allowlist, in-memory parsing, no shell/file-system execution |
-| Prompt injection via evidence text (if AI enabled) | Evidence text is only ever inserted as *content* to summarise; statuses, scores and mappings are never AI-controlled |
-| DoS via large payloads | 1 MB JSON cap, 10 MB upload cap, rate limiting, per-process memory store (no unbounded disk writes) |
-| Information leakage in errors | Generic client messages; unexpected details and stack traces are logged server-side only |
-| Clickjacking | `X-Frame-Options: SAMEORIGIN` in production |
-| Secret leakage in the bundle | Server-only secret handling; `.env` git-ignored |
-
-## Privacy notes
-
-- The AcmeCloud organisation and "AcmeCloud Demo Workspace" are synthetic; the UI labels the sample workspace as Demo Data. The persona names are fictional.
-- Extracted evidence text lives in the store (memory by default, MongoDB if configured). Deleting a document removes its text from the store.
-- `retentionDays` is a stored preference in this build; nothing is purged automatically. A production deployment must implement the retention job.
-- If you enable an external AI provider, evidence text may leave your infrastructure. Keep `AI_ALLOW_EXTERNAL=false` (the default) unless that is acceptable, and review the provider's data-processing terms.
-
-## Reporting a vulnerability
-
-This is a demo project without a security contact. If you fork or deploy it publicly, add a `SECURITY.md` contact address, enable GitHub private vulnerability reporting, and run dependency auditing (`npm audit`, Dependabot) on a schedule.
+Add a monitored security contact address and enable GitHub private vulnerability reporting before inviting external security reports.

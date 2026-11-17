@@ -1,9 +1,8 @@
 /**
  * Authentication routes.
  *
- * Demo mode issues a session for the seeded demo workspace without
- * credentials. Real accounts work too (scrypt hashes, signed session tokens)
- * and are scoped to their own organisation.
+ * Accounts use scrypt password hashes and signed session tokens, and are
+ * scoped to their own organisation.
  */
 import crypto from 'node:crypto';
 import { Router } from 'express';
@@ -18,8 +17,7 @@ import {
   workspaceDto,
 } from '../http/dto.js';
 import { rateLimit } from '../http/security.js';
-import { buildDemoEvidence } from '../domain/evidence-seed.js';
-import { optionalBoolean, optionalString, requireEmail, requireObjectBody, requirePassword, requireString } from '../http/validate.js';
+import { optionalString, requireEmail, requireObjectBody, requirePassword, requireString } from '../http/validate.js';
 import { getStore } from '../store/index.js';
 import type { Organization, User, Workspace } from '../domain/types.js';
 
@@ -72,7 +70,6 @@ authRouter.post(
     const password = requirePassword(body.password);
     const organizationName = requireString(body.organizationName, 'organizationName', { max: 120 });
     const jobTitle = optionalString(body.jobTitle, 'jobTitle', 120) ?? 'Security Owner';
-    const seedDemo = optionalBoolean(body.seedDemo, 'seedDemo') ?? true;
 
     const store = getStore();
     const existing = await store.getUserByEmail(email);
@@ -94,6 +91,8 @@ authRouter.post(
       industry: optionalString(body.industry, 'industry', 120) ?? 'Not specified',
       employeeCount: 0,
       createdAt: now,
+      trialStartedAt: now,
+      trialEndsAt: new Date(Date.parse(now) + 14 * 24 * 60 * 60 * 1000).toISOString(),
       settings: {
         defaultFramework: 'soc2',
         monthlyDigest: true,
@@ -132,18 +131,6 @@ authRouter.post(
 
     await store.createAccount({ organization, workspace, user });
 
-    if (seedDemo) {
-      // Optional starter sample data, clearly labelled as sample in the UI.
-      const samples = buildDemoEvidence(organizationId, workspaceId, `${user.name} (sample import)`);
-      for (const sample of samples) {
-        await store.createEvidence({
-          ...sample,
-          id: undefined,
-          source: 'demo',
-          summary: `${sample.summary} (Sample document imported at signup.)`,
-        });
-      }
-    }
 
     await store.recordAuditEvent({
       organizationId,
@@ -167,7 +154,11 @@ authRouter.post(
 
     const store = getStore();
     const user = await store.getUserByEmail(email);
-    if (!user || !(await verifyPassword(password, user.passwordHash))) {
+    if (
+      !user ||
+      (user.isDemoUser && !config.demoMode) ||
+      !(await verifyPassword(password, user.passwordHash))
+    ) {
       throw ApiError.unauthorized('Email or password is incorrect.');
     }
 
@@ -176,20 +167,6 @@ authRouter.post(
   }),
 );
 
-authRouter.post(
-  '/demo',
-  loginLimiter,
-  asyncHandler(async (_req, res) => {
-    if (!config.demoMode) {
-      throw ApiError.forbidden('Demo access is disabled for this deployment. Sign in instead.');
-    }
-    const store = getStore();
-    const user = await store.getUserByEmail(config.demo.userEmail);
-    if (!user) throw ApiError.notFound('The demo workspace is not available on this deployment.');
-    await store.touchLastLogin(user.id);
-    res.json(await sessionResponse(user));
-  }),
-);
 
 authRouter.post('/logout', (_req, res) => {
   // Sessions are stateless signed tokens; the client discards the token.

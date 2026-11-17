@@ -1,6 +1,6 @@
 import { CheckCircle2, Minus } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
-import { DemoButton, Eyebrow, Section } from '@/components/marketing/MarketingLayout';
+import { TrialButton, Eyebrow, Section } from '@/components/marketing/MarketingLayout';
 import { FaqSection, PricingSection } from '@/components/marketing/Sections';
 
 const COMPARISON: Array<{ feature: string; starter: boolean | string; growth: boolean | string; business: boolean | string }> = [
@@ -35,9 +35,9 @@ export function PricingPage() {
             report history.
           </p>
           <div className="mt-5 flex items-center gap-3">
-            <Badge tone="info">Demo pricing</Badge>
+            <Badge tone="info">Planned pricing</Badge>
             <span className="text-[12.5px] text-ink-500">
-              Billing is connected through Stripe Checkout. Payment details are handled by Stripe, and your plan changes after webhook confirmation.
+              Paid checkout is not enabled yet. The 14-day trial is card-free; payment details will be collected when paid plans launch.
             </span>
           </div>
         </div>
@@ -48,8 +48,7 @@ export function PricingPage() {
       <Section className="border-y border-ink-200 bg-ink-50/50">
         <h2 className="text-xl tracking-tight">Plan comparison</h2>
         <p className="mt-2 text-[13.5px] text-ink-500">
-          The table below describes the plans the product is designed around. Limits are enforced in the roadmap
-          versions; this demo does not gate features.
+          These are proposed tiers and limits. Paid plans and plan-limit enforcement are not available yet.
         </p>
 
         <div className="surface mt-6 overflow-x-auto scroll-area">
@@ -89,9 +88,9 @@ export function PricingPage() {
         </div>
 
         <div className="mt-6 flex flex-wrap items-center gap-3">
-          <DemoButton label="Try the Demo" />
+          <TrialButton label="Start 14-day free trial" />
           <span className="text-[12.5px] text-ink-500">
-            Already have an account? Choose a plan above to open secure Stripe Checkout.
+            A card is not required to start the trial. Contact the ComplyLens team about paid access while checkout is being prepared.
           </span>
         </div>
       </Section>

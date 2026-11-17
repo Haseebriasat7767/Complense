@@ -3,8 +3,8 @@
  *
  * `analyzeEvidence` and `writeNarrative` are the only two entry points the rest
  * of the application uses. If no provider is configured — which is the default
- * — the deterministic demo implementation answers instantly and the UI reports
- * "Demo Analysis Mode". No code path throws because a key is missing.
+ * — the deterministic rules-based implementation answers instantly and the UI reports
+ * "Rules-based analysis". No code path throws because a key is missing.
  *
  * Contract: the deterministic engine always produces the assessment. A
  * configured provider may only improve the wording of the narrative.
@@ -15,7 +15,7 @@ import type { ControlAssessment, Finding, ReadinessScore } from '../domain/types
 import { demoNarrative, demoSummary } from './providers/demo.js';
 import { externalNarrative, externalSummary } from './providers/openai-compatible.js';
 
-export type AnalysisMode = 'demo-analysis' | 'external-ai';
+export type AnalysisMode = 'rules-based' | 'external-ai';
 
 export type EvidenceAnalysisRequest = {
   fileName: string;
@@ -53,7 +53,7 @@ export function currentMode(): AnalysisMode {
 export function modeLabel(mode: AnalysisMode = currentMode()): string {
   return mode === 'external-ai'
     ? `AI-assisted analysis (${config.ai.provider})`
-    : 'Demo Analysis Mode (deterministic local analysis)';
+    : 'Rules-based analysis (deterministic local assessment)';
 }
 
 /**
@@ -72,9 +72,9 @@ export async function analyzeEvidence(request: EvidenceAnalysisRequest): Promise
           keywords: result.keywords,
         };
       }
-      logger.warn('AI provider returned no usable summary — falling back to demo analysis');
+      logger.warn('AI provider returned no usable summary — falling back to rules-based analysis');
     } catch (error) {
-      logger.warn('AI provider call failed — falling back to demo analysis', {
+      logger.warn('AI provider call failed — falling back to rules-based analysis', {
         reason: error instanceof Error ? error.message : 'unknown',
       });
     }
@@ -86,7 +86,7 @@ export async function analyzeEvidence(request: EvidenceAnalysisRequest): Promise
     category: request.category,
   });
   return {
-    mode: 'demo-analysis',
+    mode: 'rules-based',
     provider: 'complylens-deterministic',
     summary: local.summary,
     keywords: local.keywords,
@@ -121,7 +121,7 @@ export async function writeNarrative(request: NarrativeRequest): Promise<Narrati
     evidenceCount: request.evidenceCount,
   });
   return {
-    mode: 'demo-analysis',
+    mode: 'rules-based',
     provider: 'complylens-deterministic',
     executiveSummary: local.executiveSummary,
     themes: local.themes,
