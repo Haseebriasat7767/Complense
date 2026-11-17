@@ -46,13 +46,19 @@ const upload = multer({
 const ALL_CATEGORIES = [...new Set(CONTROL_LIBRARY.map((control) => control.category))].sort();
 
 function inferCategory(fileName: string, content: string): string {
+  // Prefer document identity and its opening title over incidental terms
+  // mentioned later (e.g. an information-security policy mentioning incidents).
+  const identity = `${fileName} ${content.slice(0, 1_500)}`.toLowerCase();
+  if (/information security policy|security policy|acceptable use policy/.test(identity) &&
+      ALL_CATEGORIES.includes('Security Policies')) return 'Security Policies';
+  if (/incident response plan|incident management plan|incident response procedure/.test(identity) &&
+      ALL_CATEGORIES.includes('Incident Response')) return 'Incident Response';
+
   const text = `${fileName} ${content}`.toLowerCase();
   const rules: Array<[string, RegExp]> = [
-    ['Incident Response', /incident|breach|ransomware|hacker|unauthori[sz]ed access|data leak|security event|complaint|investigation/],
-    ['Access Control', /access control|least privilege|permission|role-based access|privileged access/],
-    ['Identity', /identity|multi.factor|mfa|two.factor|authentication|password|credential/],
+    ['Access Control', /access control policy|least privilege|role-based access|privileged access/],
+    ['Identity', /identity lifecycle|multi.factor|mfa|two.factor|authentication|password|credential/],
     ['Data Protection', /personal data|personal information|encryption|data minim|retention|deletion|privacy/],
-    ['Security Policies', /security policy|information security policy|acceptable use|policy statement/],
     ['Risk Management', /risk assessment|risk register|risk treatment|threat assessment/],
     ['Vendor Management', /vendor|supplier|third.party|service provider/],
     ['Change Management', /change request|change management|deployment approval|release management/],
@@ -62,11 +68,15 @@ function inferCategory(fileName: string, content: string): string {
     ['Logging', /audit log|log review|logging|event log/],
     ['Employee Security', /employee training|security awareness|background check|onboarding|offboarding/],
     ['Asset Management', /asset inventory|asset register|device inventory/],
+    ['Incident Response', /incident response|incident handling|breach notification|security incident/],
+    ['Security Policies', /security policy|policy statement|acceptable use/],
   ];
-  for (const [category, pattern] of rules) {
-    if (pattern.test(text) && ALL_CATEGORIES.includes(category)) return category;
-  }
-  return ALL_CATEGORIES[0] ?? 'Access Control';
+  const ranked = rules
+    .filter(([category]) => ALL_CATEGORIES.includes(category))
+    .map(([category, pattern]) => ({ category, hits: (text.match(new RegExp(pattern.source, 'g')) ?? []).length }))
+    .filter((item) => item.hits > 0)
+    .sort((a, b) => b.hits - a.hits);
+  return ranked[0]?.category ?? ALL_CATEGORIES[0] ?? 'Access Control';
 }
 
 function parseCategory(value: unknown, fileName = '', content = ''): string {
