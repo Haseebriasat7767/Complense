@@ -58,8 +58,8 @@ export function SignupPage() {
       );
       if (result.persistence === 'memory') {
         toast.info(
-          'In-memory demo store',
-          'This deployment stores data in memory, so accounts reset when the server restarts. Set MONGODB_URI to persist.',
+          'Temporary development storage',
+          'This environment is not connected to persistent Supabase storage, so accounts and evidence may reset when the server restarts.',
         );
       }
       navigate('/app/dashboard', { replace: true });
