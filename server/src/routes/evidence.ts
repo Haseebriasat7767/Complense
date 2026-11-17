@@ -19,6 +19,7 @@ import { ApiError, asyncHandler } from '../http/errors.js';
 import { evidenceDetailDto, evidenceDto } from '../http/dto.js';
 import { optionalString, queryString, requireObjectBody } from '../http/validate.js';
 import { getStore } from '../store/index.js';
+import { logger } from '../logger.js';
 import { resolveWorkspace } from './workspace.js';
 import type { EvidenceRecord, FrameworkKey } from '../domain/types.js';
 
@@ -251,6 +252,13 @@ evidenceRouter.post(
       extension,
       fileName: file.originalname,
     });
+    logger.info('Evidence upload extraction completed', {
+      extension,
+      fileSizeBytes: file.size,
+      extractedChars: extraction.text.length,
+      extractionMethod: extraction.method,
+      frameworkCount: frameworks.length,
+    });
     const category = parseCategory(body.category, file.originalname, extraction.text);
 
     const analysis = await analyzeEvidence({
@@ -291,7 +299,12 @@ evidenceRouter.post(
     const mappings = mapEvidenceAcrossFrameworks(CONTROL_LIBRARY, [record]);
     res.status(201).json({
       evidence: evidenceDto(record, mappings.get(record.id) ?? []),
-      extraction: { method: extraction.method, confidence: extraction.confidence, note: extraction.note },
+      extraction: {
+        method: extraction.method,
+        confidence: extraction.confidence,
+        textLength: extraction.text.length,
+        note: extraction.note,
+      },
       analysis: { mode: analysis.mode, provider: analysis.provider, keywords: analysis.keywords },
       message:
         status === 'analyzed'
