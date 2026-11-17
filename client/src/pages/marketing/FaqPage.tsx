@@ -1,4 +1,4 @@
-import { DemoButton, Eyebrow, Section } from '@/components/marketing/MarketingLayout';
+import { TrialButton, Eyebrow, Section } from '@/components/marketing/MarketingLayout';
 import { FaqSection } from '@/components/marketing/Sections';
 
 export function FaqPage() {
@@ -23,7 +23,7 @@ export function FaqPage() {
             deterministic, so you will get the same answers every time.
           </p>
           <div className="mt-6 flex justify-center">
-            <DemoButton size="lg" label="Open the demo workspace" />
+            <TrialButton size="lg" label="Start 14-day free trial" />
           </div>
         </div>
       </Section>
