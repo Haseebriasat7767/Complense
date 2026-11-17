@@ -184,7 +184,7 @@ authRouter.post(
   '/demo',
   loginLimiter,
   asyncHandler(async (_req, res) => {
-    if (!config.demoMode) {
+    if (!config.demoMode && !config.demoAccessEnabled) {
       throw ApiError.forbidden('Demo access is disabled for this deployment. Sign in instead.');
     }
     const store = getStore();
