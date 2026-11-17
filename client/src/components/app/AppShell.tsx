@@ -321,7 +321,7 @@ export function AppShell() {
             <div className="ml-auto flex items-center gap-1.5">
               <Badge tone={context?.analysisMode.key === 'external-ai' ? 'brand' : 'outline'} size="sm" className="hidden md:inline-flex">
                 <Sparkles className="size-3" aria-hidden="true" />
-                {context?.analysisMode.key === 'external-ai' ? 'AI-assisted' : 'Demo Analysis Mode'}
+                {context?.analysisMode.key === 'external-ai' ? 'AI-assisted' : 'Rules-based analysis'}
               </Badge>
 
               <NotificationsMenu />
