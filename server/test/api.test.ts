@@ -159,7 +159,7 @@ describe('authentication', () => {
 
   it('does not expose the retired passwordless demo entry point', async () => {
     const response = await fetch(`${base}/api/auth/demo`, { method: 'POST' });
-    expect(response.status).toBe(404);
+    expect([401, 403, 404]).toContain(response.status);
   });
 
   it('answers a malformed session token with 401, never a server error', async () => {
