@@ -60,18 +60,18 @@ export function ProductOverviewPage() {
           <Eyebrow>Product overview</Eyebrow>
           <h1 className="mt-3 text-3xl tracking-tight sm:text-4xl">ComplyLens AI — Product Overview</h1>
           <p className="mt-4 text-[15.5px] leading-relaxed text-ink-500">
-            A demo-first SaaS MVP for compliance readiness and gap analysis: upload evidence, map it to SOC 2 and ISO
-            27001 controls, prioritise the gaps and generate a professional readiness report.
+            A SaaS MVP for compliance readiness and gap analysis: upload evidence, map it to SOC 2 and ISO 27001 controls,
+            prioritise the gaps and generate a professional readiness report.
           </p>
           <div className="mt-5 flex flex-wrap gap-2">
-            <Badge tone="neutral">Stage: MVP / demo</Badge>
+            <Badge tone="neutral">Stage: MVP / free trial</Badge>
             <Badge tone="neutral">Users: 0</Badge>
             <Badge tone="neutral">Customers: 0</Badge>
             <Badge tone="neutral">Revenue: $0</Badge>
             <Badge tone="brand">No paid APIs required</Badge>
           </div>
           <div className="mt-6 flex flex-wrap gap-3">
-            <DemoButton label="Open the demo workspace" />
+            <TrialButton label="Start 14-day free trial" />
             <ButtonLink to="/documentation" variant="secondary" iconRight={<ArrowRight className="size-4" />}>
               Read the documentation
             </ButtonLink>
@@ -165,7 +165,7 @@ export function ProductOverviewPage() {
               Calculated as assumed hours × assumed hourly cost × assumed time reduction, less the budget you entered. Actual savings, product fit, and pricing have not been independently validated.
             </p>
             <div className="mt-5">
-              <DemoButton label="Test the workflow with demo data" />
+              <TrialButton label="Start your own assessment" />
             </div>
           </div>
         </div>
