@@ -39,7 +39,6 @@ async function extractPdfText(buffer: Buffer): Promise<string> {
   const task = getDocument({
     data: new Uint8Array(buffer),
     useSystemFonts: true,
-    isEvalSupported: false,
     disableFontFace: true,
   });
   const document = await task.promise;
