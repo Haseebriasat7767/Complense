@@ -127,7 +127,7 @@ async function extractPdfWithOcr(buffer: Buffer): Promise<{ text: string; confid
     useSystemFonts: true,
     isEvalSupported: false,
     stopAtErrors: false,
-  }).promise;
+  } as Parameters<typeof pdfjs.getDocument>[0]).promise;
   const { createWorker } = await import('tesseract.js');
   const worker = await createWorker('eng');
   const pages: string[] = [];
@@ -139,7 +139,7 @@ async function extractPdfWithOcr(buffer: Buffer): Promise<{ text: string; confid
       const viewport = page.getViewport({ scale: 1.5 });
       const canvas = createCanvas(Math.ceil(viewport.width), Math.ceil(viewport.height));
       const context = canvas.getContext('2d');
-      await page.render({ canvasContext: context as never, viewport }).promise;
+      await page.render({ canvas: canvas as never, canvasContext: context as never, viewport }).promise;
       const result = await worker.recognize(canvas.toBuffer('image/png'));
       const pageText = clean(result.data.text);
       if (pageText) pages.push(pageText);
@@ -196,7 +196,7 @@ export async function extractText(input: {
   buffer: Buffer;
   extension: string;
   fileName: string;
-}): ExtractionResult {
+}): Promise<ExtractionResult> {
   const extension = input.extension.toLowerCase();
 
   if (['txt', 'csv', 'md', 'json', 'log'].includes(extension)) {
