@@ -16,7 +16,10 @@
     "express": "^4.22.3",
     "multer": "^2.4.0",
     "pdfkit": "^0.20.2",
-    "fflate": "^0.8.3"
+    "fflate": "^0.8.3",
+    "pdfjs-dist": "^5.4.394",
+    "@napi-rs/canvas": "^0.1.80",
+    "tesseract.js": "^6.0.1"
   },
   "optionalDependencies": {
     "mongoose": "^9.11.1"
