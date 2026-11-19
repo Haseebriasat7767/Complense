@@ -73,9 +73,12 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       setContext(next);
       setError(null);
     } catch (caught) {
+      // A workspace/context request can fail transiently (network, Supabase,
+      // or a 5xx). Do not sign the user out for those failures. The API client
+      // clears the stored session and notifies listeners only on HTTP 401.
       setContext(null);
+      setSession(readSession());
       setError(caught instanceof Error ? caught.message : 'Unable to load the workspace.');
-      writeSession(null);
     } finally {
       setReady(true);
     }
