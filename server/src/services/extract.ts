@@ -8,6 +8,7 @@
  * PDFs and unusual font encodings still require OCR/a dedicated PDF parser.
  */
 import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
+import mammoth from 'mammoth';
 
 export type ExtractionResult = {
   text: string;
@@ -61,18 +62,10 @@ async function extractPdfText(buffer: Buffer): Promise<string> {
   }
 }
 
-/** Fallback for DOCX containers; PDF uses the stream-aware parser above. */
-function scanBinaryForText(buffer: Buffer): { text: string; runs: number } {
-  const ascii = buffer.toString('latin1');
-  const matches = ascii.match(/[ -~\n\r\t]{24,}/g) ?? [];
-  const meaningful = matches
-    .map((chunk) => chunk.replace(/\s+/g, ' ').trim())
-    .filter((chunk) => {
-      if (chunk.length < 24) return false;
-      const letters = (chunk.match(/[A-Za-z]/g) ?? []).length;
-      return letters / chunk.length > 0.55;
-    });
-  return { text: meaningful.join('\n'), runs: meaningful.length };
+/** Extract DOCX text from the actual WordprocessingML document body. */
+async function extractDocxText(buffer: Buffer): Promise<string> {
+  const result = await mammoth.extractRawText({ buffer });
+  return clean(result.value);
 }
 
 export async function extractText(input: {
@@ -124,14 +117,13 @@ export async function extractText(input: {
   }
 
   if (extension === 'docx') {
-    const { text, runs } = scanBinaryForText(input.buffer);
-    const cleaned = clean(text);
-    if (cleaned.length >= 200 && runs >= 4) {
+    const cleaned = await extractDocxText(input.buffer);
+    if (cleaned.length >= 20) {
       return {
         text: cleaned,
         method: 'docx-text-layer',
         confidence: 0.7,
-        note: 'Text recovered heuristically from the DOCX file. Verify against the source document before relying on it.',
+        note: 'Mammoth extracted text from the DOCX document body. Verify against the source document before relying on it.',
       };
     }
     return {
