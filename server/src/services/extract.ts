@@ -41,6 +41,29 @@ function decodePdfLiteral(value: string): string {
 }
 
 
+/** Decode PDF hexadecimal strings (including UTF-16BE strings with a BOM). */
+function decodePdfHex(value: string): string {
+  const hex = value.replace(/\s+/g, '');
+  if (!hex || !/^[0-9a-f]*$/i.test(hex)) return '';
+  const bytes = Buffer.from(hex.length % 2 === 0 ? hex : hex + '0', 'hex');
+  if (bytes.length >= 2 && bytes[0] === 0xfe && bytes[1] === 0xff) {
+    const units: number[] = [];
+    for (let i = 2; i + 1 < bytes.length; i += 2) units.push((bytes[i] << 8) | bytes[i + 1]);
+    return String.fromCharCode(...units);
+  }
+  return bytes.toString('latin1');
+}
+
+function decodeTextOperand(operand: string): string {
+  if (operand.startsWith('(') && operand.endsWith(')')) {
+    return decodePdfLiteral(operand.slice(1, -1));
+  }
+  if (operand.startsWith('<') && operand.endsWith('>') && !operand.startsWith('<<')) {
+    return decodePdfHex(operand.slice(1, -1));
+  }
+  return '';
+}
+
 /** Decode the ASCII85 filter commonly used before Flate compression in PDFs. */
 function decodeAscii85(input: Buffer): Buffer {
   let source = input.toString('latin1').replace(/\\s+/g, '');
@@ -81,43 +104,55 @@ function decodeAscii85(input: Buffer): Buffer {
   return Buffer.from(output);
 }
 
+
+
 function extractPdfText(buffer: Buffer): string {
+  // Preserve byte offsets. A dictionary-to-stream regex can accidentally stop
+  // at ">>" bytes inside compressed content and silently lose PDF text.
   const source = buffer.toString('latin1');
   const chunks: string[] = [];
-  // Read PDF streams and decompress Flate streams where possible. Only parse
-  // text-showing operators inside streams, never document metadata dictionaries.
-  const streamPattern = /<<([\s\S]*?)>>\s*stream\r?\n([\s\S]*?)\r?\nendstream/g;
-  for (const match of source.matchAll(streamPattern)) {
-    const dictionary = match[1] ?? '';
-    const rawStream = match[2] ?? '';
-    let stream: Buffer<ArrayBufferLike> = Buffer.from(rawStream, 'latin1');
-    // Many generated PDFs (including ReportLab exports) apply ASCII85 before
-    // Flate compression. Decode filters in reverse stream order before parsing.
+  const streamHeader = /<<(.*?)>>\s*stream(?:\r\n|\n|\r)/gs;
+  let header: RegExpExecArray | null;
+
+  while ((header = streamHeader.exec(source)) !== null) {
+    const dictionary = header[1] ?? '';
+    const streamStart = streamHeader.lastIndex;
+    const streamEnd = source.indexOf('endstream', streamStart);
+    if (streamEnd < 0) break;
+
+    let rawEnd = streamEnd;
+    while (rawEnd > streamStart && (source[rawEnd - 1] === '\n' || source[rawEnd - 1] === '\r')) rawEnd--;
+    let stream: Buffer<ArrayBufferLike> = Buffer.from(source.slice(streamStart, rawEnd), 'latin1');
+
     try {
-      if (/\/ASCII85Decode\b|\/A85\b/.test(dictionary)) {
-        stream = decodeAscii85(stream);
+      const filters = [...dictionary.matchAll(/\/(ASCII85Decode|A85|FlateDecode|Fl)\b/g)]
+        .map((match) => match[1]);
+      for (const filter of filters.reverse()) {
+        if (filter === 'ASCII85Decode' || filter === 'A85') stream = decodeAscii85(stream);
+        else if (filter === 'FlateDecode' || filter === 'Fl') stream = inflateSync(stream);
       }
-      if (/\/FlateDecode\b|\/Fl\b/.test(dictionary)) {
-        stream = inflateSync(stream);
-      } else if (/\/Filter\b/.test(dictionary) && !/\/ASCII85Decode\b|\/A85\b/.test(dictionary)) {
-        continue;
-      }
+      if (/\/Filter\b/.test(dictionary) && filters.length === 0) continue;
     } catch {
       continue;
     }
+
     const body = stream.toString('latin1');
-    // Capture literal strings used by Tj and TJ text-showing operators.
-    const operatorPattern = /\(((?:\\.|[^\\)])*)\)\s*Tj|\[((?:.|\n)*?)\]\s*TJ/g;
+    const operatorPattern = /(\(((?:\\.|[^\\)])*)\)|<([0-9a-fA-F\s]+)>)\s*Tj|\[((?:.|\n)*?)\]\s*TJ/g;
     for (const op of body.matchAll(operatorPattern)) {
-      if (op[1] !== undefined) {
-        chunks.push(decodePdfLiteral(op[1]));
-      } else if (op[2] !== undefined) {
-        for (const part of op[2].matchAll(/\(((?:\\.|[^\\)])*)\)/g)) {
-          chunks.push(decodePdfLiteral(part[1] ?? ''));
+      if (op[2] !== undefined) {
+        chunks.push(decodePdfLiteral(op[2]));
+      } else if (op[3] !== undefined) {
+        chunks.push(decodePdfHex(op[3]));
+      } else if (op[4] !== undefined) {
+        const parts = /\\(((?:\\.|[^\\)])*)\\)|<([0-9a-fA-F\s]+)>/g;
+        for (const part of op[4].matchAll(parts)) {
+          chunks.push(part[1] !== undefined ? decodePdfLiteral(part[1]) : decodePdfHex(part[2] ?? ''));
         }
       }
       chunks.push('\n');
     }
+
+    streamHeader.lastIndex = streamEnd + 'endstream'.length;
   }
   return chunks.join('');
 }
