@@ -41,6 +41,29 @@ function decodePdfLiteral(value: string): string {
 }
 
 
+/** Decode PDF hexadecimal strings (including UTF-16BE strings with a BOM). */
+function decodePdfHex(value: string): string {
+  const hex = value.replace(/\s+/g, '');
+  if (!hex || !/^[0-9a-f]*$/i.test(hex)) return '';
+  const bytes = Buffer.from(hex.length % 2 === 0 ? hex : hex + '0', 'hex');
+  if (bytes.length >= 2 && bytes[0] === 0xfe && bytes[1] === 0xff) {
+    const units: number[] = [];
+    for (let i = 2; i + 1 < bytes.length; i += 2) units.push((bytes[i] << 8) | bytes[i + 1]);
+    return String.fromCharCode(...units);
+  }
+  return bytes.toString('latin1');
+}
+
+function decodeTextOperand(operand: string): string {
+  if (operand.startsWith('(') && operand.endsWith(')')) {
+    return decodePdfLiteral(operand.slice(1, -1));
+  }
+  if (operand.startsWith('<') && operand.endsWith('>') && !operand.startsWith('<<')) {
+    return decodePdfHex(operand.slice(1, -1));
+  }
+  return '';
+}
+
 /** Decode the ASCII85 filter commonly used before Flate compression in PDFs. */
 function decodeAscii85(input: Buffer): Buffer {
   let source = input.toString('latin1').replace(/\\s+/g, '');
@@ -106,15 +129,18 @@ function extractPdfText(buffer: Buffer): string {
       continue;
     }
     const body = stream.toString('latin1');
-    // Capture literal strings used by Tj and TJ text-showing operators.
-    const operatorPattern = /\(((?:\\.|[^\\)])*)\)\s*Tj|\[((?:.|\n)*?)\]\s*TJ/g;
+    // Tj operands can be literal or hexadecimal strings. TJ arrays can mix
+    // both forms with numeric kerning adjustments.
+    const operatorPattern = /(\((?:\\.|[^\\)])*\)|<[0-9a-f\s]+>|\[((?:.|\n)*?)\])\s*(Tj|TJ)\b/gi;
     for (const op of body.matchAll(operatorPattern)) {
-      if (op[1] !== undefined) {
-        chunks.push(decodePdfLiteral(op[1]));
-      } else if (op[2] !== undefined) {
-        for (const part of op[2].matchAll(/\(((?:\\.|[^\\)])*)\)/g)) {
-          chunks.push(decodePdfLiteral(part[1] ?? ''));
+      const operand = op[1] ?? '';
+      if (operand.startsWith('[')) {
+        const tokenPattern = /\((?:\\.|[^\\)])*\)|<[0-9a-f\s]+>/gi;
+        for (const token of (op[2] ?? '').match(tokenPattern) ?? []) {
+          chunks.push(decodeTextOperand(token));
         }
+      } else {
+        chunks.push(decodeTextOperand(operand));
       }
       chunks.push('\n');
     }
