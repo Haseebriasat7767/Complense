@@ -54,9 +54,9 @@ async function extractPdfText(buffer: Buffer): Promise<string> {
         .map((item) => item.str)
         .filter(Boolean);
       if (lines.length) pages.push(lines.join(' '));
-      if (pages.join('\\n').length >= MAX_TEXT_CHARS) break;
+      if (pages.join('\n').length >= MAX_TEXT_CHARS) break;
     }
-    return clean(pages.join('\\n\\n'));
+    return clean(pages.join('\n\n'));
   } finally {
     await document.destroy();
   }
