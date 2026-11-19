@@ -82,7 +82,7 @@ function extractPdfText(buffer: Buffer): string {
   const streamPattern = /<<([\s\S]*?)>>\s*stream\r?\n([\s\S]*?)\r?\nendstream/g;
   for (const match of source.matchAll(streamPattern)) {
     const dictionary = match[1] ?? '';
-    let stream = Buffer.from(match[2] ?? '', 'latin1');
+    let stream: Buffer<ArrayBufferLike> = Buffer.from(match[2] ?? '', 'latin1');
     try {
       if (/\/ASCII85Decode\b|\/A85\b/.test(dictionary)) stream = decodeAscii85(stream);
       if (/\/FlateDecode\b|\/Fl\b/.test(dictionary)) {
