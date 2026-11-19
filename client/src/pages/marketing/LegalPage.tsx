@@ -20,7 +20,7 @@ const PRIVACY: LegalSection[] = [
   {
     heading: 'Data the application does not store',
     body: [
-      'Uploaded files are parsed in memory and discarded. The original binary is never written to disk and there is no endpoint that serves it back.',
+      'Uploaded files are processed locally and discarded. PDF extraction and OCR use private temporary files that are deleted after processing; original files are not retained or served back.',
       'No analytics, advertising or tracking scripts are included in the client bundle. No third-party service receives data by default.',
     ],
   },

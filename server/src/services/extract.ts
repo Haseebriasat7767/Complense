@@ -1,17 +1,9 @@
-/**
- * Evidence text extraction.
- *
- * PDF text is read from content streams (including Flate-compressed streams)
- * rather than scanning the whole binary file, which can accidentally retain
- * C2PA/XMP metadata instead of the visible document. Files are parsed in
- * memory only. This lightweight parser supports common text-based PDFs; scanned
- * PDFs and unusual font encodings still require OCR/a dedicated PDF parser.
- */
-import { inflateSync } from 'node:zlib';
+/** Evidence text extraction, with local OCR fallback for PDFs. */
+import { extractPdf } from './pdf.js';
 
 export type ExtractionResult = {
   text: string;
-  method: 'direct-text' | 'pdf-text-layer' | 'docx-text-layer' | 'unavailable';
+  method: 'direct-text' | 'pdf-text-layer' | 'docx-text-layer' | 'pdf-ocr' | 'unavailable';
   confidence: number;
   note: string;
 };
@@ -31,97 +23,6 @@ function clean(raw: string): string {
     .slice(0, MAX_TEXT_CHARS);
 }
 
-function decodePdfLiteral(value: string): string {
-  return value.replace(/\\([nrtbf()\\])/g, (_match, escaped: string) => {
-    const map: Record<string, string> = { n: '\n', r: '\r', t: '\t', b: '\b', f: '\f', '(': '(', ')': ')', '\\': '\\' };
-    return map[escaped] ?? escaped;
-  }).replace(/\\([0-7]{1,3})/g, (_match, octal: string) =>
-    String.fromCharCode(parseInt(octal, 8)),
-  );
-}
-
-
-/** Decode the ASCII85 filter commonly used before Flate compression in PDFs. */
-function decodeAscii85(input: Buffer): Buffer {
-  let source = input.toString('latin1').replace(/\\s+/g, '');
-  source = source.replace(/^<~/, '').replace(/~>$/, '');
-  const output: number[] = [];
-  let group: number[] = [];
-
-  const flush = (values: number[], final = false) => {
-    if (final && values.length === 1) return;
-    const originalLength = values.length;
-    const padded = [...values];
-    while (padded.length < 5) padded.push(84); // 'u' padding
-    let value = 0;
-    for (const digit of padded) value = value * 85 + digit;
-    const bytes = [
-      (value >>> 24) & 255,
-      (value >>> 16) & 255,
-      (value >>> 8) & 255,
-      value & 255,
-    ];
-    output.push(...bytes.slice(0, final ? originalLength - 1 : 4));
-  };
-
-  for (const char of source) {
-    if (char === 'z' && group.length === 0) {
-      output.push(0, 0, 0, 0);
-      continue;
-    }
-    const code = char.charCodeAt(0) - 33;
-    if (code < 0 || code > 84) continue;
-    group.push(code);
-    if (group.length === 5) {
-      flush(group);
-      group = [];
-    }
-  }
-  if (group.length > 1) flush(group, true);
-  return Buffer.from(output);
-}
-
-function extractPdfText(buffer: Buffer): string {
-  const source = buffer.toString('latin1');
-  const chunks: string[] = [];
-  // Read PDF streams and decompress Flate streams where possible. Only parse
-  // text-showing operators inside streams, never document metadata dictionaries.
-  const streamPattern = /<<([\s\S]*?)>>\s*stream\r?\n([\s\S]*?)\r?\nendstream/g;
-  for (const match of source.matchAll(streamPattern)) {
-    const dictionary = match[1] ?? '';
-    const rawStream = match[2] ?? '';
-    let stream: Buffer<ArrayBufferLike> = Buffer.from(rawStream, 'latin1');
-    // Many generated PDFs (including ReportLab exports) apply ASCII85 before
-    // Flate compression. Decode filters in reverse stream order before parsing.
-    try {
-      if (/\/ASCII85Decode\b|\/A85\b/.test(dictionary)) {
-        stream = decodeAscii85(stream);
-      }
-      if (/\/FlateDecode\b|\/Fl\b/.test(dictionary)) {
-        stream = inflateSync(stream);
-      } else if (/\/Filter\b/.test(dictionary) && !/\/ASCII85Decode\b|\/A85\b/.test(dictionary)) {
-        continue;
-      }
-    } catch {
-      continue;
-    }
-    const body = stream.toString('latin1');
-    // Capture literal strings used by Tj and TJ text-showing operators.
-    const operatorPattern = /\(((?:\\.|[^\\)])*)\)\s*Tj|\[((?:.|\n)*?)\]\s*TJ/g;
-    for (const op of body.matchAll(operatorPattern)) {
-      if (op[1] !== undefined) {
-        chunks.push(decodePdfLiteral(op[1]));
-      } else if (op[2] !== undefined) {
-        for (const part of op[2].matchAll(/\(((?:\\.|[^\\)])*)\)/g)) {
-          chunks.push(decodePdfLiteral(part[1] ?? ''));
-        }
-      }
-      chunks.push('\n');
-    }
-  }
-  return chunks.join('');
-}
-
 /** Fallback for DOCX containers; PDF uses the stream-aware parser above. */
 function scanBinaryForText(buffer: Buffer): { text: string; runs: number } {
   const ascii = buffer.toString('latin1');
@@ -136,11 +37,11 @@ function scanBinaryForText(buffer: Buffer): { text: string; runs: number } {
   return { text: meaningful.join('\n'), runs: meaningful.length };
 }
 
-export function extractText(input: {
+export async function extractText(input: {
   buffer: Buffer;
   extension: string;
   fileName: string;
-}): ExtractionResult {
+}): Promise<ExtractionResult> {
   const extension = input.extension.toLowerCase();
 
   if (['txt', 'csv', 'md', 'json', 'log'].includes(extension)) {
@@ -156,27 +57,7 @@ export function extractText(input: {
     };
   }
 
-  if (extension === 'pdf') {
-    const cleaned = clean(extractPdfText(input.buffer));
-    // Avoid accepting metadata-only output as evidence text.
-    // Accept any substantial readable text. Compliance evidence can be an
-    // incident report, ticket export, audit log, contract, or complaint record;
-    // requiring policy-specific words incorrectly rejects valid evidence.
-    if (cleaned.length >= 80) {
-      return {
-        text: cleaned,
-        method: 'pdf-text-layer',
-        confidence: 0.8,
-        note: 'Text extracted from PDF content streams. Verify the extracted text against the original document before relying on it.',
-      };
-    }
-    return {
-      text: '',
-      method: 'unavailable',
-      confidence: 0,
-      note: 'No reliable readable text was found in the PDF content streams. The file may be scanned or use an unsupported encoding; upload a text-based PDF or OCR-processed copy.',
-    };
-  }
+  if (extension === 'pdf') return extractPdf(input.buffer);
 
   if (extension === 'docx') {
     const { text, runs } = scanBinaryForText(input.buffer);

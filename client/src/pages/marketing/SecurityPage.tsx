@@ -9,7 +9,7 @@ const DATA_HANDLING = [
   },
   {
     title: 'What is not stored',
-    body: 'The original uploaded binary is parsed in memory and discarded. No file is written to disk, and there is no endpoint that serves a raw uploaded file back.',
+    body: 'Uploaded files are processed locally and discarded. PDF extraction and OCR use private temporary files that are deleted after processing. There is no endpoint that serves a raw uploaded file back.',
   },
   {
     title: 'Where it lives',
