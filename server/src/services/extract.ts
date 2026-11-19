@@ -192,24 +192,32 @@ export function extractText(input: {
   }
 
   if (extension === 'pdf') {
-    const cleaned = clean(extractPdfText(input.buffer));
-    // Avoid accepting metadata-only output as evidence text.
-    // Accept any substantial readable text. Compliance evidence can be an
-    // incident report, ticket export, audit log, contract, or complaint record;
-    // requiring policy-specific words incorrectly rejects valid evidence.
+    const streamText = clean(extractPdfText(input.buffer));
+    // Some PDFs store visible text outside the common Tj/TJ operators or in
+    // uncompressed objects. A conservative printable-text fallback can recover
+    // these cases, but is deliberately marked for manual review because it may
+    // also include document metadata.
+    const fallbackText = streamText.length >= 80
+      ? ''
+      : clean(scanBinaryForText(input.buffer).text);
+    const cleaned = streamText.length >= 80 ? streamText : fallbackText;
+
     if (cleaned.length >= 80) {
+      const usedFallback = streamText.length < 80;
       return {
         text: cleaned,
         method: 'pdf-text-layer',
-        confidence: 0.8,
-        note: 'Text extracted from PDF content streams. Verify the extracted text against the original document before relying on it.',
+        confidence: usedFallback ? 0.55 : 0.8,
+        note: usedFallback
+          ? 'Some readable text was recovered from the PDF, but its reading order and relevance could not be fully verified. Review the extracted text against the original before relying on control mappings.'
+          : 'Text extracted from PDF content streams. Verify the extracted text against the original document before relying on it.',
       };
     }
     return {
       text: '',
       method: 'unavailable',
       confidence: 0,
-      note: 'No reliable readable text was found in the PDF content streams. The file may be scanned or use an unsupported encoding; upload a text-based PDF or OCR-processed copy.',
+      note: 'No readable text could be recovered. This may be a scanned/image-only PDF or use an unsupported font encoding. OCR is not configured in this deployment, so this file cannot yet be analysed automatically.',
     };
   }
 
