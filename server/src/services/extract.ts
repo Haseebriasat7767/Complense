@@ -104,21 +104,7 @@ function decodeAscii85(input: Buffer): Buffer {
   return Buffer.from(output);
 }
 
-function decodePdfHex(value: string): string {
-  const hex = value.replace(/\s+/g, '');
-  if (!hex || !/^[0-9a-f]+$/i.test(hex)) return '';
-  const padded = hex.length % 2 === 0 ? hex : hex + '0';
-  const bytes = Buffer.from(padded, 'hex');
-  if (bytes.length >= 2 && bytes[0] === 0xfe && bytes[1] === 0xff) {
-    const swapped = Buffer.alloc(bytes.length - 2);
-    for (let i = 2; i + 1 < bytes.length; i += 2) {
-      swapped[i - 2] = bytes[i + 1] ?? 0;
-      swapped[i - 1] = bytes[i] ?? 0;
-    }
-    return swapped.toString('utf16le');
-  }
-  return bytes.toString('latin1');
-}
+
 
 function extractPdfText(buffer: Buffer): string {
   // Preserve byte offsets. A dictionary-to-stream regex can accidentally stop
