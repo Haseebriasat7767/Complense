@@ -8,7 +8,7 @@ import { unzipSync } from 'fflate';
 
 export type ExtractionResult = {
   text: string;
-  method: 'direct-text' | 'pdf-text-layer' | 'docx-text-layer' | 'unavailable';
+  method: 'direct-text' | 'pdf-text-layer' | 'pdf-ocr' | 'docx-text-layer' | 'unavailable';
   confidence: number;
   note: string;
 };
@@ -108,6 +108,55 @@ function extractPdfText(buffer: Buffer): string {
   return chunks.join('');
 }
 
+/**
+ * OCR fallback for scanned/image-only PDFs.
+ *
+ * PDF.js renders a bounded number of pages to PNG using the Node canvas
+ * implementation; Tesseract.js recognizes the rendered page images. Workers
+ * are always terminated and document/page resources are cleaned up.
+ */
+async function extractPdfWithOcr(buffer: Buffer): Promise<{ text: string; confidence: number; pages: number }> {
+  const canvasModule = await import('@napi-rs/canvas');
+  const { createCanvas, DOMMatrix, ImageData, Path2D } = canvasModule;
+  // PDF.js expects browser geometry/image globals in Node. Supply the
+  // compatible implementations from napi-rs/canvas before loading PDF.js.
+  Object.assign(globalThis, { DOMMatrix, ImageData, Path2D });
+  const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
+  const pdf = await pdfjs.getDocument({
+    data: new Uint8Array(buffer),
+    useSystemFonts: true,
+    isEvalSupported: false,
+    stopAtErrors: false,
+  }).promise;
+  const { createWorker } = await import('tesseract.js');
+  const worker = await createWorker('eng');
+  const pages: string[] = [];
+  const confidences: number[] = [];
+  const maxPages = Math.min(pdf.numPages, 10);
+  try {
+    for (let pageNumber = 1; pageNumber <= maxPages; pageNumber += 1) {
+      const page = await pdf.getPage(pageNumber);
+      const viewport = page.getViewport({ scale: 1.5 });
+      const canvas = createCanvas(Math.ceil(viewport.width), Math.ceil(viewport.height));
+      const context = canvas.getContext('2d');
+      await page.render({ canvasContext: context as never, viewport }).promise;
+      const result = await worker.recognize(canvas.toBuffer('image/png'));
+      const pageText = clean(result.data.text);
+      if (pageText) pages.push(pageText);
+      confidences.push(Number(result.data.confidence) || 0);
+      page.cleanup();
+    }
+  } finally {
+    await worker.terminate();
+    await pdf.destroy();
+  }
+  const text = clean(pages.join('\n\n'));
+  const confidence = confidences.length
+    ? confidences.reduce((sum, value) => sum + value, 0) / confidences.length
+    : 0;
+  return { text, confidence, pages: maxPages };
+}
+
 function decodeXml(value: string): string {
   return value
     .replace(/&amp;/g, '&')
@@ -143,7 +192,7 @@ function extractDocxText(buffer: Buffer): string {
   return clean(parts.join('\n'));
 }
 
-export function extractText(input: {
+export async function extractText(input: {
   buffer: Buffer;
   extension: string;
   fileName: string;
@@ -167,10 +216,28 @@ export function extractText(input: {
         note: 'Text extracted from PDF content streams. Verify it against the original document before relying on it.',
       };
     }
-    return {
-      text: '', method: 'unavailable', confidence: 0,
-      note: 'No readable PDF text layer was detected. This may be a scanned/image-only PDF or use an unsupported font/encoding. OCR is not enabled on this deployment; upload an OCR-processed PDF.',
-    };
+    try {
+      const ocr = await extractPdfWithOcr(input.buffer);
+      if (ocr.text.length >= 20) {
+        const confidence = ocr.confidence >= 65 ? 0.82 : 0.68;
+        return {
+          text: ocr.text,
+          method: 'pdf-ocr',
+          confidence,
+          note: `OCR read ${ocr.text.length.toLocaleString('en-US')} characters from up to ${ocr.pages} PDF pages (average OCR confidence ${Math.round(ocr.confidence)}%). Review the extracted text against the original before relying on compliance conclusions.`,
+        };
+      }
+      return {
+        text: '', method: 'unavailable', confidence: 0,
+        note: 'OCR ran, but it could not recognize enough readable text. The PDF may be blank, very low resolution, or use an unsupported language.',
+      };
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : 'Unknown OCR error';
+      return {
+        text: '', method: 'unavailable', confidence: 0,
+        note: `PDF text extraction and OCR both failed: ${detail.slice(0, 220)}`,
+      };
+    }
   }
 
   if (extension === 'docx') {
