@@ -246,7 +246,7 @@ evidenceRouter.post(
     const frameworks = parseFrameworks(body.frameworks);
 
     const extension = path.extname(file.originalname).replace('.', '').toLowerCase();
-    const extraction = extractText({
+    const extraction = await extractText({
       buffer: file.buffer,
       extension,
       fileName: file.originalname,
