@@ -211,7 +211,7 @@ On Vercel the default upload limit becomes 4 MB (the platform's request-body cei
 
 - Sessions: HS256 JWT, `SESSION_SECRET` from the environment, expiry enforced server-side; passwords hashed with scrypt.
 - Authorisation: every evidence, control, gap, report and settings query is scoped to the caller's organisation; settings writes are limited to owners/admins.
-- Uploads: extension and size validated server-side, parsed in memory only, never written to disk; the extracted text is what gets stored/analysed.
+- Uploads: extension and size validated server-side, PDFs are processed in a private temporary directory that is removed after processing; other formats are parsed in memory; the extracted text is what gets stored/analysed.
 - Input: request bodies validated in helpers; errors are returned as `{ error: { code, message } }` without stack traces or internal details.
 - Frontend: no secrets in the bundle — the client only ever talks to its own `/api`.
 - Rate limiting: fixed-window limiter on `/api` (600 requests/minute per IP, 30 per 10 minutes on auth endpoints), plus baseline security headers.
@@ -240,7 +240,7 @@ Full detail, including what this demo deliberately does **not** implement (SSO, 
 
 - The demo store is **in-memory**: restarting the server resets uploads, generated reports and settings changes. Set `MONGODB_URI` to persist them. On a serverless host (Vercel) each instance keeps its own copy until it is recycled, so demo figures stay deterministic but user uploads are per instance.
 - Uploads are limited to 10 MB in a container deployment and 4 MB on Vercel (platform request-body ceiling). The UI reads the effective limit from the API.
-- PDF/DOCX extraction is a lightweight in-memory scan: documents without a reliable text layer are marked **needs review** (or **failed**) instead of being guessed at. OCR is roadmap work, not present.
+- PDF extraction uses Poppler, with local Tesseract OCR for pages with fewer than 80 text-layer characters. Install `poppler-utils`, `tesseract-ocr`, and English language data for local Node deployments; the Docker image includes them. No external OCR service or API key is used. PDF processing is limited to 20 pages, 200,000 characters and 90 seconds, with one active PDF job per process (busy uploads must be retried). OCR results always require manual review and never automatically close controls. Encrypted, unreadable, over-limit, or tool-unavailable PDFs fail with a diagnostic message. DOCX extraction remains heuristic.
 - The report is a readiness assessment snapshot, not a certification, audit opinion or control-attestation report (no SOC 2 §4 opinion language, no ISO certification claims).
 - Notifications and billing are UI-only in this build: preferences are stored, no email or payment provider is connected.
 - The rate limiter is per-process; a multi-instance deployment needs a shared store.

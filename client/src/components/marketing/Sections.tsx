@@ -255,7 +255,7 @@ export const SECURITY_ITEMS = [
   {
     title: 'Controlled file uploads',
     description:
-      'Uploads are limited by extension and size, validated on the server, parsed in memory and never written to disk or exposed as raw files.',
+      'Uploads are limited by extension and size, validated on the server, processed locally with temporary PDF files deleted after processing, and never exposed as raw files.',
     icon: Upload,
   },
   {
@@ -488,7 +488,7 @@ export const FAQ_ITEMS = [
   {
     question: 'What happens to uploaded evidence?',
     answer:
-      'Files are validated by type and size, parsed in memory, and only the extracted text is stored in your own database — the original binary is not retained or made downloadable. Uploads are scoped to your organisation by the session token, and evidence text is never sent to a third-party provider unless you enable the optional AI provider.',
+      'Files are validated by type and size, processed locally (PDFs use temporary files that are deleted after processing), and only the extracted text is stored in your own database — the original binary is not retained or made downloadable. Uploads are scoped to your organisation by the session token, and evidence text is never sent to a third-party provider unless you enable the optional AI provider.',
   },
   {
     question: 'Can I export reports?',

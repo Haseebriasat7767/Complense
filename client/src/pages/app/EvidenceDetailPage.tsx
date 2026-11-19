@@ -123,7 +123,7 @@ export function EvidenceDetailPage() {
 
       {document.status === 'failed' ? (
         <InlineAlert tone="danger" title="Analysis failed">
-          No text layer was found in this document, so it could not be mapped to any control. Re-upload a text-based
+          Text extraction could not complete, so this document could not be mapped to any control. Check the summary below for details. Re-upload a clearer scan, a smaller PDF, or a text-based
           export (PDF with selectable text, DOCX, TXT or CSV) or an OCR-processed copy. This document does not close any
           control.
         </InlineAlert>
