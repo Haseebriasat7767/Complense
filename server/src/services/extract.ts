@@ -14,19 +14,19 @@ const MAX_DOCX_XML_BYTES = 8 * 1024 * 1024;
 
 function clean(raw: string): string {
   return raw
-    .replace(/\\r\\n?/g, '\\n')
-    .replace(/\\u0000/g, '')
-    .replace(/[ \\t]{2,}/g, ' ')
-    .split('\\n')
+    .replace(/\r\n?/g, '\n')
+    .replace(/\u0000/g, '')
+    .replace(/[ \t]{2,}/g, ' ')
+    .split('\n')
     .map((line) => line.trim())
     .filter((line, index, all) => line.length > 0 || (index > 0 && all[index - 1]?.length > 0))
-    .join('\\n')
+    .join('\n')
     .trim()
     .slice(0, MAX_TEXT_CHARS);
 }
 
 function decodeXmlEntities(value: string): string {
-  return value.replace(/&(#x[0-9a-f]+|#\\d+|amp|lt|gt|quot|apos);/gi, (entity, code: string) => {
+  return value.replace(/&(#x[0-9a-f]+|#\d+|amp|lt|gt|quot|apos);/gi, (entity, code: string) => {
     const named: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'" };
     if (code[0] !== '#') return named[code.toLowerCase()] ?? entity;
     const point = code[1]?.toLowerCase() === 'x' ? Number.parseInt(code.slice(2), 16) : Number.parseInt(code.slice(1), 10);
@@ -87,10 +87,10 @@ function extractDocxXml(buffer: Buffer): string {
 function docxText(buffer: Buffer): string {
   const xml = extractDocxXml(buffer);
   const withBreaks = xml
-    .replace(/<w:tab\\b[^>]*\\/>/gi, '\\t')
-    .replace(/<w:br\\b[^>]*\\/>/gi, '\\n')
-    .replace(/<\\/w:p\\s*>/gi, '\\n')
-    .replace(/<\\/w:tr\\s*>/gi, '\\n')
+    .replace(/<w:tab\b[^>]*\/>/gi, '\t')
+    .replace(/<w:br\b[^>]*\/>/gi, '\n')
+    .replace(/<\/w:p\s*>/gi, '\n')
+    .replace(/<\/w:tr\s*>/gi, '\n')
     .replace(/<[^>]+>/g, '');
   return clean(decodeXmlEntities(withBreaks));
 }
@@ -109,7 +109,7 @@ export async function extractText(input: {
       text,
       method: 'direct-text',
       confidence: 1,
-      note: `${text.length.toLocaleString('en-US')} characters read directly from the ${extension.toUpperCase()} file.`,
+      note: text.length.toLocaleString('en-US') + ' characters read directly from the ' + extension.toUpperCase() + ' file.',
     };
   }
 
@@ -123,7 +123,7 @@ export async function extractText(input: {
         text,
         method: 'docx-text-layer',
         confidence: 0.9,
-        note: `${text.length.toLocaleString('en-US')} characters extracted from the DOCX document body. Verify evidence against the original file.`,
+        note: text.length.toLocaleString('en-US') + ' characters extracted from the DOCX document body. Verify evidence against the original file.',
       };
     } catch (error) {
       return {
@@ -139,6 +139,6 @@ export async function extractText(input: {
     text: '',
     method: 'unavailable',
     confidence: 0,
-    note: `Files of type .${extension} cannot be parsed in this build. Supported: PDF, DOCX, TXT, CSV.`,
+    note: 'Files of type .' + extension + ' cannot be parsed in this build. Supported: PDF, DOCX, TXT, CSV.',
   };
 }
