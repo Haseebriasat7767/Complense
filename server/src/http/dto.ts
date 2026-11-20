@@ -94,6 +94,7 @@ export function evidenceDetailDto(record: EvidenceRecord, mappedControls: Mappin
     extractedText: record.content,
     mapping: mappedControls,
     isDemoSample: record.source === 'demo',
+    originalFileAvailable: Boolean(record.sourceRef?.startsWith(record.organizationId + '/' + record.workspaceId + '/')),
   };
 }
 
