@@ -5,6 +5,7 @@
  * selection before any analysis runs.
  */
 import path from 'node:path';
+import crypto from 'node:crypto';
 import { Router } from 'express';
 import multer from 'multer';
 import { requireAuth, sessionOf } from '../auth/middleware.js';
@@ -15,6 +16,8 @@ import { CONTROL_LIBRARY } from '../domain/controls.js';
 import { FRAMEWORK_KEYS, isFrameworkKey } from '../domain/frameworks.js';
 import { mapEvidenceAcrossFrameworks } from '../domain/analysis.js';
 import { extractText } from '../services/extract.js';
+import { deleteOriginalFile, downloadOriginalFile, uploadOriginalFile } from '../services/original-files.js';
+import { logger } from '../logger.js';
 import { ApiError, asyncHandler } from '../http/errors.js';
 import { evidenceDetailDto, evidenceDto } from '../http/dto.js';
 import { optionalString, queryString, requireObjectBody } from '../http/validate.js';
@@ -205,6 +208,26 @@ evidenceRouter.get(
 );
 
 evidenceRouter.get(
+  '/:id/file',
+  asyncHandler(async (req, res) => {
+    const store = getStore();
+    const session = sessionOf(req);
+    const record = await store.getEvidence(req.params.id as string, session.org);
+    if (!record) throw ApiError.notFound('Evidence not found.');
+    const prefix = `${session.org}/${record.workspaceId}/`;
+    if (!record.sourceRef || !record.sourceRef.startsWith(prefix)) {
+      throw ApiError.notFound('The original file is not available for this evidence record.');
+    }
+    const original = await downloadOriginalFile(record.sourceRef);
+    const safeName = path.basename(record.fileName).replace(/[^A-Za-z0-9._-]/g, '_');
+    res.setHeader('Content-Type', original.contentType || record.mimeType || 'application/octet-stream');
+    res.setHeader('Content-Length', original.bytes.length);
+    res.setHeader('Content-Disposition', `attachment; filename="${safeName}"; filename*=UTF-8''${encodeURIComponent(record.fileName)}`);
+    res.send(original.bytes);
+  }),
+);
+
+evidenceRouter.get(
   '/:id/text',
   asyncHandler(async (req, res) => {
     const store = getStore();
@@ -262,7 +285,15 @@ evidenceRouter.post(
     const status: EvidenceRecord['status'] =
       extraction.confidence >= 0.8 ? 'analyzed' : extraction.text.length > 0 ? 'needs_review' : 'failed';
 
-    const record = await store.createEvidence({
+    const evidenceId = `ev-${crypto.randomBytes(8).toString('hex')}`;
+    const safeFileName = path.basename(file.originalname).replace(/[^A-Za-z0-9._-]/g, '_').slice(0, 100) || 'evidence';
+    const originalPath = `${session.org}/${workspace.id}/${evidenceId}/${safeFileName}`;
+    await uploadOriginalFile(originalPath, file.buffer, file.mimetype || 'application/octet-stream');
+
+    let record: EvidenceRecord;
+    try {
+      record = await store.createEvidence({
+      id: evidenceId,
       organizationId: session.org,
       workspaceId: workspace.id,
       fileName: file.originalname.slice(0, 180),
@@ -271,13 +302,18 @@ evidenceRouter.post(
       sizeBytes: file.size,
       category,
       source: 'upload',
+      sourceRef: originalPath,
       uploadedAt: new Date().toISOString(),
       uploadedBy: session.email,
       status,
       frameworkKeys: frameworks,
       content: extraction.text,
       summary: extraction.text.length > 0 ? analysis.summary : extraction.note,
-    });
+      });
+    } catch (error) {
+      await deleteOriginalFile(originalPath).catch(() => undefined);
+      throw error;
+    }
 
     await store.recordAuditEvent({
       organizationId: session.org,
@@ -374,6 +410,15 @@ evidenceRouter.delete(
     if (!record) throw ApiError.notFound('Evidence not found.');
 
     await store.deleteEvidence(record.id, session.org);
+    let originalFileDeleted = true;
+    if (record.sourceRef?.startsWith(`${session.org}/${record.workspaceId}/`)) {
+      try {
+        await deleteOriginalFile(record.sourceRef);
+      } catch (error) {
+        originalFileDeleted = false;
+        logger.warn('Original evidence file cleanup failed', { evidenceId: record.id });
+      }
+    }
     await store.recordAuditEvent({
       organizationId: session.org,
       actor: session.email,
@@ -382,6 +427,6 @@ evidenceRouter.delete(
       at: new Date().toISOString(),
     });
 
-    res.json({ ok: true, deletedId: record.id, message: `${record.fileName} removed from the workspace.` });
+    res.json({ ok: true, deletedId: record.id, originalFileDeleted, message: `${record.fileName} removed from the workspace.` });
   }),
 );
