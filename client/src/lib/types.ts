@@ -114,6 +114,7 @@ export type EvidenceDetail = EvidenceItem & {
   extractedText: string;
   mapping: MappingEntry[];
   isDemoSample: boolean;
+  originalFileAvailable: boolean;
 };
 
 export type ControlListItem = {
