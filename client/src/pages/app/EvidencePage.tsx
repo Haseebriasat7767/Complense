@@ -104,8 +104,11 @@ export function EvidencePage() {
     setUploadError(null);
     let succeeded = 0;
     let flagged = 0;
+    const failedFiles: File[] = [];
+    const failures: string[] = [];
+    const filesToUpload = [...pendingFiles];
 
-    for (const file of pendingFiles) {
+    for (const file of filesToUpload) {
       setUploadProgressLabel(`Analysing ${file.name}…`);
       const formData = new FormData();
       formData.append('file', file);
@@ -118,14 +121,16 @@ export function EvidencePage() {
         succeeded += 1;
         if (response.evidence.status !== 'analyzed') flagged += 1;
       } catch (caught) {
-        setUploadError(caught instanceof Error ? caught.message : `Upload failed for ${file.name}.`);
+        failedFiles.push(file);
+        failures.push(`${file.name}: ${caught instanceof Error ? caught.message : 'Upload failed.'}`);
       }
     }
 
     setUploadProgressLabel(null);
     setUploading(false);
-    setPendingFiles([]);
-    list.refetch();
+    setPendingFiles(failedFiles);
+    setUploadError(failures.length ? failures.join('\\n') : null);
+    if (succeeded > 0) list.refetch();
 
     if (succeeded > 0) {
       toast.success(
@@ -246,7 +251,7 @@ export function EvidencePage() {
               </button>
             </p>
             <p className="mt-1.5 text-[12px] text-ink-500">
-              Files are parsed in memory — the original upload is never written to disk or served back.
+              Original files are stored in private evidence storage and are only available to authorized workspace members.
             </p>
           </div>
 
