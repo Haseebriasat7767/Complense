@@ -16,7 +16,12 @@ COPY . .
 RUN npm run build && npm prune --omit=dev
 
 FROM node:22-alpine
-RUN apk add --no-cache poppler-utils tesseract-ocr tesseract-ocr-data-eng
+RUN apk add --no-cache poppler-utils tesseract-ocr tesseract-ocr-data-eng \
+    && command -v pdfinfo \
+    && command -v pdftotext \
+    && command -v pdftoppm \
+    && command -v tesseract \
+    && tesseract --list-langs | grep -qx 'eng'
 WORKDIR /app
 ENV NODE_ENV=production \
     PORT=4000 \
