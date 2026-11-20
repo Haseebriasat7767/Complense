@@ -219,7 +219,7 @@ evidenceRouter.get(
       throw ApiError.notFound('The original file is not available for this evidence record.');
     }
     const original = await downloadOriginalFile(record.sourceRef);
-    const safeName = record.fileName.replace(/["\\\\\\r\\n]/g, '_');
+    const safeName = path.basename(record.fileName).replace(/[^A-Za-z0-9._-]/g, '_');
     res.setHeader('Content-Type', original.contentType || record.mimeType || 'application/octet-stream');
     res.setHeader('Content-Length', original.bytes.length);
     res.setHeader('Content-Disposition', `attachment; filename="${safeName}"; filename*=UTF-8''${encodeURIComponent(record.fileName)}`);
