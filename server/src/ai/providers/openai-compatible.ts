@@ -20,9 +20,9 @@ type ChatMessage = { role: 'system' | 'user'; content: string };
  * documented generateContent endpoint without changing the configured key.
  */
 async function geminiNativeChat(messages: ChatMessage[], maxTokens: number): Promise<string | null> {
-  const model = config.ai.model.replace(/^models\\//, '');
+  const model = config.ai.model.replace(/^models\//, '');
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
-  const systemText = messages.filter((m) => m.role === 'system').map((m) => m.content).join('\\n');
+  const systemText = messages.filter((m) => m.role === 'system').map((m) => m.content).join('\n');
   const contents = messages
     .filter((m) => m.role !== 'system')
     .map((m) => ({
