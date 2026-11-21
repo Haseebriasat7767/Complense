@@ -305,6 +305,7 @@ evidenceRouter.post(
       sourceRef: originalPath,
       uploadedAt: new Date().toISOString(),
       uploadedBy: session.email,
+      createdByUser: session.sub,
       status,
       frameworkKeys: frameworks,
       content: extraction.text,
