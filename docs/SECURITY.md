@@ -42,7 +42,7 @@ PDF OCR is performed locally by Poppler and Tesseract in the application runtime
 
 ## Data handling
 
-The application stores extracted evidence text and associated metadata in the configured database. It does not make the original upload a public download. A buyer should review the live database, confirm record ownership, remove seller/test data that is not part of the agreed transfer, and establish a retention/deletion policy before onboarding customers.
+Original evidence files are stored in the non-public Supabase Storage bucket `evidence-originals`; extracted evidence text and metadata are stored in Supabase PostgreSQL. The bucket migration creates no anon or authenticated object policies, and the server accesses objects using its secret key. Local OCR temporary files are removed after processing. Buyer should verify bucket visibility and storage policies in the transferred Supabase project. A buyer should review the live database, confirm record ownership, remove seller/test data that is not part of the agreed transfer, and establish a retention/deletion policy before onboarding customers.
 
 ## Required buyer hardening
 
