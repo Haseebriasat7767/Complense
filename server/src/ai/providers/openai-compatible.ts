@@ -14,6 +14,63 @@ import { logger } from '../../logger.js';
 
 type ChatMessage = { role: 'system' | 'user'; content: string };
 
+/**
+ * Google Gemini native REST fallback. The OpenAI-compatible endpoint can
+ * return 404 for an unavailable compatibility route; retry through the
+ * documented generateContent endpoint without changing the configured key.
+ */
+async function geminiNativeChat(messages: ChatMessage[], maxTokens: number): Promise<string | null> {
+  const model = config.ai.model.replace(/^models\\//, '');
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
+  const systemText = messages.filter((m) => m.role === 'system').map((m) => m.content).join('\\n');
+  const contents = messages
+    .filter((m) => m.role !== 'system')
+    .map((m) => ({
+      role: m.role === 'user' ? 'user' : 'model',
+      parts: [{ text: m.content }],
+    }));
+
+  try {
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-goog-api-key': config.ai.apiKey,
+      },
+      body: JSON.stringify({
+        ...(systemText ? { systemInstruction: { parts: [{ text: systemText }] } } : {}),
+        contents,
+        generationConfig: { maxOutputTokens: maxTokens, temperature: 0.2 },
+      }),
+      signal: AbortSignal.timeout(config.ai.timeoutMs),
+    });
+
+    if (!response.ok) {
+      logger.warn('Gemini native fallback rejected', {
+        model,
+        status: response.status,
+        statusText: response.statusText.slice(0, 120),
+      });
+      return null;
+    }
+
+    const payload = (await response.json()) as {
+      candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+    };
+    const content = payload.candidates?.[0]?.content?.parts
+      ?.map((part) => part.text ?? '')
+      .join('')
+      .trim();
+    return content || null;
+  } catch (error) {
+    logger.warn('Gemini native fallback failed', {
+      model,
+      reason: error instanceof Error ? error.name : 'unknown',
+    });
+    return null;
+  }
+}
+
 async function chat(messages: ChatMessage[], maxTokens = 600): Promise<string | null> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), config.ai.timeoutMs);
@@ -34,6 +91,12 @@ async function chat(messages: ChatMessage[], maxTokens = 600): Promise<string | 
     });
 
     if (!response.ok) {
+      // Gemini's native generateContent endpoint is a safe fallback when its
+      // OpenAI-compatible route is unavailable (404). No evidence or key is logged.
+      if (response.status === 404 && new URL(config.ai.baseUrl).hostname === 'generativelanguage.googleapis.com') {
+        const nativeResult = await geminiNativeChat(messages, maxTokens);
+        if (nativeResult) return nativeResult;
+      }
       // Log provider metadata only; never log credentials, evidence, or request bodies.
       logger.warn('External AI request rejected', {
         provider: config.ai.provider,
