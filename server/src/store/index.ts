@@ -1,7 +1,9 @@
 /**
- * Store factory. Supabase is the persistent production store. If it is
- * unavailable during startup, production stays online in clearly-labelled
- * demo mode instead of crashing every API request. Demo data resets on restart.
+ * Store factory. Supabase is the persistent production store.
+ *
+ * Production must fail closed when Supabase is missing or unavailable. Falling
+ * back to per-instance memory storage can make uploads/reports appear to save
+ * while silently losing them after a cold start or instance recycle.
  */
 import { config } from '../config.js';
 import { logger } from '../logger.js';
@@ -23,33 +25,29 @@ export async function initStore(): Promise<Store> {
       return store;
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error);
-      if (!config.isProduction) throw error;
-
-      // Keep the demo available if production credentials or database grants
-      // are wrong. Health output exposes the reason; this is not persistence.
-      logger.error('Supabase initialization failed — using in-memory demo mode; data will not persist.', {
-        reason,
-      });
-      const memory = new MemoryStore(`Supabase unavailable: ${reason}`);
-      await memory.init();
-      store = memory;
-      return store;
+      logger.error('Supabase initialization failed.', { reason });
+      if (config.isProduction) {
+        throw new Error(
+          'Production startup blocked: Supabase is unavailable. Refusing to use temporary in-memory storage and risk losing evidence or reports.',
+          { cause: error },
+        );
+      }
+      throw error;
     }
+  }
+
+  if (config.isProduction) {
+    throw new Error(
+      'Production startup blocked: SUPABASE_URL and SUPABASE_SECRET_KEY are required. Refusing to use temporary in-memory storage.',
+    );
   }
 
   if (config.database.supabaseUrl || config.database.supabaseSecretKey) {
-    if (config.isProduction) {
-      logger.warn('Supabase configuration is incomplete — using the in-memory demo store as an emergency demo fallback. Set SUPABASE_URL and SUPABASE_SECRET_KEY to enable persistence.');
-    } else {
-      throw new Error('Supabase configuration is incomplete. Set both SUPABASE_URL and SUPABASE_SECRET_KEY.');
-    }
-  } else {
-    logger.info('Supabase not configured — using the in-memory demo store');
+    throw new Error('Supabase configuration is incomplete. Set both SUPABASE_URL and SUPABASE_SECRET_KEY.');
   }
 
-  const memory = new MemoryStore(config.isProduction
-    ? 'SUPABASE_URL or SUPABASE_SECRET_KEY is missing in Vercel Production'
-    : undefined);
+  logger.info('Supabase not configured — using the in-memory store for local development/tests.');
+  const memory = new MemoryStore();
   await memory.init();
   store = memory;
   return store;

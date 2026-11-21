@@ -1,3 +1,5 @@
+> **Status note (22 Nov 2026):** This is a historical roadmap from the original demo baseline. Treat every item as unverified until checked against the current production code; do not present roadmap items as implemented product capabilities.
+
 # Roadmap
 
 Everything on this page is **documented, not implemented**. This build contains no stubs, feature flags or half-finished screens for these items — the product only ships what works end to end.

@@ -1,3 +1,5 @@
+> **Current-provider note (22 Nov 2026):** The current production integration uses the OpenAI-compatible provider adapter configured for Gemini, with a native Gemini REST fallback. The deterministic engine remains authoritative for control matching, statuses and scoring; external AI is optional for summaries and report narrative. Confirm active model behaviour with a fresh buyer acceptance test.
+
 # AI abstraction layer
 
 ComplyLens AI is designed so that **the product works completely without AI**. The assessment — control statuses, evidence-to-control mappings, findings, risk levels, priorities, remediation guidance and the readiness index — is produced by a deterministic rule engine. An AI provider is optional and may only improve *wording*.

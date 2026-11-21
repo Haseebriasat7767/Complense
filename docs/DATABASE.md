@@ -1,3 +1,5 @@
+> **Historical note (22 Nov 2026):** This document describes the original in-memory/MongoDB data model and is not the current production database specification. The production schema is defined by `supabase/migrations/20261009000100_initial_schema.sql`; review that migration and current `server/src/store/supabase.ts` for the current schema and access model.
+
 # Database model
 
 ComplyLens AI has two storage modes behind one interface (`server/src/store/store.ts`):
