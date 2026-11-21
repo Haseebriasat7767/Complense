@@ -1,4 +1,5 @@
-import { DemoButton, Eyebrow, Section } from '@/components/marketing/MarketingLayout';
+import { Eyebrow, Section } from '@/components/marketing/MarketingLayout';
+import { ButtonLink } from '@/components/ui/Button';
 import { FaqSection } from '@/components/marketing/Sections';
 
 export function FaqPage() {
@@ -19,11 +20,10 @@ export function FaqPage() {
         <div className="mx-auto max-w-2xl text-center">
           <h2 className="text-xl tracking-tight">Still deciding?</h2>
           <p className="mt-3 text-[14px] text-ink-500">
-            The fastest way to evaluate ComplyLens is to open the seeded workspace and try to break the analysis — it is
-            deterministic, so you will get the same answers every time.
+            Create an account to evaluate ComplyLens with your own evidence.
           </p>
           <div className="mt-6 flex justify-center">
-            <DemoButton size="lg" label="Open the demo workspace" />
+            <ButtonLink to="/signup">Create an account</ButtonLink>
           </div>
         </div>
       </Section>

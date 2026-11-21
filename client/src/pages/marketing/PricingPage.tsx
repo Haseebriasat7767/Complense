@@ -1,6 +1,7 @@
 import { CheckCircle2, Minus } from 'lucide-react';
+import { ButtonLink } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
-import { DemoButton, Eyebrow, Section } from '@/components/marketing/MarketingLayout';
+import { Eyebrow, Section } from '@/components/marketing/MarketingLayout';
 import { FaqSection, PricingSection } from '@/components/marketing/Sections';
 
 const COMPARISON: Array<{ feature: string; starter: boolean | string; growth: boolean | string; business: boolean | string }> = [
@@ -89,7 +90,7 @@ export function PricingPage() {
         </div>
 
         <div className="mt-6 flex flex-wrap items-center gap-3">
-          <DemoButton label="Try the Demo" />
+          <ButtonLink to="/signup">Create an account</ButtonLink>
           <span className="text-[12.5px] text-ink-500">
             Already have an account? Choose a plan above to open secure Stripe Checkout.
           </span>

@@ -2,7 +2,7 @@ import { AlertTriangle, ArrowRight, BadgeCheck, Calculator, TrendingUp } from 'l
 import { useMemo, useState } from 'react';
 import { Badge } from '@/components/ui/Badge';
 import { ButtonLink } from '@/components/ui/Button';
-import { DemoButton, Eyebrow, Section } from '@/components/marketing/MarketingLayout';
+import { Eyebrow, Section } from '@/components/marketing/MarketingLayout';
 
 /**
  * Buyer-facing product overview ("Product Asset Overview").
@@ -16,8 +16,8 @@ const FEATURES = [
   ['Gap analysis', 'Risk-rated findings with filtering by framework, risk, status, category, owner and priority'],
   ['Remediation guidance', 'Suggested fix, owner and timeline per finding, clearly labelled as generated guidance'],
   ['Readiness reporting', 'Server-rendered PDF with cover, executive summary, findings, remediation and evidence inventory'],
-  ['Auth and tenancy', 'Sign-up, log in, forgot password, demo entry, protected routes, organisation-scoped data'],
-  ['Settings', 'Profile, organisation, workspace, framework preferences, security and demo billing pages'],
+  ['Auth and tenancy', 'Sign-up, log in, forgot password, account access, protected routes, organisation-scoped data'],
+  ['Settings', 'Profile, organisation, workspace, framework preferences, security and billing pages'],
   ['Documentation', 'README, /docs set and in-app documentation covering architecture to deployment'],
 ];
 
@@ -71,7 +71,7 @@ export function ProductOverviewPage() {
             <Badge tone="brand">No paid APIs required</Badge>
           </div>
           <div className="mt-6 flex flex-wrap gap-3">
-            <DemoButton label="Open the demo workspace" />
+            <ButtonLink to="/signup">Create an account</ButtonLink>
             <ButtonLink to="/documentation" variant="secondary" iconRight={<ArrowRight className="size-4" />}>
               Read the documentation
             </ButtonLink>
@@ -165,7 +165,7 @@ export function ProductOverviewPage() {
               Calculated as assumed hours × assumed hourly cost × assumed time reduction, less the budget you entered. Actual savings, product fit, and pricing have not been independently validated.
             </p>
             <div className="mt-5">
-              <DemoButton label="Test the workflow with demo data" />
+              <ButtonLink to="/signup">Create an account</ButtonLink>
             </div>
           </div>
         </div>
@@ -230,7 +230,7 @@ AI_PROVIDER=openai-compatible  # optional narrative layer`}</pre>
               {[
                 'Working end-to-end demo: landing → demo workspace → evidence → analysis → mapping → control detail → gap analysis → report PDF.',
                 'Zero users, zero customers and zero revenue. There is no billing integration and no paid API usage.',
-                'All workspace data is fictional sample data for the demo organisation "AcmeCloud", labelled as demo data in the UI.',
+                'All workspace data is fictional sample data for the demo organisation "AcmeCloud", labelled as your evidence in the UI.',
                 'No customer testimonials, logos, revenue or traction claims appear anywhere in the product.',
                 'The control libraries are demonstration datasets, not licensed reproductions of AICPA or ISO text.',
                 'AI assistance is optional. The default analysis is deterministic and runs locally with no API key.',

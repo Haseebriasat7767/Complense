@@ -1,11 +1,12 @@
 import { ShieldAlert } from 'lucide-react';
-import { DemoButton, Eyebrow, Section } from '@/components/marketing/MarketingLayout';
+import { ButtonLink } from '@/components/ui/Button';
+import { Eyebrow, Section } from '@/components/marketing/MarketingLayout';
 import { SecuritySection } from '@/components/marketing/Sections';
 
 const DATA_HANDLING = [
   {
     title: 'What is stored',
-    body: 'Organisation, user, workspace, evidence metadata and the extracted text of uploaded documents (or the seeded demo text). Passwords are stored only as scrypt hashes.',
+    body: 'Organisation, user, workspace, evidence metadata and the extracted text of uploaded documents (). Passwords are stored only as scrypt hashes.',
   },
   {
     title: 'What is not stored',
@@ -33,7 +34,7 @@ export function SecurityPage() {
             implementation in this codebase — and what it does not claim.
           </p>
           <div className="mt-6">
-            <DemoButton label="Try the Demo" />
+            <ButtonLink to="/signup">Create an account</ButtonLink>
           </div>
         </div>
       </Section>
@@ -72,7 +73,7 @@ export function SecurityPage() {
         <ul className="mt-5 grid gap-3 sm:grid-cols-2">
           {[
             'Set SESSION_SECRET to a long random value so sessions survive restarts and cannot be forged.',
-            'Set AUTH_REQUIRED=true and DEMO_MODE=false to disable passwordless demo entry.',
+            'Set AUTH_REQUIRED=true and DEMO_MODE=false to disable passwordless account access.',
             'Point MONGODB_URI at a database with authentication, TLS and backups enabled.',
             'Terminate TLS at a trusted reverse proxy; set TRUST_PROXY_HOPS to the exact trusted proxy count (default 0).',
             'Leave AI_ALLOW_EXTERNAL=false unless you have a data-processing agreement covering evidence text.',

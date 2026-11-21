@@ -1,8 +1,9 @@
 import { useState } from 'react';
+import { ButtonLink } from '@/components/ui/Button';
 import { BookOpen, Boxes, Database, KeyRound, Layers, Rocket, ShieldCheck } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { Tabs, TabPanel } from '@/components/ui/Tabs';
-import { DemoButton, Eyebrow, Section } from '@/components/marketing/MarketingLayout';
+import { Eyebrow, Section } from '@/components/marketing/MarketingLayout';
 
 /**
  * In-app documentation. The same content ships as Markdown in /docs so a buyer
@@ -268,7 +269,7 @@ npm start                   # serves API + built client on :4000`}</Code>
               <p className="flex-1 text-[13px] text-ink-600">
                 Prefer to click through it instead of reading it? The demo workspace is one click away.
               </p>
-              <DemoButton label="Try the Demo" />
+              <ButtonLink to="/signup">Create an account</ButtonLink>
             </div>
           </div>
         </div>
