@@ -10,6 +10,7 @@
  */
 import { config } from '../../config.js';
 import type { Finding, ReadinessScore } from '../../domain/types.js';
+import { logger } from '../../logger.js';
 
 type ChatMessage = { role: 'system' | 'user'; content: string };
 
@@ -32,13 +33,34 @@ async function chat(messages: ChatMessage[], maxTokens = 600): Promise<string | 
       signal: controller.signal,
     });
 
-    if (!response.ok) return null;
+    if (!response.ok) {
+      // Log provider metadata only; never log credentials, evidence, or request bodies.
+      logger.warn('External AI request rejected', {
+        provider: config.ai.provider,
+        model: config.ai.model,
+        status: response.status,
+        statusText: response.statusText.slice(0, 120),
+      });
+      return null;
+    }
     const payload = (await response.json()) as {
       choices?: Array<{ message?: { content?: string } }>;
     };
     const content = payload.choices?.[0]?.message?.content;
-    return typeof content === 'string' && content.trim() ? content.trim() : null;
-  } catch {
+    if (typeof content === 'string' && content.trim()) return content.trim();
+
+    logger.warn('External AI response contained no usable message', {
+      provider: config.ai.provider,
+      model: config.ai.model,
+      responseShape: Array.isArray(payload.choices) ? 'choices_without_content' : 'missing_choices',
+    });
+    return null;
+  } catch (error) {
+    logger.warn('External AI request failed before a usable response', {
+      provider: config.ai.provider,
+      model: config.ai.model,
+      reason: controller.signal.aborted ? 'timeout' : error instanceof Error ? error.name : 'unknown',
+    });
     return null;
   } finally {
     clearTimeout(timeout);
