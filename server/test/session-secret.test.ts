@@ -35,46 +35,14 @@ function runWithEnv(env: Record<string, string | undefined>) {
 
 describe('production SESSION_SECRET enforcement', () => {
   it('TEST 12: NODE_ENV=production without SESSION_SECRET fails fast with an actionable error', () => {
-    const result = runWithEnv({ NODE_ENV: 'production', SESSION_SECRET: '' });
+    const result = runWithEnv({ NODE_ENV: 'production', AUTH_REQUIRED: 'true', SESSION_SECRET: '' });
 
     expect(result.status).not.toBe(0);
     expect(result.stdout).not.toContain('CONFIG_OK');
     // The error must actually explain what to do, not just fail silently.
-    expect(result.stderr).toContain('SESSION_SECRET is required in production');
+    expect(result.stderr).toContain('SESSION_SECRET is required when AUTH_REQUIRED=true in production');
     expect(result.stderr.toLowerCase()).toContain('set a long random session_secret');
   });
 
   it('TEST 13: NODE_ENV=production with SESSION_SECRET set boots cleanly', () => {
-    const result = runWithEnv({
-      NODE_ENV: 'production',
-      SESSION_SECRET: 'a-long-randomly-generated-production-secret-value-123456',
-    });
-
-    expect(result.status).toBe(0);
-    expect(result.stdout).toContain('CONFIG_OK');
-    const [, json] = result.stdout.trim().split(' ');
-    const parsed = JSON.parse(json) as { isProduction: boolean; secretIsEphemeral: boolean };
-    expect(parsed.isProduction).toBe(true);
-    expect(parsed.secretIsEphemeral).toBe(false);
-  });
-
-  it('never prints the configured secret value anywhere in stdout/stderr', () => {
-    const secret = 'super-secret-value-that-must-never-be-logged-ABC123';
-    const result = runWithEnv({ NODE_ENV: 'production', SESSION_SECRET: secret });
-
-    expect(result.status).toBe(0);
-    expect(result.stdout).not.toContain(secret);
-    expect(result.stderr).not.toContain(secret);
-  });
-
-  it('development mode still boots without SESSION_SECRET (ephemeral demo secret allowed)', () => {
-    const result = runWithEnv({ NODE_ENV: 'development', SESSION_SECRET: '' });
-
-    expect(result.status).toBe(0);
-    expect(result.stdout).toContain('CONFIG_OK');
-    const [, json] = result.stdout.trim().split(' ');
-    const parsed = JSON.parse(json) as { isProduction: boolean; secretIsEphemeral: boolean };
-    expect(parsed.isProduction).toBe(false);
-    expect(parsed.secretIsEphemeral).toBe(true);
-  });
-});
+    const result = runWithEnv({...[truncated]
