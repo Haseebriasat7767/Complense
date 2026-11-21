@@ -8,7 +8,7 @@
 import { FRAMEWORKS, FRAMEWORK_DISCLAIMER } from './frameworks.js';
 import { countStatuses } from './scoring.js';
 import { demoNarrative } from '../ai/providers/demo.js';
-import { modeLabel } from '../ai/index.js';
+
 import type {
   ControlAssessment,
   EvidenceRecord,
