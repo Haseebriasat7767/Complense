@@ -244,9 +244,7 @@ export async function externalNarrative(input: {
   const lines = [
     `Company: ${input.companyName}`,
     `Framework: ${input.frameworkName}`,
-    `Readiness index: ${readiness.index}% (${readiness.bandLabel})`,
-    'Do not repeat any numerical values, readiness scores, percentages, or control counts in the narrative.',
-    `Evidence documents: ${input.evidenceCount}`,
+    'Describe qualitative readiness only. Do not include numerical scores, percentages, counts, or control totals.',
     'Findings:',
     ...findings
       .slice(0, 12)
