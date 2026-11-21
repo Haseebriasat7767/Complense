@@ -245,7 +245,7 @@ export async function externalNarrative(input: {
     `Company: ${input.companyName}`,
     `Framework: ${input.frameworkName}`,
     `Readiness index: ${readiness.index}% (${readiness.bandLabel})`,
-    `Reviewed controls: ${readiness.counts.reviewed} — passed ${readiness.counts.passed}, needs attention ${readiness.counts.needsAttention}, missing ${readiness.counts.missing}, needs review ${readiness.counts.needsReview}`,
+    `Controls assessed: ${readiness.counts.total} — passed ${readiness.counts.passed}, needs attention ${readiness.counts.needsAttention}, missing ${readiness.counts.missing}, needs review ${readiness.counts.needsReview}; reviewable controls: ${readiness.counts.reviewed}`,
     `Evidence documents: ${input.evidenceCount}`,
     'Findings:',
     ...findings
