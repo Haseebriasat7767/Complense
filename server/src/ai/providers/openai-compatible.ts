@@ -231,7 +231,7 @@ export async function externalSummary(input: {
 }
 
 const NARRATIVE_SYSTEM =
-  'You write executive summaries for compliance readiness reports. Use only the figures provided. State clearly that the report is a readiness indicator and not a certification or audit opinion. Do not invent facts. 120 to 180 words.';
+  'You write qualitative executive summaries for compliance readiness reports. Do not state, calculate, repeat, or infer any numerical counts, percentages, readiness scores, or control totals; those are rendered separately from deterministic assessment data. Describe only qualitative risk themes and remediation context using the supplied facts. State clearly that the report is a readiness indicator and not a certification or audit opinion. Do not invent facts. 120 to 180 words.';
 
 export async function externalNarrative(input: {
   companyName: string;
@@ -245,7 +245,7 @@ export async function externalNarrative(input: {
     `Company: ${input.companyName}`,
     `Framework: ${input.frameworkName}`,
     `Readiness index: ${readiness.index}% (${readiness.bandLabel})`,
-    `Controls assessed: ${readiness.counts.total} — passed ${readiness.counts.passed}, needs attention ${readiness.counts.needsAttention}, missing ${readiness.counts.missing}, needs review ${readiness.counts.needsReview}; reviewable controls: ${readiness.counts.reviewed}`,
+    'Do not repeat any numerical values, readiness scores, percentages, or control counts in the narrative.',
     `Evidence documents: ${input.evidenceCount}`,
     'Findings:',
     ...findings

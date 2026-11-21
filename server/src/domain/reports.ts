@@ -70,6 +70,11 @@ export function buildReportSummary(input: {
     analysisMode,
   } = input;
 
+  // Derive report counts from the exact assessment rows rendered below. This is
+  // the single source of truth for the PDF, UI summary and category breakdown.
+  const reportCounts = countStatuses(assessments);
+  const reportReadiness: ReadinessScore = { ...readiness, counts: reportCounts };
+
   const critical = findings.filter((finding) => finding.riskLevel === 'critical');
   const high = findings.filter((finding) => finding.riskLevel === 'high');
 
@@ -130,10 +135,18 @@ export function buildReportSummary(input: {
   }
 
   return {
-    executiveSummary: [executiveSummary, themes.length ? `Focus areas: ${themes.join(' · ')}.` : '']
-      .filter(Boolean)
-      .join(' '),
-    readiness,
+    executiveSummary: [
+      `Control totals: ${reportCounts.total} assessed; ${reportCounts.reviewed} reviewable; ${reportCounts.needsReview} awaiting manual review. Status breakdown: ${reportCounts.passed} passed, ${reportCounts.needsAttention} needing attention, and ${reportCounts.missing} missing.`,
+      // AI is used for qualitative context only. Drop any generated sentence
+      // that attempts to restate numerical control totals; counts above are
+      // always calculated from the deterministic assessment rows.
+      executiveSummary
+        .split(/(?<=[.!?])\s+/)
+        .filter((sentence) => !(/\b\d+\s+(?:controls?|passed|missing|findings?)\b/i.test(sentence) || /\b(?:passed|missing|needs? attention|awaiting manual review|reviewable)\s*[:=]?\s*\d+\b/i.test(sentence)))
+        .join(' '),
+      themes.length ? `Focus areas: ${themes.join(' · ')}.` : '',
+    ].filter(Boolean).join(' '),
+    readiness: reportReadiness,
     criticalFindings: critical.map((finding) => ({
       controlCode: finding.controlCode,
       title: finding.title,
@@ -172,7 +185,7 @@ export function buildReportSummary(input: {
     })),
     conductedBy: `${organization.name} — internal readiness review`,
     analysisMode,
-    disclaimer: `This report is an AI-generated preliminary readiness assessment. It is not a certification, audit opinion, or substitute for professional compliance advice. ${FRAMEWORK_DISCLAIMER}`,
+    disclaimer: `This report is a preliminary readiness assessment. It is not a certification, audit opinion, or substitute for professional compliance advice. ${FRAMEWORK_DISCLAIMER}`,
   };
 }
 
