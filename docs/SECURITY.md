@@ -1,107 +1,57 @@
-# Security
+# Security and product limitations
 
-This document describes what the demo MVP actually implements, what it deliberately does not, and how to harden it for real use. It is written to be verifiable against the code — nothing here is aspirational.
+**Current scope:** this document describes the current ComplyLens implementation and the production configuration reviewed on 22 November 2026. It is not a security certification or independent audit.
 
----
+## Implemented application controls
 
-## Implemented controls
-
-### Authentication
-
-| Control | Implementation |
+| Area | Current implementation |
 | --- | --- |
-| Password storage | `scrypt` with a per-user random salt (`server/src/auth/passwords.ts`); format `scrypt$<salt>$<hash>`; constant-time comparison |
-| Session tokens | HS256 JWT signed with `SESSION_SECRET`, `sub`/`email`/`org`/`role`/`demo` claims, server-enforced expiry (`SESSION_TTL_HOURS`, default 12h) |
-| Token transport | `Authorization: Bearer <token>` only; query-string tokens are rejected to avoid leaking credentials through URLs, logs or referrers |
-| Failed login | Single generic message for unknown accounts and wrong passwords: `"Email or password is incorrect."` |
-| Demo sessions | Issued by `POST /api/auth/demo` with a real signed token — protected routes behave exactly as for a paying account |
-| Sign-out | Client clears the stored session; tokens are short-lived and server-validated on every request |
+| Password storage | Node.js scrypt password hashing with per-user salt |
+| Sessions | Signed HS256 tokens with server-enforced expiry |
+| Production authentication | Vercel Production environment has `AUTH_REQUIRED=true` and `DEMO_MODE=false` |
+| Organisation isolation | Authenticated routes and store queries apply organisation scoping |
+| Evidence attribution | New evidence uploads persist `createdByUser`; signup-imported sample evidence is attributed to the account owner |
+| Input handling | Server-side request validation, upload extension allowlist and upload-size limits |
+| Error handling | Structured client errors; internal details are logged server-side |
+| Database | Supabase PostgreSQL; RLS is enabled on the application's public tables and no public policies are created by the migration |
+| Secret handling | Supabase and AI keys are read by the server and must not be exposed in the client bundle |
+| PDF processing | Local Poppler/Tesseract processing in a temporary directory; temporary files are removed after processing |
 
-### Authorisation
+The Supabase server uses a server-only secret key. That key has elevated database privileges, so row-level security is defence in depth rather than the sole tenant boundary. Application-level organisation checks in routes and store queries remain security-critical and should be independently reviewed before handling sensitive customer evidence.
 
-- Every session route runs `requireAuth()`, which verifies the token **and** confirms the organisation still exists.
-- Token parsing is defensive: non-base64, non-JSON, wrongly-signed, expired, or claim-less tokens all produce a clean `401` (a malformed token can never reach a handler or surface as a `500`). Regression-tested in `server/test/api.test.ts`.
-- The password-reset endpoint returns an identical body for known and unknown addresses and records the attempt in the audit log, so it cannot be used for account enumeration.
-- All store queries are scoped by `organizationId` (`sessionOf(req)`), so a token from one organisation cannot read or mutate another organisation's evidence, controls, findings, reports or settings. `assertSameOrganization()` guards any resource that carries an organisation id.
-- Settings writes (`PATCH /api/organization`) additionally require the `owner` or `admin` role; members get `403`.
+## Known security and enterprise gaps
 
-### Input handling
-
-- Request bodies are validated by helpers in `server/src/http/validate.ts` (required strings with length limits, e-mail and password rules, enums, booleans, clamped integers, size limits for query strings).
-- Uploads: extension allowlist (`ALLOWED_UPLOAD_TYPES`) and size limit (`MAX_UPLOAD_MB`, default 10 MB) enforced server-side by multer before the handler runs; unsupported media returns `415`, oversized uploads return `413`.
-- Uploads are held in memory (`multer.memoryStorage()`) and are **never written to disk**; only extracted text and metadata are stored. PDF/DOCX extraction is heuristic (not OCR), and a re-analysis request cannot improve the original extraction.
-- JSON bodies are capped at 1 MB; malformed JSON returns a structured `400 invalid_json` and oversized JSON returns `413 payload_too_large`.
-
-### Output and error handling
-
-- Errors are returned as a stable envelope: `{ error: { code, message } }` (with `details` only when present). `errorHandler` logs unexpected errors server-side and returns a safe message — never a stack trace, database error or file path.
-- Unknown API routes return a structured `404` rather than falling through to the SPA shell.
-- `X-Powered-By` is disabled.
-
-### Transport and browser hardening
-
-Set by `securityHeaders()` on every response:
-
-| Header | Value |
+| Gap | Current status / buyer consideration |
 | --- | --- |
-| `X-Content-Type-Options` | `nosniff` |
-| `Referrer-Policy` | `strict-origin-when-cross-origin` |
-| `Permissions-Policy` | `camera=(), microphone=(), geolocation=()` |
-| `Cross-Origin-Opener-Policy` | `same-origin` |
-| `X-Frame-Options` | `SAMEORIGIN` (production only) |
+| MFA enforcement | Not implemented; a stored preference is not equivalent to enforced MFA |
+| SSO / SAML / OIDC | Not implemented |
+| Independent penetration test | Not performed |
+| Formal security audit / SOC 2 attestation | Not performed |
+| Immutable audit trail and export | Not implemented as an append-only, independently verifiable audit log |
+| Automated retention deletion | Retention preference exists in product data; scheduled purge enforcement is not implemented |
+| Malware scanning | Upload type and size checks exist; no dedicated antivirus/content-disarm pipeline |
+| Distributed rate limiting | Current rate limiting is process-local; a shared limiter is needed for horizontally scaled deployments |
+| DPA / subprocessor review / data residency | Requires buyer legal and vendor review |
+| Incident response and security contact | Buyer should establish a named security contact and incident process |
 
-`CORS_ORIGINS` (empty by default) enables an explicit allowlist for split deployments; no wildcard-with-credentials combination is possible because cookies are never used.
+## AI and evidence privacy
 
-### Abuse protection
+The control matching, statuses and readiness scoring are deterministic application logic. The optional external AI provider can generate evidence summaries and report narrative. When external AI is enabled, relevant extracted evidence text is transmitted to the configured provider. A buyer must review provider terms, data-processing settings and customer permissions before using confidential production evidence.
 
-- Fixed-window limiters: 30 authentication attempts per 10 minutes and 600 requests/minute across `/api`, keyed by Express `req.ip`, with `X-RateLimit-*` and `Retry-After` headers (`server/src/http/security.ts`). `TRUST_PROXY_HOPS` defaults to `0`; set it to the exact count of trusted proxies only, or clients may spoof forwarded IP headers. Both limiters are single-instance only — see hardening below.
+PDF OCR is performed locally by Poppler and Tesseract in the application runtime. OCR output is advisory and should be checked against the original document.
 
-### Secrets
+## Data handling
 
-- All secrets come from environment variables and are read in one place (`server/src/config.ts`). `.env` is loaded from the repo root, is git-ignored, and `.env.example` documents every variable.
-- Nothing secret is exposed to the frontend: the client bundle only knows the API base URL (and only if `VITE_API_BASE_URL` is set).
-- The app boots without any keys; a missing AI key degrades to the deterministic engine rather than failing.
+The application stores extracted evidence text and associated metadata in the configured database. It does not make the original upload a public download. A buyer should review the live database, confirm record ownership, remove seller/test data that is not part of the agreed transfer, and establish a retention/deletion policy before onboarding customers.
 
----
+## Required buyer hardening
 
-## Deliberately not implemented (honest scope)
+1. Complete an independent application and database security review.
+2. Review all organisation-scoped routes and privileged database access.
+3. Add enforced MFA and enterprise SSO if required by target customers.
+4. Implement automated retention, immutable audit export and shared rate limiting.
+5. Add malware scanning and a documented incident-response process.
+6. Review AI-provider data terms and execute any required DPAs.
+7. Rotate every credential after transfer; never reuse the seller's personal API keys.
 
-| Gap | Impact | Recommended next step |
-| --- | --- | --- |
-| Real MFA enforcement | `mfaRequired` is a stored preference only | TOTP or WebAuthn enrolment + enforcement on login |
-| SSO / SAML / OIDC | Not present | Add an identity provider integration (roadmap) |
-| Refresh-token rotation & revocation list | A stolen token is valid until it expires | Short-lived access tokens + refresh tokens, or server-side session store |
-| Encrypted-at-rest evidence storage | Demo keeps text in memory / plain Mongo documents | Use a KMS-backed encrypted store, field-level encryption for extracted text |
-| Antivirus / content disinfection of uploads | Only extension + size are checked | Scan uploads in a sandboxed worker before analysis |
-| Immutable audit log export | Events are recorded but cannot be exported or made append-only | Append-only store with hash chaining and export UI |
-| CSRF protection | Not needed today (no cookie auth) | Required if cookies are introduced |
-| Distributed rate limiting | Per-process limiter | Redis-backed limiter for multi-instance deployments |
-| Data residency / DPA / sub-processor review | Out of scope for a demo | Legal review before handling real customer evidence |
-| Penetration testing | Not performed | Independent review before production use |
-
----
-
-## Threat model summary
-
-| Threat | Mitigation in this build |
-| --- | --- |
-| Cross-organisation data access | Organisation scoping on every query + `assertSameOrganization` |
-| Credential stuffing / brute force | Rate limiting, generic error messages, scrypt hashing |
-| Token theft via XSS | No cookies, no `dangerouslySetInnerHTML`, React escaping, evidence text rendered as text |
-| Malicious uploads | Extension + size allowlist, in-memory parsing, no shell/file-system execution |
-| Prompt injection via evidence text (if AI enabled) | Evidence text is only ever inserted as *content* to summarise; statuses, scores and mappings are never AI-controlled |
-| DoS via large payloads | 1 MB JSON cap, 10 MB upload cap, rate limiting, per-process memory store (no unbounded disk writes) |
-| Information leakage in errors | Generic client messages; unexpected details and stack traces are logged server-side only |
-| Clickjacking | `X-Frame-Options: SAMEORIGIN` in production |
-| Secret leakage in the bundle | Server-only secret handling; `.env` git-ignored |
-
-## Privacy notes
-
-- The AcmeCloud organisation and "AcmeCloud Demo Workspace" are synthetic; the UI labels the sample workspace as Demo Data. The persona names are fictional.
-- Extracted evidence text lives in the store (memory by default, MongoDB if configured). Deleting a document removes its text from the store.
-- `retentionDays` is a stored preference in this build; nothing is purged automatically. A production deployment must implement the retention job.
-- If you enable an external AI provider, evidence text may leave your infrastructure. Keep `AI_ALLOW_EXTERNAL=false` (the default) unless that is acceptable, and review the provider's data-processing terms.
-
-## Reporting a vulnerability
-
-This is a demo project without a security contact. If you fork or deploy it publicly, add a `SECURITY.md` contact address, enable GitHub private vulnerability reporting, and run dependency auditing (`npm audit`, Dependabot) on a schedule.
+**Disclaimer:** this document is a product-scope summary, not legal advice, a penetration-test report, or proof of compliance.
