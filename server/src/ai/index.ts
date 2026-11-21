@@ -51,9 +51,19 @@ export function currentMode(): AnalysisMode {
 }
 
 export function modeLabel(mode: AnalysisMode = currentMode()): string {
-  return mode === 'external-ai'
-    ? `AI-assisted analysis (${config.ai.provider})`
-    : 'Demo Analysis Mode (deterministic local analysis)';
+  if (mode !== 'external-ai') return 'Demo Analysis Mode (deterministic local analysis)';
+
+  // The adapter name describes the protocol, not the actual model provider.
+  // Only label Gemini when the configured endpoint is Google's Gemini API.
+  let providerLabel = config.ai.provider;
+  try {
+    if (new URL(config.ai.baseUrl).hostname === 'generativelanguage.googleapis.com') {
+      providerLabel = `Google Gemini · ${config.ai.model}`;
+    }
+  } catch {
+    // Keep the configured provider label when the endpoint is not a valid URL.
+  }
+  return `AI-assisted analysis (${providerLabel})`;
 }
 
 /**

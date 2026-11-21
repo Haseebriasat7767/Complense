@@ -385,7 +385,10 @@ function controlStatusSection(
       .fontSize(8)
       .fillColor(COLORS.body)
       .text(row.detail, PAGE.margins.left + 100, y + 20, { width: width - 100, height: 22, ellipsis: true });
-    y = doc.y + 10;
+    // These rows are positioned with explicit coordinates; PDFKit's cursor
+    // is not authoritative for them. Advance our own layout cursor to avoid
+    // repeatedly treating the previous page position as an overflow.
+    y += 42;
   }
   return y;
 }
