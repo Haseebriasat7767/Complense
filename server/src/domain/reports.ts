@@ -142,7 +142,7 @@ export function buildReportSummary(input: {
       // always calculated from the deterministic assessment rows.
       executiveSummary
         .split(/(?<=[.!?])\s+/)
-        .filter((sentence) => !(/\b\d+\s+(?:controls?|passed|missing|findings?)\b/i.test(sentence) || /\b(?:passed|missing|needs? attention|awaiting manual review|reviewable)\\s*[:=]?\\s*\d+\b/i.test(sentence)))
+        .filter((sentence) => !(/\b\d+\s+(?:controls?|passed|missing|findings?)\b/i.test(sentence) || /\b(?:passed|missing|needs? attention|awaiting manual review|reviewable)\s*[:=]?\s*\d+\b/i.test(sentence)))
         .join(' '),
       themes.length ? `Focus areas: ${themes.join(' · ')}.` : '',
     ].filter(Boolean).join(' '),
