@@ -1,9 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { ArrowRight, Menu, X } from 'lucide-react';
-import { Button, ButtonLink } from '@/components/ui/Button';
-import { useToast } from '@/components/ui/Toast';
-import { useSession } from '@/lib/session';
+import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
+import { Menu, X } from 'lucide-react';
+import { ButtonLink } from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
 
 export const NAV_LINKS = [
@@ -13,60 +11,6 @@ export const NAV_LINKS = [
   { to: '/pricing', label: 'Pricing' },
   { to: '/faq', label: 'FAQ' },
 ];
-
-/** Opens the seeded demo workspace from any marketing surface. */
-export function useDemoEntry() {
-  const { startDemo, loading } = useSession();
-  const toast = useToast();
-
-  const start = async (): Promise<boolean> => {
-    try {
-      await startDemo();
-      return true;
-    } catch (error) {
-      toast.error(
-        'Demo workspace unavailable',
-        error instanceof Error ? error.message : 'Please try again in a moment.',
-      );
-      return false;
-    }
-  };
-
-  return { start, loading };
-}
-
-export function DemoButton({
-  size = 'md',
-  variant = 'primary',
-  label = 'Try the Demo',
-  className,
-  fullWidth,
-}: {
-  size?: 'sm' | 'md' | 'lg';
-  variant?: 'primary' | 'secondary';
-  label?: string;
-  className?: string;
-  fullWidth?: boolean;
-}) {
-  const { start, loading } = useDemoEntry();
-  const navigate = useNavigate();
-
-  return (
-    <Button
-      size={size}
-      variant={variant}
-      loading={loading}
-      fullWidth={fullWidth}
-      className={className}
-      iconRight={<ArrowRight className="size-4" aria-hidden="true" />}
-      onClick={async () => {
-        if (await start()) navigate('/app/dashboard');
-      }}
-    >
-      {label}
-    </Button>
-  );
-}
 
 export function Logo({ className, tone = 'dark' }: { className?: string; tone?: 'dark' | 'light' }) {
   return (
@@ -141,7 +85,7 @@ export function MarketingLayout() {
             <ButtonLink to="/login" variant="ghost" size="sm">
               Log in
             </ButtonLink>
-            <DemoButton size="sm" label="Try Demo" />
+            <ButtonLink to="/signup" size="sm">Get started</ButtonLink>
           </div>
           <button
             type="button"
@@ -177,7 +121,7 @@ export function MarketingLayout() {
               </NavLink>
             </nav>
             <div className="mt-4 flex flex-col gap-2">
-              <DemoButton fullWidth label="Try the Demo" />
+              <ButtonLink to="/signup" fullWidth>Get started</ButtonLink>
               <ButtonLink to="/login" variant="secondary" fullWidth>
                 Log in
               </ButtonLink>
@@ -212,7 +156,7 @@ export function MarketingFooter() {
       links: [
         { label: 'Documentation', to: '/documentation' },
         { label: 'Product overview', to: '/overview' },
-        { label: 'Demo workspace', to: '/login' },
+        { label: 'Log in', to: '/login' },
       ],
     },
     {
@@ -257,7 +201,7 @@ export function MarketingFooter() {
             opinions, or legal advice.
           </p>
           <p className="mt-2 text-[12px] text-ink-400">
-            © {new Date().getFullYear()} ComplyLens AI. Demo build — Sample workspace data is fictional.
+            © {new Date().getFullYear()} ComplyLens AI.
           </p>
         </div>
       </div>
