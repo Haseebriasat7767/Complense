@@ -17,7 +17,7 @@ This document supersedes the older deployment notes that described the original 
 - Node.js 22.12+
 - GitHub repository access
 - Vercel project and production environment
-- Supabase project with the schema in `supabase/migrations/20261009000100_initial_schema.sql`
+- Supabase project with all migrations applied in order: `20261009000100_initial_schema.sql`, `20261014000100_stripe_billing.sql`, `20261108000100_add_remediation_tables.sql`, `20261120132106_private_evidence_storage.sql`
 - Server-side secrets: `SESSION_SECRET`, `SUPABASE_URL`, `SUPABASE_SECRET_KEY`
 - Optional external AI configuration: `AI_PROVIDER=openai-compatible`, `AI_API_KEY`, `AI_BASE_URL`, `AI_MODEL`, `AI_ALLOW_EXTERNAL=true`
 - Optional Stripe configuration: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, and all three plan price IDs
@@ -52,7 +52,7 @@ Run these commands in the buyer's controlled environment after the repository an
 - [ ] Signed asset purchase and IP assignment agreement, including precise asset list and exclusions.
 - [ ] Buyer receives repository ownership/admin access or a complete source archive and history.
 - [ ] Vercel project ownership, deployment settings, domains and environment-variable names transferred.
-- [ ] Supabase project ownership, schema/migrations, database backup and storage settings transferred.
+- [ ] Supabase project ownership, all migrations, database backup, private `evidence-originals` bucket and storage settings transferred.
 - [ ] Buyer creates or transfers Gemini/API provider credentials and validates usage/billing.
 - [ ] Stripe account and price products configured by the buyer; do not transfer personal financial credentials.
 - [ ] All seller-owned secrets rotated and old access revoked after acceptance.
