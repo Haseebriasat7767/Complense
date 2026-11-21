@@ -1,13 +1,13 @@
 import { ArrowRight } from 'lucide-react';
 import { ButtonLink } from '@/components/ui/Button';
 import { DashboardPreview } from '@/components/marketing/DashboardPreview';
-import { DemoButton, Eyebrow, Section } from '@/components/marketing/MarketingLayout';
+import { Eyebrow, Section } from '@/components/marketing/MarketingLayout';
 import { HowItWorksSection } from '@/components/marketing/Sections';
 
 const JOURNEY = [
-  { step: 'Open the demo', detail: 'One click issues a session for the seeded AcmeCloud demo workspace — no sign-up.' },
+  { step: 'Create an account', detail: 'Create an account and open your organisation workspace.' },
   { step: 'Review the dashboard', detail: 'Readiness index, controls reviewed, passed, needs attention and critical gaps.' },
-  { step: 'Open Evidence', detail: 'Ten sample documents with analysis statuses, categories and extracted text previews.' },
+  { step: 'Open Evidence', detail: 'Your uploaded documents with analysis statuses, categories and extracted text previews.' },
   { step: 'Run an analysis', detail: 'Re-analyze a document and watch its mapping and status update deterministically.' },
   { step: 'Inspect the mapping', detail: 'See which controls each document supports, with per-control confidence.' },
   { step: 'Read a control', detail: 'Evidence found, evidence missing, analysis note and the recommended action.' },
@@ -29,7 +29,7 @@ export function HowItWorksPage() {
             team already has and improve from there.
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
-            <DemoButton label="Try the Demo" />
+            <ButtonLink to="/signup">Create an account</ButtonLink>
             <ButtonLink to="/pricing" variant="secondary" iconRight={<ArrowRight className="size-4" />}>
               See pricing
             </ButtonLink>
@@ -72,7 +72,7 @@ export function HowItWorksPage() {
             The demo workspace already contains the state described above — 92% readiness on SOC 2 with two critical gaps.
           </p>
           <div className="mt-6 flex justify-center">
-            <DemoButton size="lg" label="Open the demo workspace" />
+            <ButtonLink to="/signup">Create an account</ButtonLink>
           </div>
         </div>
         <div className="mt-12">
