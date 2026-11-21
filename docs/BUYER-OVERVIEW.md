@@ -25,7 +25,7 @@ ComplyLens is a web application for preliminary SOC 2 and ISO/IEC 27001 readines
 
 React + TypeScript frontend; Node.js + Express + TypeScript API; Vercel hosting; Supabase PostgreSQL; Gemini-compatible AI provider adapter; Stripe integration code.
 
-The live deployment is configured for authenticated access with demo mode disabled. The seller confirmed that an evidence analysis completed after the latest production deployment. Buyer acceptance testing is still required.
+The live deployment is configured for authenticated access with demo mode disabled. Production now fails startup rather than silently switching to temporary in-memory storage if Supabase is unavailable. The seller confirmed that an evidence analysis completed after the latest production deployment. Buyer acceptance testing is still required.
 
 ## Commercial status
 
