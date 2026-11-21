@@ -13,7 +13,7 @@
 | Evidence attribution | New evidence uploads persist `createdByUser`; signup-imported sample evidence is attributed to the account owner |
 | Input handling | Server-side request validation, upload extension allowlist and upload-size limits |
 | Error handling | Structured client errors; internal details are logged server-side |
-| Database | Supabase PostgreSQL; RLS is enabled on the application's public tables and no public policies are created by the migration |
+| Database | Supabase PostgreSQL; the core tables in the initial migration have RLS enabled and no public policies are created by that migration |
 | Secret handling | Supabase and AI keys are read by the server and must not be exposed in the client bundle |
 | PDF processing | Local Poppler/Tesseract processing in a temporary directory; temporary files are removed after processing |
 
