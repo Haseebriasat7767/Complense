@@ -63,7 +63,7 @@ export function demoNarrative(input: {
 
   const lines: string[] = [];
   lines.push(
-    `${companyName} was assessed against ${frameworkName} using ${evidenceCount} evidence document${evidenceCount === 1 ? '' : 's'} submitted to the workspace. The readiness index is ${index}% (${bandLabel.toLowerCase()}), derived from ${counts.reviewed} reviewed controls: ${counts.passed} passed, ${counts.needsAttention} need attention, ${counts.missing} missing, and ${counts.needsReview} awaiting manual review.`,
+    `${companyName} was assessed against ${frameworkName} using ${evidenceCount} evidence document${evidenceCount === 1 ? '' : 's'} submitted to the workspace. The readiness index is ${index}% (${bandLabel.toLowerCase()}), derived from ${counts.total} assessed controls: ${counts.passed} passed, ${counts.needsAttention} need attention, ${counts.missing} missing, and ${counts.needsReview} awaiting manual review (${counts.reviewed} reviewable; ${counts.needsReview} require manual review).`,
   );
 
   if (critical.length > 0) {
