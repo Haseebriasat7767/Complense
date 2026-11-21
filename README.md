@@ -53,7 +53,7 @@ The seller confirmed a successful evidence analysis after the latest production 
 - Authenticated API requests use signed, expiring session tokens.
 - Server routes and store queries apply organisation scoping.
 - Supabase tables in the public schema have row-level security enabled; the application accesses them through a server-only secret key. The browser must never receive this key.
-- Uploaded files are processed in memory or a temporary directory; the application stores extracted text and evidence metadata rather than serving the original upload as a public file.
+- Original evidence files are stored in the private Supabase Storage bucket `evidence-originals`; extracted text and evidence metadata are stored in Supabase PostgreSQL. The bucket is configured as non-public with no anon/authenticated object policies. Local OCR temporary files are removed after processing.
 - External AI processing can transmit evidence text to the configured provider. Review the provider's terms and customer-data permissions before using real customer evidence.
 
 These controls are implementation details, not proof of a security certification. No independent penetration test has been completed.
@@ -102,7 +102,7 @@ Configure these in the hosting provider's secret manager; never put secrets in b
 | `AI_ALLOW_EXTERNAL=true` | Explicitly allow external AI calls |
 | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_STARTER`, `STRIPE_PRICE_GROWTH`, `STRIPE_PRICE_BUSINESS` | Required only to activate subscription checkout |
 
-Apply the database schema from `supabase/migrations/20261009000100_initial_schema.sql` to a new Supabase project before deploying a transferred copy. Verify the schema, RLS, server-only key, health endpoint and a complete signup → upload → analysis → PDF-report flow.
+Apply all migrations in order to a new Supabase project before deploying a transferred copy: `20261009000100_initial_schema.sql`, `20261014000100_stripe_billing.sql`, `20261108000100_add_remediation_tables.sql`, and `20261120132106_private_evidence_storage.sql`. Verify the schema, RLS, private `evidence-originals` bucket, server-only key, health endpoint and a complete signup → upload → analysis → PDF-report flow.
 
 ## Documentation
 
