@@ -14,7 +14,7 @@ import { cn } from '@/lib/utils';
 
 /**
  * Static, hand-built preview of the product UI for marketing pages.
- * Figures match the seeded demo workspace, which is labelled as demo data.
+ * Static product preview using illustrative sample information.
  */
 export function DashboardPreview({ className }: { className?: string }) {
   return (
@@ -36,7 +36,7 @@ export function DashboardPreview({ className }: { className?: string }) {
           app.complylens.ai/app/dashboard
         </span>
         <span className="rounded-full border border-info-100 bg-info-50 px-2 py-0.5 text-[10px] font-medium text-info-700">
-          Demo data
+          Product preview
         </span>
       </div>
 
@@ -54,7 +54,7 @@ export function DashboardPreview({ className }: { className?: string }) {
           </div>
           <div className="mx-3 mb-3 rounded-lg border border-ink-200 bg-ink-50 px-2.5 py-1.5">
             <p className="text-[11px] font-medium text-ink-800">AcmeCloud</p>
-            <p className="text-[10px] text-ink-500">AcmeCloud Demo Workspace</p>
+            <p className="text-[10px] text-ink-500">Example workspace</p>
           </div>
           <ul className="space-y-0.5 px-2">
             {[
@@ -104,7 +104,7 @@ export function DashboardPreview({ className }: { className?: string }) {
             </div>
             <span className="hidden items-center gap-1.5 rounded-md border border-ink-200 px-2 py-1 text-[10px] text-ink-500 md:flex">
               <Sparkles className="size-3" />
-              Demo Analysis Mode
+              Rule-based analysis
             </span>
             <span className="relative flex size-7 items-center justify-center rounded-md border border-ink-200 text-ink-500">
               <Bell className="size-3.5" />
