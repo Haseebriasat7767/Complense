@@ -19,7 +19,7 @@ import {
   PricingSection,
   SecuritySection,
 } from '@/components/marketing/Sections';
-import { DemoButton, Eyebrow, Section } from '@/components/marketing/MarketingLayout';
+import { Eyebrow, Section } from '@/components/marketing/MarketingLayout';
 
 const CAPABILITIES = [
   { label: 'Evidence Analysis', icon: Upload },
@@ -51,7 +51,7 @@ export function LandingPage() {
               into an actionable readiness plan.
             </p>
             <div className="mt-7 flex flex-col items-center justify-center gap-3 sm:flex-row">
-              <DemoButton size="lg" label="Try the Demo" className="w-full sm:w-auto" />
+              <ButtonLink to="/signup" size="lg" className="w-full sm:w-auto">Create an account</ButtonLink>
               <ButtonLink
                 to="/how-it-works"
                 size="lg"
@@ -63,7 +63,7 @@ export function LandingPage() {
               </ButtonLink>
             </div>
             <p className="mt-4 text-[12.5px] text-ink-500">
-              Opens a seeded sample workspace instantly. No sign-up, no API keys, no credit card.
+              Create an account to start your own workspace.
             </p>
           </div>
 
@@ -92,7 +92,7 @@ export function LandingPage() {
           ))}
         </ul>
         <p className="mt-5 text-center text-[12px] text-ink-400">
-          This build has no customers and no testimonials — the workspace you can open is fictional demo data.
+          This build has no customers or testimonials; figures shown are illustrative.
         </p>
       </Section>
 
@@ -175,7 +175,7 @@ export function LandingPage() {
             <Eyebrow>Inside the workspace</Eyebrow>
             <h2 className="mt-3 text-2xl tracking-tight sm:text-3xl">A dashboard that answers one question first</h2>
             <p className="mt-3 text-[15px] leading-relaxed text-ink-500">
-              How ready are we right now? The numbers below come from the seeded demo workspace, and every one of them
+              How ready are we right now? The example numbers below illustrate the dashboard, and every one of them
               can be traced to a document or a missing document.
             </p>
             <dl className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -194,7 +194,7 @@ export function LandingPage() {
               ))}
             </dl>
             <p className="mt-4 text-[12px] text-ink-400">
-              Sample workspace figures. Demo data — no customer data is used anywhere in this product.
+              Illustrative sample figures — not customer results.
             </p>
           </div>
           <DashboardPreview />
@@ -213,11 +213,10 @@ export function LandingPage() {
             See your readiness gaps in about a minute
           </h2>
           <p className="mt-3 text-[15px] leading-relaxed text-ink-300">
-            The demo workspace is already populated with sample evidence, controls and findings — open it and follow the
-            full journey through to a readiness report.
+            Create a workspace, upload your evidence and follow the assessment through to a readiness report.
           </p>
           <div className="mt-7 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <DemoButton size="lg" label="Open the demo workspace" />
+            <ButtonLink to="/signup" size="lg">Create an account</ButtonLink>
             <Link
               to="/documentation"
               className="text-[13.5px] font-medium text-ink-300 underline-offset-4 transition-colors hover:text-white hover:underline"
