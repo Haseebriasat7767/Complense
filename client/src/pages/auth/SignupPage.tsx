@@ -55,8 +55,8 @@ export function SignupPage() {
       toast.success('Account created', 'Your workspace is ready. Upload your first evidence document to begin.');
       if (result.persistence === 'memory') {
         toast.info(
-          'In-memory demo store',
-          'This deployment stores data in memory, so accounts reset when the server restarts. Set MONGODB_URI to persist.',
+          'Temporary storage mode',
+          'Workspace data may reset when the server restarts. Configure persistent database storage before using this workspace for ongoing work.',
         );
       }
       navigate('/app/dashboard', { replace: true });
