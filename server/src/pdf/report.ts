@@ -111,7 +111,7 @@ export function renderReportPdf(report: ReportRecord): PDFKit.PDFDocument {
     .fontSize(9)
     .fillColor(COLORS.body)
     .text(
-      `Reviewed ${summary.readiness.counts.reviewed} · Passed ${summary.readiness.counts.passed} · Needs attention ${summary.readiness.counts.needsAttention} · Missing ${summary.readiness.counts.missing} · Needs review ${summary.readiness.counts.needsReview}`,
+      `Controls assessed ${summary.readiness.counts.total} · Reviewable ${summary.readiness.counts.reviewed} · Passed ${summary.readiness.counts.passed} · Needs attention ${summary.readiness.counts.needsAttention} · Missing ${summary.readiness.counts.missing} · Needs review ${summary.readiness.counts.needsReview}`,
       PAGE.margins.left,
       y,
       { width: contentWidth },
