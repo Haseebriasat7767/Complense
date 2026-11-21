@@ -140,6 +140,7 @@ authRouter.post(
           ...sample,
           id: undefined,
           source: 'demo',
+          createdByUser: user.id,
           summary: `${sample.summary} (Sample document imported at signup.)`,
         });
       }
