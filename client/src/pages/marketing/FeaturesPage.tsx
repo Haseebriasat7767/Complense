@@ -1,6 +1,6 @@
 import { ArrowRight, BadgeCheck } from 'lucide-react';
 import { ButtonLink } from '@/components/ui/Button';
-import { DemoButton, Eyebrow, Section } from '@/components/marketing/MarketingLayout';
+import { Eyebrow, Section } from '@/components/marketing/MarketingLayout';
 import { FeaturesGrid } from '@/components/marketing/Sections';
 
 const DEEP_DIVES = [
@@ -15,7 +15,7 @@ const DEEP_DIVES = [
   },
   {
     title: 'Control library',
-    body: 'A read-only demo library of 28 SOC 2 criteria and 22 ISO 27001 Annex A controls across 14 categories, each with a description, risk level, required evidence and a readiness status.',
+    body: 'A read-only control library of 28 SOC 2 criteria and 22 ISO 27001 Annex A controls across 14 categories, each with a description, risk level, required evidence and a readiness status.',
     points: [
       'Passed, Partial, Missing and Needs review statuses',
       'Control detail with evidence found, evidence missing and analysis notes',
@@ -56,7 +56,7 @@ export function FeaturesPage() {
             the distance between the two.
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
-            <DemoButton label="Try the Demo" />
+            <ButtonLink to="/signup">Create an account</ButtonLink>
             <ButtonLink to="/how-it-works" variant="secondary" iconRight={<ArrowRight className="size-4" />}>
               See How It Works
             </ButtonLink>
