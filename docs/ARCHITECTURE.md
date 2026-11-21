@@ -1,3 +1,5 @@
+> **Historical note (22 Nov 2026):** This architecture note describes the original demo baseline and still refers to in-memory/MongoDB defaults. The current production deployment uses Supabase PostgreSQL. Use the root README and [Buyer Overview](BUYER-OVERVIEW.md) as the current product summary; verify implementation directly in `server/src/` and the Supabase migration before relying on this document.
+
 # Architecture
 
 ComplyLens AI is a two-workspace TypeScript monorepo that runs as **one Node process**. The same process serves the JSON API and the web client, which removes CORS configuration, dual deployments and environment drift from the default setup.
