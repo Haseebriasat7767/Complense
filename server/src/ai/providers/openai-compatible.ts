@@ -19,8 +19,8 @@ type ChatMessage = { role: 'system' | 'user'; content: string };
  * return 404 for an unavailable compatibility route; retry through the
  * documented generateContent endpoint without changing the configured key.
  */
-async function geminiNativeChat(messages: ChatMessage[], maxTokens: number): Promise<string | null> {
-  const model = config.ai.model.replace(/^models\//, '');
+async function geminiNativeChat(messages: ChatMessage[], maxTokens: number, requestedModel = config.ai.model): Promise<string | null> {
+  const model = requestedModel.replace(/^models\//, '');
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
   const systemText = messages.filter((m) => m.role === 'system').map((m) => m.content).join('\n');
   const contents = messages
@@ -46,10 +46,13 @@ async function geminiNativeChat(messages: ChatMessage[], maxTokens: number): Pro
     });
 
     if (!response.ok) {
+      const diagnostic = await readProviderDiagnostic(response);
       logger.warn('Gemini native fallback rejected', {
         model,
         status: response.status,
         statusText: response.statusText.slice(0, 120),
+        providerCode: diagnostic.code,
+        providerMessage: diagnostic.message,
       });
       return null;
     }
@@ -71,63 +74,120 @@ async function geminiNativeChat(messages: ChatMessage[], maxTokens: number): Pro
   }
 }
 
-async function chat(messages: ChatMessage[], maxTokens = 600): Promise<string | null> {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), config.ai.timeoutMs);
-  try {
-    const response = await fetch(`${config.ai.baseUrl.replace(/\/$/, '')}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        authorization: `Bearer ${config.ai.apiKey}`,
-      },
-      body: JSON.stringify({
-        model: config.ai.model,
-        messages,
-        max_tokens: maxTokens,
-        temperature: 0.2,
-      }),
-      signal: controller.signal,
-    });
+type ProviderDiagnostic = { code?: string; message?: string };
 
-    if (!response.ok) {
-      // Gemini's native generateContent endpoint is a safe fallback when its
-      // OpenAI-compatible route is unavailable (404). No evidence or key is logged.
-      if (response.status === 404 && new URL(config.ai.baseUrl).hostname === 'generativelanguage.googleapis.com') {
-        const nativeResult = await geminiNativeChat(messages, maxTokens);
-        if (nativeResult) return nativeResult;
+async function readProviderDiagnostic(response: Response): Promise<ProviderDiagnostic> {
+  try {
+    const raw = await response.text();
+    const parsed = JSON.parse(raw) as {
+      error?: { code?: string | number; status?: string; message?: string };
+    };
+    return {
+      code: String(parsed.error?.status ?? parsed.error?.code ?? '').slice(0, 80) || undefined,
+      message: String(parsed.error?.message ?? '').replace(/[\r\n\t]+/g, ' ').slice(0, 240) || undefined,
+    };
+  } catch {
+    return {};
+  }
+}
+
+async function chat(messages: ChatMessage[], maxTokens = 600): Promise<string | null> {
+  const isGemini = (() => {
+    try {
+      return new URL(config.ai.baseUrl).hostname === 'generativelanguage.googleapis.com';
+    } catch {
+      return false;
+    }
+  })();
+  // Google has restricted new-project access to Gemini 2.5 models. Try the
+  // configured model first, then current stable Developer API models on 404.
+  const models = [...new Set([
+    config.ai.model,
+    ...(isGemini ? ['gemini-3.5-flash-lite', 'gemini-3.8-flash'] : []),
+  ])];
+  const endpoint = `${config.ai.baseUrl.replace(/\/$/, '')}/chat/completions`;
+
+  for (const model of models) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), config.ai.timeoutMs);
+    try {
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          authorization: `Bearer ${config.ai.apiKey}`,
+        },
+        body: JSON.stringify({
+          model,
+          messages,
+          max_tokens: maxTokens,
+          temperature: 0.2,
+        }),
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        const diagnostic = await readProviderDiagnostic(response);
+        logger.warn('External AI request rejected', {
+          provider: config.ai.provider,
+          model,
+          status: response.status,
+          statusText: response.statusText.slice(0, 120),
+          providerCode: diagnostic.code,
+          providerMessage: diagnostic.message,
+        });
+        if (isGemini && response.status === 404) continue;
+        return null;
       }
-      // Log provider metadata only; never log credentials, evidence, or request bodies.
-      logger.warn('External AI request rejected', {
+
+      const payload = (await response.json()) as {
+        choices?: Array<{ message?: { content?: string } }>;
+      };
+      const content = payload.choices?.[0]?.message?.content;
+      if (typeof content === 'string' && content.trim()) {
+        if (model !== config.ai.model) {
+          logger.warn('Gemini model fallback succeeded', {
+            configuredModel: config.ai.model,
+            activeModel: model,
+          });
+        }
+        return content.trim();
+      }
+
+      logger.warn('External AI response contained no usable message', {
         provider: config.ai.provider,
-        model: config.ai.model,
-        status: response.status,
-        statusText: response.statusText.slice(0, 120),
+        model,
+        responseShape: Array.isArray(payload.choices) ? 'choices_without_content' : 'missing_choices',
       });
       return null;
+    } catch (error) {
+      logger.warn('External AI request failed before a usable response', {
+        provider: config.ai.provider,
+        model,
+        reason: controller.signal.aborted ? 'timeout' : error instanceof Error ? error.name : 'unknown',
+      });
+      return null;
+    } finally {
+      clearTimeout(timeout);
     }
-    const payload = (await response.json()) as {
-      choices?: Array<{ message?: { content?: string } }>;
-    };
-    const content = payload.choices?.[0]?.message?.content;
-    if (typeof content === 'string' && content.trim()) return content.trim();
-
-    logger.warn('External AI response contained no usable message', {
-      provider: config.ai.provider,
-      model: config.ai.model,
-      responseShape: Array.isArray(payload.choices) ? 'choices_without_content' : 'missing_choices',
-    });
-    return null;
-  } catch (error) {
-    logger.warn('External AI request failed before a usable response', {
-      provider: config.ai.provider,
-      model: config.ai.model,
-      reason: controller.signal.aborted ? 'timeout' : error instanceof Error ? error.name : 'unknown',
-    });
-    return null;
-  } finally {
-    clearTimeout(timeout);
   }
+
+  // Last-resort direct Gemini REST path, with the same model fallback order.
+  if (isGemini) {
+    for (const model of models) {
+      const nativeResult = await geminiNativeChat(messages, maxTokens, model);
+      if (nativeResult) {
+        if (model !== config.ai.model) {
+          logger.warn('Gemini native model fallback succeeded', {
+            configuredModel: config.ai.model,
+            activeModel: model,
+          });
+        }
+        return nativeResult;
+      }
+    }
+  }
+  return null;
 }
 
 const EVIDENCE_SYSTEM =
