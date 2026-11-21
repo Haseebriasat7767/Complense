@@ -166,14 +166,20 @@ export function buildReportSummary(input: {
         timelineLabel: finding.recommendation.timelineLabel,
         priority: `${finding.priority} · ${finding.riskLevel.toUpperCase()}`,
       })),
-    evidenceInventory: evidence.map((doc) => ({
-      fileName: doc.fileName,
-      category: doc.category,
-      sizeLabel: formatBytes(doc.sizeBytes),
-      uploadedAt: doc.uploadedAt,
-      status: doc.status,
-      mappedControls: (mappings.get(doc.id) ?? []).length,
-    })),
+    // A repeated upload of the exact same named file and extracted content
+    // should appear once in the report inventory. Keep distinct revisions
+    // (different content or size) as separate evidence records.
+    evidenceInventory: [...new Map(evidence.map((doc) => [
+      `${doc.fileName.trim().toLowerCase()}|${doc.sizeBytes}|${doc.content}`,
+      {
+        fileName: doc.fileName,
+        category: doc.category,
+        sizeLabel: formatBytes(doc.sizeBytes),
+        uploadedAt: doc.uploadedAt,
+        status: doc.status,
+        mappedControls: (mappings.get(doc.id) ?? []).length,
+      },
+    ])).values()],
     controlsByStatus,
     categoryBreakdown: [...categoryMap.entries()].map(([category, counts]) => ({
       category,
