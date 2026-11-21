@@ -240,7 +240,7 @@ export async function externalNarrative(input: {
   findings: Finding[];
   evidenceCount: number;
 }): Promise<{ executiveSummary: string; themes: string[] } | null> {
-  const { readiness, findings } = input;
+  const { findings } = input;
   const lines = [
     `Company: ${input.companyName}`,
     `Framework: ${input.frameworkName}`,
