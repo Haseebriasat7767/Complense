@@ -64,6 +64,9 @@ async function geminiNativeChat(messages: ChatMessage[], maxTokens: number, requ
       ?.map((part) => part.text ?? '')
       .join('')
       .trim();
+    if (content) {
+      logger.info('Gemini native request succeeded', { model, endpoint: 'generateContent' });
+    }
     return content || null;
   } catch (error) {
     logger.warn('Gemini native fallback failed', {
@@ -99,11 +102,11 @@ async function chat(messages: ChatMessage[], maxTokens = 600): Promise<string | 
       return false;
     }
   })();
-  // Google has restricted new-project access to Gemini 2.5 models. Try the
-  // configured model first, then current stable Developer API models on 404.
+  // Try the configured Gemini model first, then the currently supported
+  // Flash model IDs as compatibility fallbacks when the configured ID is 404.
   const models = [...new Set([
     config.ai.model,
-    ...(isGemini ? ['gemini-3.5-flash-lite', 'gemini-3.8-flash'] : []),
+    ...(isGemini ? ['gemini-3.8-flash', 'gemini-3.5-flash-lite'] : []),
   ])];
   const endpoint = `${config.ai.baseUrl.replace(/\/$/, '')}/chat/completions`;
 
@@ -145,6 +148,11 @@ async function chat(messages: ChatMessage[], maxTokens = 600): Promise<string | 
       };
       const content = payload.choices?.[0]?.message?.content;
       if (typeof content === 'string' && content.trim()) {
+        logger.info('External AI request succeeded', {
+          provider: config.ai.provider,
+          model,
+          endpoint: 'openai-compatible',
+        });
         if (model !== config.ai.model) {
           logger.warn('Gemini model fallback succeeded', {
             configuredModel: config.ai.model,
@@ -237,7 +245,7 @@ export async function externalNarrative(input: {
     `Company: ${input.companyName}`,
     `Framework: ${input.frameworkName}`,
     `Readiness index: ${readiness.index}% (${readiness.bandLabel})`,
-    `Reviewed controls: ${readiness.counts.reviewed} — passed ${readiness.counts.passed}, needs attention ${readiness.counts.needsAttention}, missing ${readiness.counts.missing}, needs review ${readiness.counts.needsReview}`,
+    `Controls assessed: ${readiness.counts.total} — passed ${readiness.counts.passed}, needs attention ${readiness.counts.needsAttention}, missing ${readiness.counts.missing}, needs review ${readiness.counts.needsReview}; reviewable controls: ${readiness.counts.reviewed}`,
     `Evidence documents: ${input.evidenceCount}`,
     'Findings:',
     ...findings
