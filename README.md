@@ -35,7 +35,7 @@ Last checked: **22 November 2026**.
 | Payments | Stripe integration code exists, but production Stripe credentials/prices are not currently present in the Vercel project environment; do not represent checkout as live until configured and tested |
 | Independent security audit | Not performed |
 
-The seller confirmed a successful evidence analysis after the latest production deployment. This is a functional smoke test, not an independent QA or security certification.
+The seller confirmed a successful evidence analysis after the latest production deployment. Production now fails startup rather than silently switching to temporary in-memory storage if Supabase is unavailable. This is a functional smoke test, not an independent QA or security certification.
 
 ## Technology
 
