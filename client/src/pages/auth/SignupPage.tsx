@@ -7,7 +7,7 @@ import { InlineAlert } from '@/components/ui/Feedback';
 import { useToast } from '@/components/ui/Toast';
 import { useSession } from '@/lib/session';
 import { ApiError } from '@/lib/api';
-import { AuthDivider, AuthFootnoteLink, AuthLayout, DemoEntryPanel } from './AuthLayout';
+import { AuthFootnoteLink, AuthLayout } from './AuthLayout';
 
 export function SignupPage() {
   const { signup, loading } = useSession();
@@ -21,7 +21,6 @@ export function SignupPage() {
     organizationName: '',
     jobTitle: '',
   });
-  const [seedDemo, setSeedDemo] = useState(true);
   const [accepted, setAccepted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -41,7 +40,7 @@ export function SignupPage() {
       next.password = 'Include at least two of: lowercase letters, uppercase letters, numbers.';
     }
     if (form.organizationName.trim().length < 2) next.organizationName = 'Enter your organisation name.';
-    if (!accepted) next.accepted = 'Please acknowledge how the demo handles data.';
+    if (!accepted) next.accepted = 'Please acknowledge the readiness-tool limitation.';
     setFieldErrors(next);
     if (Object.keys(next).length > 0) return;
 
@@ -52,14 +51,8 @@ export function SignupPage() {
         password: form.password,
         organizationName: form.organizationName,
         jobTitle: form.jobTitle || undefined,
-        seedDemo,
       });
-      toast.success(
-        'Account created',
-        seedDemo
-          ? 'Your workspace includes clearly labelled sample documents so you can evaluate the analysis immediately.'
-          : 'Your workspace is empty — upload your first evidence document to run an assessment.',
-      );
+      toast.success('Account created', 'Your workspace is ready. Upload your first evidence document to begin.');
       if (result.persistence === 'memory') {
         toast.info(
           'In-memory demo store',
@@ -132,13 +125,7 @@ export function SignupPage() {
         </Field>
 
         <div className="rounded-lg border border-ink-200 bg-ink-50/70 px-3.5 py-3">
-          <Checkbox
-            checked={seedDemo}
-            onChange={setSeedDemo}
-            label="Start with sample evidence"
-            description="Loads the labelled demo document set so the analysis, mapping and gap views are populated immediately. You can delete it at any time."
-          />
-          <div className="mt-3 border-t border-ink-200 pt-3">
+          <div>
             <Checkbox
               checked={accepted}
               onChange={setAccepted}
@@ -164,8 +151,6 @@ export function SignupPage() {
         </Button>
       </form>
 
-      <AuthDivider />
-      <DemoEntryPanel />
     </AuthLayout>
   );
 }
