@@ -18,7 +18,7 @@ ComplyLens is a web application for preliminary SOC 2 and ISO/IEC 27001 readines
 - Deterministic readiness scoring and risk/gap summaries.
 - Suggested remediation actions.
 - PDF readiness report generation.
-- Supabase PostgreSQL persistence in production.
+- Supabase PostgreSQL persistence and a private Supabase Storage bucket for original evidence files in production.
 - Optional Gemini-generated summaries and report narrative, with deterministic fallback.
 
 ## Technology and infrastructure
