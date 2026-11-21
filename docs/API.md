@@ -1,3 +1,5 @@
+> **Implementation note (22 Nov 2026):** This API reference originated with the initial demo baseline. Confirm current request/response contracts against the route handlers in `server/src/routes/` before using it for a buyer integration or external client.
+
 # API reference
 
 Base URL: the same origin as the web app. All routes live under `/api`.
