@@ -89,8 +89,8 @@ export function AppShell() {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
 
-  const displayName = context?.user?.name ?? 'Demo user';
-  const displayEmail = context?.user?.email ?? 'demo@complylens.ai';
+  const displayName = context?.user?.name ?? 'Account';
+  const displayEmail = context?.user?.email ?? '—';
 
   const handleSignOut = async () => {
     await logout();
@@ -209,7 +209,7 @@ export function AppShell() {
                   {context?.organization.name ?? 'AcmeCloud'}
                 </span>
                 <span className="block truncate text-[11px] text-ink-500">
-                  {context?.workspace.name ?? 'AcmeCloud Demo Workspace'}
+                  {context?.workspace.name ?? 'Workspace'}
                 </span>
               </span>
               <ChevronDown className="size-3.5 shrink-0 text-ink-400" aria-hidden="true" />
@@ -227,10 +227,10 @@ export function AppShell() {
               <MenuSeparator />
               <div className="px-2.5 py-2">
                 <Badge tone="info" size="sm">
-                  {context?.workspace.isDemo ? 'Demo Workspace' : 'Live workspace'}
+                  {context?.workspace.isDemo ? 'Workspace' : 'Live workspace'}
                 </Badge>
                 <p className="mt-2 text-[11.5px] leading-relaxed text-ink-500">
-                  Sample organisations, users and documents are fictional and labelled as demo data throughout.
+                  Workspace information and uploaded evidence are managed by your organisation.
                 </p>
               </div>
             </>
@@ -321,7 +321,7 @@ export function AppShell() {
             <div className="ml-auto flex items-center gap-1.5">
               <Badge tone={context?.analysisMode.key === 'external-ai' ? 'brand' : 'outline'} size="sm" className="hidden md:inline-flex">
                 <Sparkles className="size-3" aria-hidden="true" />
-                {context?.analysisMode.key === 'external-ai' ? 'AI-assisted' : 'Demo Analysis Mode'}
+                {context?.analysisMode.key === 'external-ai' ? 'AI-assisted' : 'Rule-based analysis'}
               </Badge>
 
               <NotificationsMenu />
@@ -352,7 +352,7 @@ export function AppShell() {
                       <p className="truncate text-[11.5px] text-ink-500">{displayEmail}</p>
                       <p className="mt-1">
                         <Badge tone={context?.user?.isDemoUser ? 'info' : 'neutral'} size="sm">
-                          {context?.user?.isDemoUser ? 'Demo account' : context?.user?.role ?? 'member'}
+                          {context?.user?.isDemoUser ? 'member' : context?.user?.role ?? 'member'}
                         </Badge>
                       </p>
                     </div>
@@ -403,7 +403,7 @@ export function AppShell() {
           <p className="text-[11.5px] leading-relaxed text-ink-500">
             ComplyLens AI provides preliminary compliance readiness analysis and does not provide certification, audit
             opinions, or legal advice. {context?.workspace.isDemo
-              ? 'All organisations, users and documents shown here are fictional demo data.'
+              ? 'Workspace information is illustrative until you add your organisation’s evidence.'
               : ''}
           </p>
         </footer>
