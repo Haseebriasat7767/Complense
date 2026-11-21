@@ -84,7 +84,7 @@ async function readProviderDiagnostic(response: Response): Promise<ProviderDiagn
     };
     return {
       code: String(parsed.error?.status ?? parsed.error?.code ?? '').slice(0, 80) || undefined,
-      message: String(parsed.error?.message ?? '').replace(/[\\r\\n\\t]+/g, ' ').slice(0, 240) || undefined,
+      message: String(parsed.error?.message ?? '').replace(/[\r\n\t]+/g, ' ').slice(0, 240) || undefined,
     };
   } catch {
     return {};
@@ -105,7 +105,7 @@ async function chat(messages: ChatMessage[], maxTokens = 600): Promise<string | 
     config.ai.model,
     ...(isGemini ? ['gemini-3.5-flash-lite', 'gemini-3.8-flash'] : []),
   ])];
-  const endpoint = `${config.ai.baseUrl.replace(/\\/$/, '')}/chat/completions`;
+  const endpoint = `${config.ai.baseUrl.replace(/\/$/, '')}/chat/completions`;
 
   for (const model of models) {
     const controller = new AbortController();
