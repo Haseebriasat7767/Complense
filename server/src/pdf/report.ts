@@ -66,7 +66,7 @@ export function renderReportPdf(report: ReportRecord): PDFKit.PDFDocument {
 
   let y = 226;
   const metaRows: Array<[string, string]> = [
-    ['Company', `${report.companyName} (Demo Data)`],
+    ['Company', report.companyName],
     ['Framework', `${framework.name}`],
     ['Assessment date', formatDate(report.generatedAt)],
     ['Prepared for', report.requestedBy],
@@ -122,7 +122,7 @@ export function renderReportPdf(report: ReportRecord): PDFKit.PDFDocument {
     .fontSize(8.5)
     .fillColor(COLORS.muted)
     .text(
-      'This workspace contains fictional sample data (AcmeCloud demo organisation). It is provided to demonstrate the product and does not describe a real company.',
+      'This report reflects the evidence and workspace details available at the time it was generated.',
       PAGE.margins.left,
       y,
       { width: contentWidth },
