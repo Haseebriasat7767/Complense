@@ -166,11 +166,11 @@ export function buildReportSummary(input: {
         timelineLabel: finding.recommendation.timelineLabel,
         priority: `${finding.priority} · ${finding.riskLevel.toUpperCase()}`,
       })),
-    // A repeated upload of the exact same named file and extracted content
-    // should appear once in the report inventory. Keep distinct revisions
-    // (different content or size) as separate evidence records.
+    // Deduplicate repeated uploads by normalized extracted content, not filename:
+    // browsers often rename the same upload with (1)/(2) suffixes. Keep distinct
+    // document revisions separate when their extracted content differs.
     evidenceInventory: [...new Map(evidence.map((doc) => [
-      `${doc.fileName.trim().toLowerCase()}|${doc.sizeBytes}|${doc.content}`,
+      doc.content.trim() ? doc.content.replace(/\\s+/g, ' ').trim() : `${doc.fileName.trim().toLowerCase()}|${doc.sizeBytes}`,
       {
         fileName: doc.fileName,
         category: doc.category,
