@@ -320,7 +320,9 @@ export function renderReportPdf(report: ReportRecord): PDFKit.PDFDocument {
   const range = doc.bufferedPageRange();
   for (let index = range.start; index < range.start + range.count; index += 1) {
     doc.switchToPage(index);
-    const footerY = doc.page.height - 46;
+    // Keep footer text inside PDFKit's printable area. Drawing below the bottom
+    // margin triggers PDFKit's automatic page-break logic and appends blank pages.
+    const footerY = doc.page.height - PAGE.margins.bottom - 14;
     doc.moveTo(PAGE.margins.left, footerY - 10).lineTo(PAGE.margins.left + contentWidth, footerY - 10).strokeColor(COLORS.border).lineWidth(0.5).stroke();
     doc
       .font('Helvetica')
