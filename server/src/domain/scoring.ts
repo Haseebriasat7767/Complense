@@ -31,7 +31,7 @@ export const SCORE_WEIGHTS: Record<ReadinessComponent['key'], number> = {
 };
 
 export const SCORE_METHODOLOGY =
-  'Weighted readiness index — control health 28%, evidence coverage 35%, evidence depth 12%, remediation planning 25%.';
+  'Weighted readiness index — control health 28%, evidence coverage 35%, evidence depth 12%, remediation planning 25%, adjusted by the share of controls with a completed review.';
 
 export function scoreBand(index: number): { band: ReadinessScore['band']; label: string } {
   if (index >= 85) return { band: 'strong', label: 'Strong readiness' };
@@ -122,9 +122,11 @@ export function computeReadiness(input: {
     },
   ];
 
-  const index = Math.round(
-    components.reduce((sum, component) => sum + component.value * component.weight, 0) * 100,
-  );
+  const weightedIndex = components.reduce((sum, component) => sum + component.value * component.weight, 0);
+  // An assessment with controls awaiting manual review is incomplete. Apply
+  // explicit review coverage so unreviewed controls cannot inflate the score.
+  const assessmentCoverage = counts.total === 0 ? 0 : counts.reviewed / counts.total;
+  const index = Math.round(weightedIndex * assessmentCoverage * 100);
   const { band, label } = scoreBand(index);
 
   return {
