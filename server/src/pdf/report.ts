@@ -111,7 +111,7 @@ export function renderReportPdf(report: ReportRecord): PDFKit.PDFDocument {
     .fontSize(9)
     .fillColor(COLORS.body)
     .text(
-      `Controls assessed ${summary.readiness.counts.total} · Reviewable ${summary.readiness.counts.reviewed} · Passed ${summary.readiness.counts.passed} · Needs attention ${summary.readiness.counts.needsAttention} · Missing ${summary.readiness.counts.missing} · Needs review ${summary.readiness.counts.needsReview}`,
+      `Controls assessed ${summary.readiness.counts.total} · Reviewed ${summary.readiness.counts.reviewed} · Passed ${summary.readiness.counts.passed} · Needs attention ${summary.readiness.counts.needsAttention} · Missing ${summary.readiness.counts.missing} · Needs review ${summary.readiness.counts.needsReview}`,
       PAGE.margins.left,
       y,
       { width: contentWidth },
@@ -274,18 +274,27 @@ export function renderReportPdf(report: ReportRecord): PDFKit.PDFDocument {
   doc.addPage();
   sectionTitle(doc, '11. Evidence Inventory', contentWidth);
   y = doc.y + 12;
-  tableHeader(doc, y, [['Document', 0.42], ['Category', 0.2], ['Size', 0.1], ['Uploaded', 0.15], ['Controls', 0.13]], contentWidth);
+  tableHeader(doc, y, [['Document', 0.28], ['Category', 0.16], ['Size', 0.08], ['Uploaded', 0.12], ['Mapped controls', 0.36]], contentWidth);
   y += 18;
   for (const item of summary.evidenceInventory) {
-    y = ensureSpace(doc, y, 22);
     doc.font('Helvetica').fontSize(8.5).fillColor(COLORS.body);
-    doc.text(item.fileName, PAGE.margins.left + 4, y, { width: contentWidth * 0.42 - 6 });
-    doc.text(item.category, PAGE.margins.left + contentWidth * 0.42, y, { width: contentWidth * 0.2 - 6 });
-    doc.text(item.sizeLabel, PAGE.margins.left + contentWidth * 0.62, y);
-    doc.text(formatDate(item.uploadedAt), PAGE.margins.left + contentWidth * 0.72, y);
-    doc.text(String(item.mappedControls), PAGE.margins.left + contentWidth * 0.9, y);
-    y += 15;
-    doc.moveTo(PAGE.margins.left, y - 4).lineTo(PAGE.margins.left + contentWidth, y - 4).strokeColor(COLORS.border).lineWidth(0.4).stroke();
+    const controlCodes = item.mappedControlCodes ?? [];
+    const mappedCodes = controlCodes.length
+      ? controlCodes.join(', ')
+      : item.mappedControls > 0
+        ? `${item.mappedControls} mapped (legacy report)`
+        : 'No controls mapped';
+    const mappedWidth = contentWidth * 0.36 - 8;
+    const mappedHeight = doc.heightOfString(mappedCodes, { width: mappedWidth, lineGap: 1 });
+    const rowHeight = Math.max(18, mappedHeight + 4);
+    y = ensureSpace(doc, y, rowHeight + 8);
+    doc.text(item.fileName, PAGE.margins.left + 4, y, { width: contentWidth * 0.28 - 6, height: rowHeight, ellipsis: true });
+    doc.text(item.category, PAGE.margins.left + contentWidth * 0.28, y, { width: contentWidth * 0.16 - 6, height: rowHeight, ellipsis: true });
+    doc.text(item.sizeLabel, PAGE.margins.left + contentWidth * 0.44, y, { width: contentWidth * 0.08 - 4 });
+    doc.text(formatDate(item.uploadedAt), PAGE.margins.left + contentWidth * 0.52, y, { width: contentWidth * 0.12 - 4 });
+    doc.text(mappedCodes, PAGE.margins.left + contentWidth * 0.64, y, { width: mappedWidth, lineGap: 1 });
+    y += rowHeight + 6;
+    doc.moveTo(PAGE.margins.left, y - 3).lineTo(PAGE.margins.left + contentWidth, y - 3).strokeColor(COLORS.border).lineWidth(0.4).stroke();
   }
 
   /* --------------------------- final summary --------------------------- */
@@ -297,7 +306,7 @@ export function renderReportPdf(report: ReportRecord): PDFKit.PDFDocument {
     .fontSize(10)
     .fillColor(COLORS.body)
     .text(
-      `${report.companyName} currently presents a readiness index of ${report.scoreIndex}% against ${framework.name}. ${counts.passed} of ${counts.reviewed} reviewed controls are evidenced, ${counts.needsAttention} require additional evidence, and ${counts.missing} have no supporting evidence at all. Addressing the ${summary.criticalFindings.length + summary.highFindings.length} critical and high-risk findings listed in sections 8 and 9 will materially improve readiness before an audit window opens.`,
+      `${report.companyName} currently presents a readiness index of ${report.scoreIndex}% against ${framework.name}. ${counts.passed} of ${counts.reviewed} reviewed controls passed, ${counts.needsAttention} need additional evidence, ${counts.missing} are missing evidence, and ${counts.needsReview} are awaiting manual review. ${counts.needsReview} of ${counts.total} controls are not yet included in the completed review population. Addressing the ${summary.criticalFindings.length + summary.highFindings.length} critical and high-risk findings listed in sections 8 and 9 should be prioritised before an audit window opens.`,
       { width: contentWidth, lineGap: 3 },
     );
 
@@ -329,7 +338,7 @@ export function renderReportPdf(report: ReportRecord): PDFKit.PDFDocument {
       .fontSize(7.5)
       .fillColor(COLORS.muted)
       .text(
-        'ComplyLens AI · preliminary readiness assessment · not a certification, audit opinion or legal advice · Demo Data workspace',
+        `ComplyLens AI · preliminary readiness assessment · not a certification, audit opinion or legal advice · Workspace: ${summary.workspaceName?.trim() || report.companyName}`,
         PAGE.margins.left,
         footerY,
         { width: contentWidth - 60 },

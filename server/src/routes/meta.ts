@@ -3,7 +3,7 @@
  * These endpoints are unauthenticated and expose no customer data.
  */
 import { Router } from 'express';
-import { analysisMode, config } from '../config.js';
+import { analysisMode, config, isExternalAiEnabled } from '../config.js';
 import { categoriesForFramework, frameworkSummary } from '../domain/controls.js';
 import { FRAMEWORKS } from '../domain/frameworks.js';
 import { SCORE_WEIGHTS, SCORE_METHODOLOGY } from '../domain/scoring.js';
@@ -34,6 +34,12 @@ metaRouter.get(
       store: { kind: store.kind, detail: database.detail },
       demoMode: config.demoMode,
       analysisMode: analysisMode(),
+      aiProvider: isExternalAiEnabled()
+        ? (config.ai.baseUrl.includes('generativelanguage.googleapis.com') || ['gemini', 'google', 'google-gemini'].includes(config.ai.provider)
+            ? 'Google Gemini'
+            : config.ai.provider)
+        : 'deterministic-local',
+      externalAiConfigured: isExternalAiEnabled(),
       authRequired: config.authRequired,
     });
   }),
@@ -56,6 +62,12 @@ metaRouter.get('/meta', (_req, res) => {
     })),
     analysis: {
       mode: analysisMode(),
+      provider: isExternalAiEnabled()
+        ? (config.ai.baseUrl.includes('generativelanguage.googleapis.com') || ['gemini', 'google', 'google-gemini'].includes(config.ai.provider)
+            ? 'Google Gemini'
+            : config.ai.provider)
+        : 'deterministic-local',
+      externalAiConfigured: isExternalAiEnabled(),
       label:
         analysisMode() === 'external-ai'
           ? 'AI-assisted analysis enabled'

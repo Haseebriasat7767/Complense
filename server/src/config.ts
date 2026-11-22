@@ -169,11 +169,11 @@ if (config.isProduction && config.authRequired && config.session.secretIsEphemer
 
 /** True when an external AI provider is configured AND explicitly allowed. */
 export function isExternalAiEnabled(): boolean {
-  return (
-    config.ai.provider === 'openai-compatible' &&
-    config.ai.apiKey.length > 0 &&
-    config.ai.allowExternal
-  );
+  // Gemini can be configured explicitly as `gemini`/`google-gemini`, or
+  // through the OpenAI-compatible Gemini endpoint. Both use the same adapter.
+  const provider = config.ai.provider.trim().toLowerCase();
+  const supportedProviders = new Set(['openai-compatible', 'gemini', 'google', 'google-gemini']);
+  return supportedProviders.has(provider) && config.ai.apiKey.length > 0 && config.ai.allowExternal;
 }
 
 /** Human-readable analysis mode used by the UI banner. */

@@ -63,14 +63,14 @@ export function demoNarrative(input: {
 
   const lines: string[] = [];
   lines.push(
-    `${companyName} was assessed against ${frameworkName} using ${evidenceCount} evidence document${evidenceCount === 1 ? '' : 's'} submitted to the workspace. The readiness index is ${index}% (${bandLabel.toLowerCase()}), derived from ${counts.total} assessed controls: ${counts.passed} passed, ${counts.needsAttention} need attention, ${counts.missing} missing, and ${counts.needsReview} awaiting manual review (${counts.reviewed} reviewable; ${counts.needsReview} require manual review).`,
+    `${companyName} was assessed against ${frameworkName} using ${evidenceCount} evidence document${evidenceCount === 1 ? '' : 's'} submitted to the workspace. The readiness index is ${index}% (${bandLabel.toLowerCase()}), derived from ${counts.total} assessed controls: ${counts.passed} passed, ${counts.needsAttention} need attention, ${counts.missing} missing, and ${counts.needsReview} awaiting manual review (${counts.reviewed} reviewed; ${counts.needsReview} require manual review).`,
   );
 
   if (critical.length > 0) {
     lines.push(
-      `${critical.length} control${critical.length === 1 ? '' : 's'} have no supporting evidence at all (${critical
+      `${critical.length} critical-risk finding${critical.length === 1 ? '' : 's'} currently have no evidence mapped to the affected control (${critical
         .map((f) => f.controlCode)
-        .join(', ')}). These represent the largest exposure because an auditor would request evidence immediately and none could be produced.`,
+        .join(', ')}). This is a control-level evidence gap; it does not mean the workspace contains no documents.`,
     );
   }
 

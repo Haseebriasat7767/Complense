@@ -268,6 +268,7 @@ export type ReportControlRow = {
 };
 
 export type ReportSummary = {
+  workspaceName?: string;
   executiveSummary: string;
   readiness: ReadinessScore;
   criticalFindings: Array<{ controlCode: string; title: string; riskLevel: RiskLevel }>;
@@ -286,6 +287,7 @@ export type ReportSummary = {
     uploadedAt: string;
     status: EvidenceAnalysisStatus;
     mappedControls: number;
+    mappedControlCodes?: string[];
   }>;
   categoryBreakdown: Array<{
     category: string;
