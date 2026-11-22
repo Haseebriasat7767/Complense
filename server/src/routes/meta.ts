@@ -35,7 +35,7 @@ metaRouter.get(
       demoMode: config.demoMode,
       analysisMode: analysisMode(),
       aiProvider: isExternalAiEnabled()
-        ? (new URL(config.ai.baseUrl).hostname === 'generativelanguage.googleapis.com' || ['gemini', 'google', 'google-gemini'].includes(config.ai.provider)
+        ? (config.ai.baseUrl.includes('generativelanguage.googleapis.com') || ['gemini', 'google', 'google-gemini'].includes(config.ai.provider)
             ? 'Google Gemini'
             : config.ai.provider)
         : 'deterministic-local',
@@ -63,7 +63,7 @@ metaRouter.get('/meta', (_req, res) => {
     analysis: {
       mode: analysisMode(),
       provider: isExternalAiEnabled()
-        ? (new URL(config.ai.baseUrl).hostname === 'generativelanguage.googleapis.com' || ['gemini', 'google', 'google-gemini'].includes(config.ai.provider)
+        ? (config.ai.baseUrl.includes('generativelanguage.googleapis.com') || ['gemini', 'google', 'google-gemini'].includes(config.ai.provider)
             ? 'Google Gemini'
             : config.ai.provider)
         : 'deterministic-local',
