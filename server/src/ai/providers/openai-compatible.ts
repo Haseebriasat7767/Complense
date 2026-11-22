@@ -13,6 +13,18 @@ import type { Finding, ReadinessScore } from '../../domain/types.js';
 import { logger } from '../../logger.js';
 
 type ChatMessage = { role: 'system' | 'user'; content: string };
+type ChatResult = { text: string; model: string; transport: 'openai-compatible' | 'gemini-native' };
+
+function actualProviderLabel(model: string): string {
+  try {
+    if (new URL(config.ai.baseUrl).hostname === 'generativelanguage.googleapis.com') {
+      return `Google Gemini · ${model}`;
+    }
+  } catch {
+    // Use the configured provider name for non-URL/custom adapters.
+  }
+  return `${config.ai.provider} · ${model}`;
+}
 
 /**
  * Google Gemini native REST fallback. The OpenAI-compatible endpoint can
@@ -94,7 +106,7 @@ async function readProviderDiagnostic(response: Response): Promise<ProviderDiagn
   }
 }
 
-async function chat(messages: ChatMessage[], maxTokens = 600): Promise<string | null> {
+async function chat(messages: ChatMessage[], maxTokens = 600): Promise<ChatResult | null> {
   const isGemini = (() => {
     try {
       return new URL(config.ai.baseUrl).hostname === 'generativelanguage.googleapis.com';
@@ -159,7 +171,7 @@ async function chat(messages: ChatMessage[], maxTokens = 600): Promise<string | 
             activeModel: model,
           });
         }
-        return content.trim();
+        return { text: content.trim(), model, transport: 'openai-compatible' };
       }
 
       logger.warn('External AI response contained no usable message', {
@@ -191,7 +203,7 @@ async function chat(messages: ChatMessage[], maxTokens = 600): Promise<string | 
             activeModel: model,
           });
         }
-        return nativeResult;
+        return { text: nativeResult, model, transport: 'gemini-native' };
       }
     }
   }
@@ -205,7 +217,7 @@ export async function externalSummary(input: {
   content: string;
   fileName: string;
   category: string;
-}): Promise<{ summary: string; keywords: string[] } | null> {
+}): Promise<{ summary: string; keywords: string[]; providerLabel: string } | null> {
   const excerpt = input.content.slice(0, 4000);
   const answer = await chat(
     [
@@ -219,7 +231,7 @@ export async function externalSummary(input: {
   );
   if (!answer) return null;
 
-  const [body, keywordLine] = answer.split(/Keywords:/i);
+  const [body, keywordLine] = answer.text.split(/Keywords:/i);
   const keywords =
     keywordLine
       ?.split(',')
@@ -227,7 +239,7 @@ export async function externalSummary(input: {
       .filter(Boolean)
       .slice(0, 6) ?? [];
 
-  return { summary: (body ?? answer).trim().slice(0, 400), keywords };
+  return { summary: (body ?? answer.text).trim().slice(0, 400), keywords, providerLabel: actualProviderLabel(answer.model) };
 }
 
 const NARRATIVE_SYSTEM =
@@ -239,7 +251,7 @@ export async function externalNarrative(input: {
   readiness: ReadinessScore;
   findings: Finding[];
   evidenceCount: number;
-}): Promise<{ executiveSummary: string; themes: string[] } | null> {
+}): Promise<{ executiveSummary: string; themes: string[]; providerLabel: string } | null> {
   const { findings } = input;
   const lines = [
     `Company: ${input.companyName}`,
@@ -262,7 +274,7 @@ export async function externalNarrative(input: {
   );
   if (!answer) return null;
 
-  const [body, themeLine] = answer.split(/Themes:/i);
+  const [body, themeLine] = answer.text.split(/Themes:/i);
   const themes =
     themeLine
       ?.split(',')
@@ -271,7 +283,8 @@ export async function externalNarrative(input: {
       .slice(0, 4) ?? [];
 
   return {
-    executiveSummary: (body ?? answer).trim().slice(0, 2000),
+    executiveSummary: (body ?? answer.text).trim().slice(0, 2000),
     themes: themes.length ? themes : ['Readiness', 'Evidence depth', 'Remediation sequencing'],
+    providerLabel: actualProviderLabel(answer.model),
   };
 }
