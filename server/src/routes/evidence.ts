@@ -13,6 +13,7 @@ import { config } from '../config.js';
 import { analyzeEvidence, modeLabel } from '../ai/index.js';
 import { categoriesForFramework } from '../domain/controls.js';
 import { CONTROL_LIBRARY } from '../domain/controls.js';
+import { inferEvidenceCategory } from '../domain/evidence-category.js';
 import { FRAMEWORK_KEYS, isFrameworkKey } from '../domain/frameworks.js';
 import { mapEvidenceAcrossFrameworks } from '../domain/analysis.js';
 import { extractText } from '../services/extract.js';
@@ -47,34 +48,11 @@ const upload = multer({
 
 const ALL_CATEGORIES = [...new Set(CONTROL_LIBRARY.map((control) => control.category))].sort();
 
-function inferCategory(fileName: string, content: string): string {
-  const text = `${fileName} ${content}`.toLowerCase();
-  const rules: Array<[string, RegExp]> = [
-    ['Incident Response', /incident|breach|ransomware|hacker|unauthori[sz]ed access|data leak|security event|complaint|investigation/],
-    ['Access Control', /access control|least privilege|permission|role-based access|privileged access/],
-    ['Identity', /identity|multi.factor|mfa|two.factor|authentication|password|credential/],
-    ['Data Protection', /personal data|personal information|encryption|data minim|retention|deletion|privacy/],
-    ['Security Policies', /security policy|information security policy|acceptable use|policy statement/],
-    ['Risk Management', /risk assessment|risk register|risk treatment|threat assessment/],
-    ['Vendor Management', /vendor|supplier|third.party|service provider/],
-    ['Change Management', /change request|change management|deployment approval|release management/],
-    ['Backup', /backup|restore test|disaster recovery/],
-    ['Business Continuity', /business continuity|continuity plan|recovery time objective|recovery point objective/],
-    ['Monitoring', /monitoring|alert|security operations|threat detection/],
-    ['Logging', /audit log|log review|logging|event log/],
-    ['Employee Security', /employee training|security awareness|background check|onboarding|offboarding/],
-    ['Asset Management', /asset inventory|asset register|device inventory/],
-  ];
-  for (const [category, pattern] of rules) {
-    if (pattern.test(text) && ALL_CATEGORIES.includes(category)) return category;
-  }
-  return ALL_CATEGORIES[0] ?? 'Access Control';
-}
 
 function parseCategory(value: unknown, fileName = '', content = ''): string {
   const raw = optionalString(value, 'category', 60);
   if (!raw || /^(un)?categorised$|^(un)?categorized$/i.test(raw)) {
-    return inferCategory(fileName, content);
+    return inferEvidenceCategory(fileName, content);
   }
   const match = ALL_CATEGORIES.find((category) => category.toLowerCase() === raw.toLowerCase());
   if (!match) {
