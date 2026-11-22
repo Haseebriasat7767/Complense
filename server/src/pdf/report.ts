@@ -278,7 +278,12 @@ export function renderReportPdf(report: ReportRecord): PDFKit.PDFDocument {
   y += 18;
   for (const item of summary.evidenceInventory) {
     doc.font('Helvetica').fontSize(8.5).fillColor(COLORS.body);
-    const mappedCodes = item.mappedControlCodes.length ? item.mappedControlCodes.join(', ') : 'No controls mapped';
+    const controlCodes = item.mappedControlCodes ?? [];
+    const mappedCodes = controlCodes.length
+      ? controlCodes.join(', ')
+      : item.mappedControls > 0
+        ? `${item.mappedControls} mapped (legacy report)`
+        : 'No controls mapped';
     const mappedWidth = contentWidth * 0.36 - 8;
     const mappedHeight = doc.heightOfString(mappedCodes, { width: mappedWidth, lineGap: 1 });
     const rowHeight = Math.max(18, mappedHeight + 4);
@@ -333,7 +338,7 @@ export function renderReportPdf(report: ReportRecord): PDFKit.PDFDocument {
       .fontSize(7.5)
       .fillColor(COLORS.muted)
       .text(
-        `ComplyLens AI · preliminary readiness assessment · not a certification, audit opinion or legal advice · Workspace: ${summary.workspaceName}`,
+        `ComplyLens AI · preliminary readiness assessment · not a certification, audit opinion or legal advice · Workspace: ${summary.workspaceName || 'legacy report'}`,
         PAGE.margins.left,
         footerY,
         { width: contentWidth - 60 },
