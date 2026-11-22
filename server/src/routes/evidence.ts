@@ -124,6 +124,18 @@ evidenceRouter.get(
 
     let items = await store.listEvidence(session.org, workspace.id);
 
+    // Repair legacy auto-categorised records when the filename gives a clear,
+    // more specific category. Explicit user-selected categories are preserved.
+    let recategorized = false;
+    for (const doc of items) {
+      if (doc.category !== 'Incident Response') continue;
+      const inferred = inferEvidenceCategory(doc.fileName, doc.content, doc.category);
+      if (inferred === doc.category) continue;
+      await store.updateEvidence(doc.id, doc.organizationId, { category: inferred });
+      recategorized = true;
+    }
+    if (recategorized) items = await store.listEvidence(session.org, workspace.id);
+
     // Stale "analyzing" records (e.g. after a restart) are re-derived on read.
     const stale = items.filter(
       (doc) =>
