@@ -50,8 +50,10 @@ export function currentMode(): AnalysisMode {
   return analysisMode();
 }
 
-export function modeLabel(mode: AnalysisMode = currentMode()): string {
+export function modeLabel(mode: AnalysisMode = currentMode(), actualProvider?: string): string {
   if (mode !== 'external-ai') return 'Demo Analysis Mode (deterministic local analysis)';
+
+  if (actualProvider) return `AI-assisted analysis (${actualProvider})`;
 
   // The adapter name describes the protocol, not the actual model provider.
   // Only label Gemini when the configured endpoint is Google's Gemini API.
@@ -77,7 +79,7 @@ export async function analyzeEvidence(request: EvidenceAnalysisRequest): Promise
       if (result) {
         return {
           mode: 'external-ai',
-          provider: config.ai.provider,
+          provider: result.providerLabel,
           summary: result.summary,
           keywords: result.keywords,
         };
@@ -111,7 +113,7 @@ export async function writeNarrative(request: NarrativeRequest): Promise<Narrati
       if (result) {
         return {
           mode: 'external-ai',
-          provider: config.ai.provider,
+          provider: result.providerLabel,
           executiveSummary: result.executiveSummary,
           themes: result.themes,
         };
