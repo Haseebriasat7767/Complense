@@ -136,8 +136,9 @@ export function buildReportSummary(input: {
   }
 
   return {
+    workspaceName: input.workspace.name,
     executiveSummary: [
-      `Control totals: ${reportCounts.total} assessed; ${reportCounts.reviewed} reviewable; ${reportCounts.needsReview} awaiting manual review. Status breakdown: ${reportCounts.passed} passed, ${reportCounts.needsAttention} needing attention, and ${reportCounts.missing} missing.`,
+      `Control totals: ${reportCounts.total} assessed; ${reportCounts.reviewed} reviewed; ${reportCounts.needsReview} awaiting manual review. Status breakdown: ${reportCounts.passed} passed, ${reportCounts.needsAttention} needing attention, and ${reportCounts.missing} missing.`,
       // AI is used for qualitative context only. Drop any generated sentence
       // that attempts to restate numerical control totals; counts above are
       // always calculated from the deterministic assessment rows.
@@ -174,13 +175,14 @@ export function buildReportSummary(input: {
       doc.content.trim() ? doc.content.replace(/\\s+/g, ' ').trim() : `${doc.fileName.trim().toLowerCase()}|${doc.sizeBytes}`,
       {
         fileName: doc.fileName,
-        category: doc.category === 'Incident Response'
-          ? inferEvidenceCategory(doc.fileName, doc.content, doc.category)
-          : doc.category,
+        // Use strong filename clues to correct legacy auto-categories in the report;
+        // otherwise preserve the category stored on the evidence record.
+        category: inferEvidenceCategory(doc.fileName, '', doc.category),
         sizeLabel: formatBytes(doc.sizeBytes),
         uploadedAt: doc.uploadedAt,
         status: doc.status,
         mappedControls: (mappings.get(doc.id) ?? []).length,
+        mappedControlCodes: [...new Set((mappings.get(doc.id) ?? []).map((mapping) => mapping.controlCode))].sort(),
       },
     ])).values()],
     controlsByStatus,
