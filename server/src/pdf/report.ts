@@ -338,7 +338,7 @@ export function renderReportPdf(report: ReportRecord): PDFKit.PDFDocument {
       .fontSize(7.5)
       .fillColor(COLORS.muted)
       .text(
-        `ComplyLens AI · preliminary readiness assessment · not a certification, audit opinion or legal advice · Workspace: ${summary.workspaceName || 'legacy report'}`,
+        `ComplyLens AI · preliminary readiness assessment · not a certification, audit opinion or legal advice · Workspace: ${summary.workspaceName?.trim() || report.companyName}`,
         PAGE.margins.left,
         footerY,
         { width: contentWidth - 60 },
