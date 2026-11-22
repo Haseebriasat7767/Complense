@@ -90,7 +90,7 @@ export function renderReportPdf(report: ReportRecord): PDFKit.PDFDocument {
     .font('Helvetica')
     .fontSize(10)
     .fillColor(COLORS.muted)
-    .text('READINESS INDEX', PAGE.margins.left + 26, scoreTop + 76, { characterSpacing: 0.6 });
+    .text('WEIGHTED READINESS INDEX', PAGE.margins.left + 26, scoreTop + 76, { characterSpacing: 0.6 });
   doc
     .font('Helvetica-Bold')
     .fontSize(13)
