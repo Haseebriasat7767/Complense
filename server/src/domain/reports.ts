@@ -8,6 +8,7 @@
 import { FRAMEWORKS, FRAMEWORK_DISCLAIMER } from './frameworks.js';
 import { countStatuses } from './scoring.js';
 import { demoNarrative } from '../ai/providers/demo.js';
+import { inferEvidenceCategory } from './evidence-category.js';
 
 import type {
   ControlAssessment,
@@ -173,7 +174,9 @@ export function buildReportSummary(input: {
       doc.content.trim() ? doc.content.replace(/\\s+/g, ' ').trim() : `${doc.fileName.trim().toLowerCase()}|${doc.sizeBytes}`,
       {
         fileName: doc.fileName,
-        category: doc.category,
+        category: doc.category === 'Incident Response'
+          ? inferEvidenceCategory(doc.fileName, doc.content, doc.category)
+          : doc.category,
         sizeLabel: formatBytes(doc.sizeBytes),
         uploadedAt: doc.uploadedAt,
         status: doc.status,
