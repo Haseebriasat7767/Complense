@@ -63,7 +63,11 @@ export function LandingPage() {
               </ButtonLink>
             </div>
             <p className="mt-4 text-[12.5px] text-ink-500">
-              Create an account to start your own workspace.
+              Create an account to start your own workspace — or{' '}
+              <a className="font-medium text-teal-700 hover:underline" href="/demo">
+                view the live AcmeCloud demo, no sign-up
+              </a>
+              .
             </p>
           </div>
 

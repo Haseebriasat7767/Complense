@@ -22,6 +22,7 @@ import { reportsRouter } from './routes/reports.js';
 import { questionnaireRouter } from './routes/questionnaire.js';
 import { workspaceRouter } from './routes/workspace.js';
 import { billingRouter } from './routes/billing.js';
+import { demoRouter } from './routes/demo.js';
 
 export function createApp(): Express {
   const app = express();
@@ -43,6 +44,8 @@ export function createApp(): Express {
   );
 
   app.use('/api', billingRouter);
+  // Public demo endpoints — no auth. Mounted before the /api catch-all below.
+  app.use('/api/demo', demoRouter);
   app.use('/api', metaRouter);
   app.use('/api/auth', authRouter);
   app.use('/api', workspaceRouter);

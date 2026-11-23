@@ -12,6 +12,7 @@ import { SecurityPage } from '@/pages/marketing/SecurityPage';
 import { PricingPage } from '@/pages/marketing/PricingPage';
 import { FaqPage } from '@/pages/marketing/FaqPage';
 import { DocumentationPage } from '@/pages/marketing/DocumentationPage';
+import { DemoPage } from '@/pages/marketing/DemoPage';
 import { ProductOverviewPage } from '@/pages/marketing/ProductOverviewPage';
 import { LegalPage } from '@/pages/marketing/LegalPage';
 import { LoginPage } from '@/pages/auth/LoginPage';
@@ -60,6 +61,7 @@ export function App() {
             </Route>
 
             {/* Standalone pages that carry their own chrome. */}
+            <Route path="/demo" element={<DemoPage />} />
             <Route path="/documentation" element={<DocumentationPage />} />
             <Route path="/overview" element={<ProductOverviewPage />} />
             <Route path="/privacy" element={<LegalPage kind="privacy" />} />
