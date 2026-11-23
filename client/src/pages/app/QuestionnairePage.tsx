@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { FileSearch, ShieldCheck, AlertTriangle, ExternalLink } from 'lucide-react';
 import { PageHeader } from '@/components/app/PageHeader';
 import { Card, CardContent, CardHeader } from '@/components/ui/Card';
@@ -47,7 +48,7 @@ export function QuestionnairePage() {
         </CardContent>
       </Card>
       {draft.sources.map((source) => <Card key={source.evidenceId}>
-        <CardHeader title={source.fileName} description={`${source.category} · keyword relevance ${source.relevance}%`} actions={<a href={`/app/evidence/${encodeURIComponent(source.evidenceId)}`} className="inline-flex items-center gap-1 text-xs font-medium text-brand-700 hover:text-brand-800">Open evidence <ExternalLink className="size-3.5" /></a>} />
+        <CardHeader title={source.fileName} description={`${source.category} · keyword relevance ${source.relevance}%`} actions={<Link to={`/app/evidence/${encodeURIComponent(source.evidenceId)}`} className="inline-flex items-center gap-1 text-xs font-medium text-brand-700 hover:text-brand-800">Open evidence <ExternalLink className="size-3.5" /></Link>} />
         <CardContent className="space-y-3">
           <blockquote className="border-l-2 border-ink-300 pl-3 text-[13px] leading-relaxed text-ink-700">{source.excerpt}</blockquote>
           <div className="flex flex-wrap gap-1.5">{source.matchedTerms.map((term) => <span key={term} className="rounded-full bg-ink-100 px-2 py-1 text-[10.5px] text-ink-600">{term}</span>)}</div>

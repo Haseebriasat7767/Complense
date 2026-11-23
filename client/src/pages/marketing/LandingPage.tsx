@@ -64,9 +64,9 @@ export function LandingPage() {
             </div>
             <p className="mt-4 text-[12.5px] text-ink-500">
               Create an account to start your own workspace — or{' '}
-              <a className="font-medium text-teal-700 hover:underline" href="/demo">
+              <Link className="font-medium text-teal-700 hover:underline" to="/demo">
                 view the live AcmeCloud demo, no sign-up
-              </a>
+              </Link>
               .
             </p>
           </div>
