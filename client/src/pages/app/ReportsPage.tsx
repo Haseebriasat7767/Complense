@@ -327,7 +327,7 @@ export function ReportsPage() {
         <Field
           label="Framework"
           htmlFor="report-framework"
-          hint="The seeded demo workspace scores 92% for SOC 2 and 78% for ISO 27001."
+          hint="The seeded demo workspace scores 77% for SOC 2 and 61% for ISO 27001."
         >
           <Select
             id="report-framework"

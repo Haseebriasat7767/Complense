@@ -130,13 +130,13 @@ export function DashboardPreview({ className }: { className?: string }) {
               <div className="col-span-2 rounded-xl border border-ink-200 bg-white p-3 lg:col-span-1">
                 <p className="text-[10px] font-medium tracking-wide text-ink-500 uppercase">Readiness</p>
                 <div className="mt-1 flex items-center gap-2">
-                  <span className="metric-value text-2xl text-pass-700">92%</span>
+                  <span className="metric-value text-2xl text-pass-700">77%</span>
                   <span className="rounded-full bg-pass-50 px-1.5 py-0.5 text-[9.5px] font-medium text-pass-700">
                     Strong
                   </span>
                 </div>
                 <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-ink-100">
-                  <div className="h-full w-[92%] rounded-full bg-pass-600" />
+                  <div className="h-full w-[77%] rounded-full bg-pass-600" />
                 </div>
               </div>
               <MiniMetric label="Controls reviewed" value="24" />
@@ -192,8 +192,8 @@ export function DashboardPreview({ className }: { className?: string }) {
                 <div className="rounded-xl border border-ink-200 bg-white px-3 py-2.5">
                   <p className="text-[11.5px] font-semibold text-ink-900">Readiness overview</p>
                   <div className="mt-2.5 space-y-2.5">
-                    <FrameworkRow label="SOC 2" value={92} tone="pass" />
-                    <FrameworkRow label="ISO 27001" value={78} tone="brand" />
+                    <FrameworkRow label="SOC 2" value={77} tone="pass" />
+                    <FrameworkRow label="ISO 27001" value={61} tone="brand" />
                   </div>
                 </div>
                 <div className="rounded-xl border border-ink-200 bg-white">

@@ -119,7 +119,7 @@ export function HelpPage() {
               </div>
               <p className="mt-2">
                 Deterministic local analysis: keyword, category and required-evidence rules run inside the server. The same
-                demo workspace always produces the same scores — SOC 2 92% and ISO 27001 78%.
+                demo workspace always produces the same scores — SOC 2 77% and ISO 27001 61%.
               </p>
             </div>
             <div className="rounded-lg border border-ink-200 px-3.5 py-3">

@@ -69,7 +69,7 @@ export function HowItWorksPage() {
         <div className="mx-auto max-w-2xl text-center">
           <h2 className="text-2xl tracking-tight">Want to see it first?</h2>
           <p className="mt-3 text-[14.5px] text-ink-500">
-            The demo workspace already contains the state described above — 92% readiness on SOC 2 with two critical gaps.
+            The demo workspace already contains the state described above — 77% readiness on SOC 2 with two critical gaps.
           </p>
           <div className="mt-6 flex justify-center">
             <ButtonLink to="/signup">Create an account</ButtonLink>

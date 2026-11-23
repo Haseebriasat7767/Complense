@@ -45,4 +45,20 @@ describe('production SESSION_SECRET enforcement', () => {
   });
 
   it('TEST 13: NODE_ENV=production with SESSION_SECRET set boots cleanly', () => {
-    const result = runWithEnv({...[truncated]
+    const result = runWithEnv({
+      NODE_ENV: 'production',
+      AUTH_REQUIRED: 'true',
+      SESSION_SECRET: 'a-long-random-session-secret-for-tests-only-0123456789',
+    });
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain('CONFIG_OK');
+    const payload = JSON.parse(result.stdout.replace('CONFIG_OK', '').trim()) as {
+      isProduction: boolean;
+      secretIsEphemeral: boolean;
+    };
+    expect(payload.isProduction).toBe(true);
+    // A configured secret is persistent, not ephemeral.
+    expect(payload.secretIsEphemeral).toBe(false);
+  });
+});

@@ -180,7 +180,7 @@ export function LandingPage() {
             </p>
             <dl className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
               {[
-                { label: 'Readiness score', value: '92%', tone: 'text-pass-700' },
+                { label: 'Readiness score', value: '77%', tone: 'text-pass-700' },
                 { label: 'Controls reviewed', value: '24' },
                 { label: 'Passed', value: '18', tone: 'text-pass-700' },
                 { label: 'Needs attention', value: '4', tone: 'text-warn-700' },

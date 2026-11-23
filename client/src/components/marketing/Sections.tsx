@@ -165,7 +165,7 @@ export function FrameworksSection() {
       version: 'AICPA Trust Services Criteria (2017, 2022 revision)',
       controls: 28,
       categories: 12,
-      readiness: 92,
+      readiness: 77,
       description:
         'Security, availability and confidentiality criteria that B2B customers ask about during vendor due diligence.',
     },
@@ -174,7 +174,7 @@ export function FrameworksSection() {
       version: 'ISO/IEC 27001:2022 Annex A',
       controls: 22,
       categories: 9,
-      readiness: 78,
+      readiness: 61,
       description:
         'Organisational, people and technology controls from the international information security standard.',
     },
