@@ -1,4 +1,6 @@
 > **Status note (22 Nov 2026):** This is a historical roadmap from the original demo baseline. Treat every item as unverified until checked against the current production code; do not present roadmap items as implemented product capabilities.
+>
+> **Shipped 24 Nov 2026 (not on this roadmap):** Free plan ($0, server-side enforced limits) with new signups defaulting to Free; reusable questionnaire library (25 seeded canonical questions, answer once / reuse with explicit human confirmation, PDF + CSV export); auditor evidence package export (readiness, controls, findings, evidence inventory, approved answers in one PDF). Live Stripe checkout is still NOT enabled — no Stripe keys are configured — and the 1-vs-2 framework limit is recorded but not yet enforceable on the single-primary-framework model.
 
 # Roadmap
 

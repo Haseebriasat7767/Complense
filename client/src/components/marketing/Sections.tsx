@@ -325,6 +325,19 @@ export type PricingPlan = {
 
 export const PRICING_PLANS: PricingPlan[] = [
   {
+    name: 'Free',
+    price: 0,
+    tagline: 'Try the product with real limits — no card required.',
+    features: [
+      '1 workspace, 1 framework',
+      'Up to 10 evidence documents',
+      '1 readiness report',
+      '1 questionnaire, 25 reusable answers',
+      'Auditor package export',
+    ],
+    cta: 'Create a free account',
+  },
+  {
     name: 'Starter',
     price: 49,
     tagline: 'For a first readiness pass on one framework.',
@@ -379,7 +392,7 @@ export function PricingSection({ heading = true }: { heading?: boolean }) {
     }
     setLoadingPlan(plan.name);
     try {
-      const result = await api.post<{ url: string }>('/billing/checkout', {
+      const result = await api.post<{ url: string }>('/api/billing/checkout', {
         plan: plan.name.toLowerCase(),
       });
       window.location.assign(result.url);
@@ -409,7 +422,7 @@ export function PricingSection({ heading = true }: { heading?: boolean }) {
         <p role="alert" className="mt-4 text-[13px] text-red-700">{billingMessage}</p>
       ) : null}
 
-      <div className="mt-8 grid gap-5 lg:grid-cols-3">
+      <div className="mt-8 grid gap-5 lg:grid-cols-4">
         {PRICING_PLANS.map((plan) => (
           <div
             key={plan.name}
@@ -440,18 +453,27 @@ export function PricingSection({ heading = true }: { heading?: boolean }) {
               ))}
             </ul>
             <div className="mt-5">
-              <button
-                type="button"
-                onClick={() => checkout(plan)}
-                disabled={loadingPlan !== null}
-                className={cn(
-                  'inline-flex w-full items-center justify-center rounded-lg px-4 py-2.5 text-[13px] font-semibold transition',
-                  plan.highlighted ? 'bg-ink-900 text-white hover:bg-ink-800' : 'border border-ink-300 bg-white text-ink-800 hover:bg-ink-50',
-                  loadingPlan === plan.name && 'cursor-wait opacity-70',
-                )}
-              >
-                {loadingPlan === plan.name ? 'Opening Stripe…' : `Subscribe to ${plan.name}`}
-              </button>
+              {plan.name === 'Free' ? (
+                <a
+                  href="/signup"
+                  className="inline-flex w-full items-center justify-center rounded-lg border border-ink-300 bg-white px-4 py-2.5 text-[13px] font-semibold text-ink-800 transition hover:bg-ink-50"
+                >
+                  Create a free account
+                </a>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => checkout(plan)}
+                  disabled={loadingPlan !== null}
+                  className={cn(
+                    'inline-flex w-full items-center justify-center rounded-lg px-4 py-2.5 text-[13px] font-semibold transition',
+                    plan.highlighted ? 'bg-ink-900 text-white hover:bg-ink-800' : 'border border-ink-300 bg-white text-ink-800 hover:bg-ink-50',
+                    loadingPlan === plan.name && 'cursor-wait opacity-70',
+                  )}
+                >
+                  {loadingPlan === plan.name ? 'Opening Stripe…' : `Subscribe to ${plan.name}`}
+                </button>
+              )}
             </div>
           </div>
         ))}

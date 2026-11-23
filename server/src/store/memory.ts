@@ -11,9 +11,12 @@ import type {
   EvidenceInput,
   EvidenceRecord,
   Organization,
+  Questionnaire,
+  QuestionnaireItem,
   ReportRecord,
   RemediationEvent,
   RemediationRecord,
+  ReusableAnswer,
   User,
   Workspace,
 } from '../domain/types.js';
@@ -38,6 +41,9 @@ export class MemoryStore implements Store {
   private remediations = new Map<string, RemediationRecord>();
   private remediationEvents: RemediationEvent[] = [];
   private audit: AuditEvent[] = [];
+  private reusableAnswers = new Map<string, ReusableAnswer>();
+  private questionnaires = new Map<string, Questionnaire>();
+  private questionnaireItems = new Map<string, QuestionnaireItem>();
 
   async init(): Promise<void> {
     const seed = await buildDemoSeed();
@@ -245,6 +251,128 @@ export class MemoryStore implements Store {
   async recordAuditEvent(event: Omit<AuditEvent, 'id'>) {
     this.audit.push({ ...event, id: id('aud') });
     if (this.audit.length > 500) this.audit = this.audit.slice(-500);
+  }
+
+  // --- Reusable questionnaire library ---------------------------------
+  async listReusableAnswers(organizationId: string) {
+    return [...this.reusableAnswers.values()]
+      .filter((answer) => answer.organizationId === organizationId)
+      .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  }
+
+  async getReusableAnswer(answerId: string, organizationId: string) {
+    const answer = this.reusableAnswers.get(answerId);
+    if (!answer || answer.organizationId !== organizationId) return null;
+    return answer;
+  }
+
+  async getReusableAnswerBySlug(organizationId: string, questionSlug: string) {
+    return (
+      [...this.reusableAnswers.values()].find(
+        (answer) => answer.organizationId === organizationId && answer.questionSlug === questionSlug,
+      ) ?? null
+    );
+  }
+
+  async createReusableAnswer(answer: ReusableAnswer) {
+    this.reusableAnswers.set(answer.id, answer);
+    return answer;
+  }
+
+  async updateReusableAnswer(answerId: string, organizationId: string, patch: Partial<ReusableAnswer>) {
+    const current = await this.getReusableAnswer(answerId, organizationId);
+    if (!current) return null;
+    const next = { ...current, ...patch, id: current.id, organizationId: current.organizationId };
+    this.reusableAnswers.set(answerId, next);
+    return next;
+  }
+
+  async deleteReusableAnswer(answerId: string, organizationId: string) {
+    const current = await this.getReusableAnswer(answerId, organizationId);
+    if (!current) return false;
+    this.reusableAnswers.delete(answerId);
+    return true;
+  }
+
+  async countReusableAnswers(organizationId: string) {
+    return [...this.reusableAnswers.values()].filter((answer) => answer.organizationId === organizationId).length;
+  }
+
+  async listQuestionnaires(organizationId: string) {
+    return [...this.questionnaires.values()]
+      .filter((item) => item.organizationId === organizationId)
+      .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  }
+
+  async getQuestionnaire(questionnaireId: string, organizationId: string) {
+    const item = this.questionnaires.get(questionnaireId);
+    if (!item || item.organizationId !== organizationId) return null;
+    return item;
+  }
+
+  async createQuestionnaire(questionnaire: Questionnaire) {
+    this.questionnaires.set(questionnaire.id, questionnaire);
+    return questionnaire;
+  }
+
+  async updateQuestionnaire(questionnaireId: string, organizationId: string, patch: Partial<Questionnaire>) {
+    const current = await this.getQuestionnaire(questionnaireId, organizationId);
+    if (!current) return null;
+    const next = { ...current, ...patch, id: current.id, organizationId: current.organizationId };
+    this.questionnaires.set(questionnaireId, next);
+    return next;
+  }
+
+  async deleteQuestionnaire(questionnaireId: string, organizationId: string) {
+    const current = await this.getQuestionnaire(questionnaireId, organizationId);
+    if (!current) return false;
+    this.questionnaires.delete(questionnaireId);
+    for (const item of [...this.questionnaireItems.values()]) {
+      if (item.questionnaireId === questionnaireId) this.questionnaireItems.delete(item.id);
+    }
+    return true;
+  }
+
+  async countQuestionnaires(organizationId: string) {
+    return [...this.questionnaires.values()].filter((item) => item.organizationId === organizationId).length;
+  }
+
+  async listQuestionnaireItems(questionnaireId: string, organizationId: string) {
+    return [...this.questionnaireItems.values()]
+      .filter((item) => item.questionnaireId === questionnaireId && item.organizationId === organizationId)
+      .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  }
+
+  async getQuestionnaireItem(itemId: string, organizationId: string) {
+    const item = this.questionnaireItems.get(itemId);
+    if (!item || item.organizationId !== organizationId) return null;
+    return item;
+  }
+
+  async createQuestionnaireItem(item: QuestionnaireItem) {
+    this.questionnaireItems.set(item.id, item);
+    return item;
+  }
+
+  async updateQuestionnaireItem(itemId: string, organizationId: string, patch: Partial<QuestionnaireItem>) {
+    const current = await this.getQuestionnaireItem(itemId, organizationId);
+    if (!current) return null;
+    const next = {
+      ...current,
+      ...patch,
+      id: current.id,
+      organizationId: current.organizationId,
+      questionnaireId: current.questionnaireId,
+    };
+    this.questionnaireItems.set(itemId, next);
+    return next;
+  }
+
+  async deleteQuestionnaireItem(itemId: string, organizationId: string) {
+    const current = await this.getQuestionnaireItem(itemId, organizationId);
+    if (!current) return false;
+    this.questionnaireItems.delete(itemId);
+    return true;
   }
 
   async close() {

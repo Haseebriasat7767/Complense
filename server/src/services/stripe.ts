@@ -3,7 +3,8 @@ import { config } from '../config.js';
 import { getStore } from '../store/index.js';
 import type { PlanTier } from '../domain/types.js';
 
-const PRICE_ENV: Record<PlanTier, keyof typeof config.stripe.priceIds> = {
+/** Free has no Stripe price: it is the default plan, never bought. */
+const PRICE_ENV: Record<Exclude<PlanTier, 'free'>, keyof typeof config.stripe.priceIds> = {
   starter: 'starter',
   growth: 'growth',
   business: 'business',
@@ -13,7 +14,7 @@ export function stripeConfigured(): boolean {
   return Boolean(config.stripe.secretKey && config.stripe.webhookSecret && Object.values(config.stripe.priceIds).every(Boolean));
 }
 
-export function priceIdForPlan(plan: PlanTier): string {
+export function priceIdForPlan(plan: Exclude<PlanTier, 'free'>): string {
   const id = config.stripe.priceIds[PRICE_ENV[plan]];
   if (!id) throw new Error(`Stripe Price ID is not configured for the ${plan} plan.`);
   return id;
@@ -53,7 +54,7 @@ export async function createCheckoutSession(input: {
   organizationId: string;
   userId: string;
   email: string;
-  plan: PlanTier;
+  plan: Exclude<PlanTier, 'free'>;
 }): Promise<CheckoutSession> {
   const origin = config.clientUrl || 'https://complense.vercel.app';
   return stripeRequest<CheckoutSession>('POST', 'checkout/sessions', {
@@ -121,8 +122,10 @@ export async function applyStripeEvent(event: any): Promise<void> {
     const subscription = event.data?.object as StripeSubscription;
     const organizationId = subscription?.metadata?.organizationId;
     if (!organizationId) return;
+    // A cancelled subscription drops the organisation to the Free plan —
+    // never to a paid tier.
     await store.updateOrganization(organizationId, {
-      plan: 'starter',
+      plan: 'free',
       stripeSubscriptionStatus: 'canceled',
     });
   }

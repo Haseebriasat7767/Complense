@@ -3,6 +3,7 @@ import { ApiError, asyncHandler } from '../http/errors.js';
 import { requireAuth, sessionOf } from '../auth/middleware.js';
 import { getStore } from '../store/index.js';
 import { applyStripeEvent, createCheckoutSession, stripeConfigured, verifyStripeSignature } from '../services/stripe.js';
+import { formatLimit, limitsFor, usageFor } from '../billing/entitlements.js';
 import type { PlanTier } from '../domain/types.js';
 
 export const billingRouter = Router();
@@ -18,9 +19,27 @@ billingRouter.get('/billing/status', requireAuth(), asyncHandler(async (req, res
   });
 }));
 
+/** Plan limits and current usage for the signed-in organisation. */
+billingRouter.get('/billing/usage', requireAuth(), asyncHandler(async (req, res) => {
+  const session = sessionOf(req);
+  const organization = await getStore().getOrganization(session.org);
+  if (!organization) throw ApiError.forbidden('Organisation not found.');
+  const limits = limitsFor(organization.plan);
+  const usage = await usageFor(session.org);
+  res.json({
+    plan: organization.plan,
+    subscriptionStatus: organization.stripeSubscriptionStatus ?? null,
+    configured: stripeConfigured(),
+    limits: Object.fromEntries(
+      Object.entries(limits).map(([resource, limit]) => [resource, { limit, display: formatLimit(limit) }]),
+    ),
+    usage,
+  });
+}));
+
 billingRouter.post('/billing/checkout', requireAuth(), asyncHandler(async (req, res) => {
   const session = sessionOf(req);
-  const plan = req.body?.plan as PlanTier;
+  const plan = req.body?.plan as Exclude<PlanTier, 'free'>;
   if (!['starter', 'growth', 'business'].includes(plan)) {
     throw ApiError.badRequest('Choose a valid plan: starter, growth, or business.');
   }

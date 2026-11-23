@@ -37,7 +37,7 @@ export type Organization = {
   id: string;
   name: string;
   slug: string;
-  plan: 'starter' | 'growth' | 'business';
+  plan: 'free' | 'starter' | 'growth' | 'business';
   primaryFramework: FrameworkKey;
   industry: string;
   employeeCount: number;

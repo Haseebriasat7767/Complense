@@ -72,7 +72,7 @@ authRouter.post(
     const password = requirePassword(body.password);
     const organizationName = requireString(body.organizationName, 'organizationName', { max: 120 });
     const jobTitle = optionalString(body.jobTitle, 'jobTitle', 120) ?? 'Security Owner';
-    const seedDemo = optionalBoolean(body.seedDemo, 'seedDemo') ?? true;
+    const seedDemo = optionalBoolean(body.seedDemo, 'seedDemo') ?? false;
 
     const store = getStore();
     const existing = await store.getUserByEmail(email);
@@ -89,7 +89,7 @@ authRouter.post(
       id: organizationId,
       name: organizationName,
       slug: organizationName.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 40),
-      plan: 'starter',
+      plan: 'free',
       primaryFramework: 'soc2',
       industry: optionalString(body.industry, 'industry', 120) ?? 'Not specified',
       employeeCount: 0,
@@ -133,7 +133,9 @@ authRouter.post(
     await store.createAccount({ organization, workspace, user });
 
     if (seedDemo) {
-      // Optional starter sample data, clearly labelled as sample in the UI.
+      // Optional sample data, clearly labelled as sample in the UI. Defaults
+      // to off: a new Free organisation starts empty (10-document limit), so
+      // seeding 10 sample documents would leave it full on day one.
       const samples = buildDemoEvidence(organizationId, workspaceId, `${user.name} (sample import)`);
       for (const sample of samples) {
         await store.createEvidence({

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   Bell,
+  BookOpenCheck,
   ChevronDown,
   CircleHelp,
   FileText,
@@ -53,6 +54,7 @@ const NAV_GROUPS: Array<{ label: string; items: NavItem[] }> = [
       { to: '/app/reports', label: 'Reports', icon: TrendingUp },
       { to: '/app/frameworks', label: 'Frameworks', icon: Sparkles },
       { to: '/app/questionnaire', label: 'Questionnaire assistant', icon: ClipboardCheck },
+      { to: '/app/questionnaires', label: 'Questionnaire library', icon: BookOpenCheck },
     ],
   },
 ];

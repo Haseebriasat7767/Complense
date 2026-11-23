@@ -20,6 +20,7 @@ import { gapsRouter } from './routes/gaps.js';
 import { metaRouter } from './routes/meta.js';
 import { reportsRouter } from './routes/reports.js';
 import { questionnaireRouter } from './routes/questionnaire.js';
+import { questionnaireLibraryRouter } from './routes/questionnaire-library.js';
 import { workspaceRouter } from './routes/workspace.js';
 import { billingRouter } from './routes/billing.js';
 import { demoRouter } from './routes/demo.js';
@@ -56,6 +57,7 @@ export function createApp(): Express {
   app.use('/api', reportsRouter);
   app.use('/api', frameworksRouter);
   app.use('/api', questionnaireRouter);
+  app.use('/api', questionnaireLibraryRouter);
 
   // Unknown API routes must not fall through to the SPA shell.
   app.use('/api', notFoundHandler);

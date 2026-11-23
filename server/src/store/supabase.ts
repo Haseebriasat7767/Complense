@@ -8,7 +8,7 @@ import crypto from 'node:crypto';
 import { config } from '../config.js';
 import { logger } from '../logger.js';
 import type {
-  AuditEvent, EvidenceInput, EvidenceRecord, Organization, RemediationEvent, RemediationRecord, ReportRecord, User, Workspace,
+  AuditEvent, EvidenceInput, EvidenceRecord, Organization, Questionnaire, QuestionnaireItem, RemediationEvent, RemediationRecord, ReportRecord, ReusableAnswer, User, Workspace,
 } from '../domain/types.js';
 import type { NewAccount, Store } from './store.js';
 import { buildDemoSeed, logSeedSummary } from './seed.js';
@@ -244,5 +244,61 @@ export class SupabaseStore implements Store {
 
   listAuditEvents(organizationId: string, limit: number) { return this.rows<AuditEvent>('audit_events', { organizationId: `eq.${organizationId}`, order: 'at.desc', limit: String(Math.max(0, Math.min(limit, 500))) }); }
   async recordAuditEvent(event: Omit<AuditEvent, 'id'>) { await this.insert('audit_events', { ...event, id: makeId('aud') }); }
+
+  // --- Reusable questionnaire library ---------------------------------
+  // Tables live in supabase/migrations/20261124120000_free_plan_questionnaire_library.sql.
+  // If the migration has not been applied, these calls fail with the standard
+  // "table not found" error — apply the migration in the Supabase SQL editor.
+  listReusableAnswers(organizationId: string) {
+    return this.rows<ReusableAnswer>('questionnaire_answers', { organizationId: `eq.${organizationId}`, order: 'updatedAt.desc' });
+  }
+  getReusableAnswer(id: string, organizationId: string) {
+    return this.one<ReusableAnswer>('questionnaire_answers', { id: `eq.${id}`, organizationId: `eq.${organizationId}` });
+  }
+  getReusableAnswerBySlug(organizationId: string, questionSlug: string) {
+    return this.one<ReusableAnswer>('questionnaire_answers', { organizationId: `eq.${organizationId}`, questionSlug: `eq.${questionSlug}` });
+  }
+  createReusableAnswer(answer: ReusableAnswer) { return this.insert<ReusableAnswer>('questionnaire_answers', answer); }
+  updateReusableAnswer(id: string, organizationId: string, patch: Partial<ReusableAnswer>) {
+    return this.patchOne<ReusableAnswer>('questionnaire_answers', { id: `eq.${id}`, organizationId: `eq.${organizationId}` }, cleanPatch(patch));
+  }
+  deleteReusableAnswer(id: string, organizationId: string) {
+    return this.deleteOne('questionnaire_answers', { id: `eq.${id}`, organizationId: `eq.${organizationId}` });
+  }
+  async countReusableAnswers(organizationId: string) {
+    const result = await this.request<Row[]>('questionnaire_answers', { query: { select: 'id', organizationId: `eq.${organizationId}`, limit: '0' }, count: true });
+    return result.count ?? 0;
+  }
+  listQuestionnaires(organizationId: string) {
+    return this.rows<Questionnaire>('questionnaires', { organizationId: `eq.${organizationId}`, order: 'updatedAt.desc' });
+  }
+  getQuestionnaire(id: string, organizationId: string) {
+    return this.one<Questionnaire>('questionnaires', { id: `eq.${id}`, organizationId: `eq.${organizationId}` });
+  }
+  createQuestionnaire(questionnaire: Questionnaire) { return this.insert<Questionnaire>('questionnaires', questionnaire); }
+  updateQuestionnaire(id: string, organizationId: string, patch: Partial<Questionnaire>) {
+    return this.patchOne<Questionnaire>('questionnaires', { id: `eq.${id}`, organizationId: `eq.${organizationId}` }, cleanPatch(patch));
+  }
+  deleteQuestionnaire(id: string, organizationId: string) {
+    return this.deleteOne('questionnaires', { id: `eq.${id}`, organizationId: `eq.${organizationId}` });
+  }
+  async countQuestionnaires(organizationId: string) {
+    const result = await this.request<Row[]>('questionnaires', { query: { select: 'id', organizationId: `eq.${organizationId}`, limit: '0' }, count: true });
+    return result.count ?? 0;
+  }
+  listQuestionnaireItems(questionnaireId: string, organizationId: string) {
+    return this.rows<QuestionnaireItem>('questionnaire_items', { questionnaireId: `eq.${questionnaireId}`, organizationId: `eq.${organizationId}`, order: 'createdAt.asc' });
+  }
+  getQuestionnaireItem(id: string, organizationId: string) {
+    return this.one<QuestionnaireItem>('questionnaire_items', { id: `eq.${id}`, organizationId: `eq.${organizationId}` });
+  }
+  createQuestionnaireItem(item: QuestionnaireItem) { return this.insert<QuestionnaireItem>('questionnaire_items', item); }
+  updateQuestionnaireItem(id: string, organizationId: string, patch: Partial<QuestionnaireItem>) {
+    return this.patchOne<QuestionnaireItem>('questionnaire_items', { id: `eq.${id}`, organizationId: `eq.${organizationId}` }, cleanPatch(patch));
+  }
+  deleteQuestionnaireItem(id: string, organizationId: string) {
+    return this.deleteOne('questionnaire_items', { id: `eq.${id}`, organizationId: `eq.${organizationId}` });
+  }
+
   async close(): Promise<void> { /* fetch-based client holds no pooled socket */ }
 }

@@ -4,18 +4,22 @@ import { Badge } from '@/components/ui/Badge';
 import { Eyebrow, Section } from '@/components/marketing/MarketingLayout';
 import { FaqSection, PricingSection } from '@/components/marketing/Sections';
 
-const COMPARISON: Array<{ feature: string; starter: boolean | string; growth: boolean | string; business: boolean | string }> = [
-  { feature: 'Frameworks', starter: '1', growth: '2', business: '2 + custom' },
-  { feature: 'Workspaces', starter: '1', growth: '3', business: 'Unlimited' },
-  { feature: 'Evidence documents', starter: '50', growth: 'Unlimited', business: 'Unlimited' },
-  { feature: 'Deterministic gap analysis', starter: true, growth: true, business: true },
-  { feature: 'Evidence-to-control mapping', starter: true, growth: true, business: true },
-  { feature: 'Readiness report PDF', starter: true, growth: true, business: true },
-  { feature: 'Report history and snapshots', starter: false, growth: true, business: true },
-  { feature: 'Remediation owners and timelines', starter: false, growth: true, business: true },
-  { feature: 'Vendor evidence packs', starter: false, growth: false, business: true },
-  { feature: 'Scheduled assessments (roadmap)', starter: false, growth: false, business: 'Planned' },
-  { feature: 'SSO and audit trail (roadmap)', starter: false, growth: false, business: 'Planned' },
+const COMPARISON: Array<{ feature: string; free: boolean | string; starter: boolean | string; growth: boolean | string; business: boolean | string }> = [
+  { feature: 'Frameworks', free: '1', starter: '1', growth: '2', business: '2 + custom' },
+  { feature: 'Workspaces', free: '1', starter: '1', growth: '3', business: 'Unlimited' },
+  { feature: 'Evidence documents', free: '10', starter: '50', growth: 'Unlimited', business: 'Unlimited' },
+  { feature: 'Readiness reports', free: '1', starter: '3', growth: 'Unlimited', business: 'Unlimited' },
+  { feature: 'Questionnaires', free: '1', starter: '3', growth: '25', business: 'Unlimited' },
+  { feature: 'Reusable answers', free: '25', starter: '100', growth: 'Unlimited', business: 'Unlimited' },
+  { feature: 'Deterministic gap analysis', free: true, starter: true, growth: true, business: true },
+  { feature: 'Evidence-to-control mapping', free: true, starter: true, growth: true, business: true },
+  { feature: 'Readiness report PDF', free: true, starter: true, growth: true, business: true },
+  { feature: 'Auditor package export', free: true, starter: true, growth: true, business: true },
+  { feature: 'Report history and snapshots', free: false, starter: false, growth: true, business: true },
+  { feature: 'Remediation owners and timelines', free: false, starter: false, growth: true, business: true },
+  { feature: 'Vendor evidence packs', free: false, starter: false, growth: false, business: true },
+  { feature: 'Scheduled assessments (roadmap)', free: false, starter: false, growth: false, business: 'Planned' },
+  { feature: 'SSO and audit trail (roadmap)', free: false, starter: false, growth: false, business: 'Planned' },
 ];
 
 function Cell({ value }: { value: boolean | string }) {
@@ -49,8 +53,7 @@ export function PricingPage() {
       <Section className="border-y border-ink-200 bg-ink-50/50">
         <h2 className="text-xl tracking-tight">Plan comparison</h2>
         <p className="mt-2 text-[13.5px] text-ink-500">
-          The table below describes the plans the product is designed around. Limits are enforced in the roadmap
-          versions; this demo does not gate features.
+          The table below describes the plans the product is designed around. Limits are enforced server-side; the Free plan needs no card.
         </p>
 
         <div className="surface mt-6 overflow-x-auto scroll-area">
@@ -61,7 +64,7 @@ export function PricingPage() {
                 <th scope="col" className="px-4 py-3 text-[12px] font-semibold tracking-wide text-ink-500 uppercase">
                   Capability
                 </th>
-                {['Starter · $49', 'Growth · $149', 'Business · $499'].map((plan) => (
+                {['Free · $0', 'Starter · $49', 'Growth · $149', 'Business · $499'].map((plan) => (
                   <th key={plan} scope="col" className="px-4 py-3 text-[12px] font-semibold tracking-wide text-ink-500 uppercase">
                     {plan}
                   </th>
@@ -74,6 +77,9 @@ export function PricingPage() {
                   <th scope="row" className="px-4 py-2.5 text-[13px] font-normal text-ink-700">
                     {row.feature}
                   </th>
+                  <td className="px-4 py-2.5">
+                    <Cell value={row.free} />
+                  </td>
                   <td className="px-4 py-2.5">
                     <Cell value={row.starter} />
                   </td>

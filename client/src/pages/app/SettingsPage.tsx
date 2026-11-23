@@ -460,25 +460,29 @@ export function SettingsPage() {
             description="Demo pricing for the hosted product"
             actions={<Badge tone="brand" size="sm">Demo pricing</Badge>}
           />
-          <CardContent className="grid gap-4 lg:grid-cols-3">
+          <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {[
-              { name: 'Starter', price: '$49', detail: '1 framework · 1 workspace · 25 documents' },
-              { name: 'Growth', price: '$149', detail: 'Both frameworks · 3 workspaces · unlimited documents', current: true },
+              { name: 'Free', price: '$0', detail: '1 framework · 1 workspace · 10 documents · 1 report · 1 questionnaire' },
+              { name: 'Starter', price: '$49', detail: '1 framework · 1 workspace · 50 documents · 3 reports · 3 questionnaires' },
+              { name: 'Growth', price: '$149', detail: 'Both frameworks · 3 workspaces · unlimited documents · 25 questionnaires' },
               { name: 'Business', price: '$499', detail: 'Unlimited workspaces · SSO · priority support' },
-            ].map((plan) => (
-              <div
+            ].map((plan) => {
+              const current = organization?.plan === plan.name.toLowerCase();
+              return (
+                <div
                 key={plan.name}
-                className={`rounded-xl border px-4 py-4 ${plan.current ? 'border-brand-200 bg-brand-50/40' : 'border-ink-200'}`}
+                className={`rounded-xl border px-4 py-4 ${current ? 'border-brand-200 bg-brand-50/40' : 'border-ink-200'}`}
               >
                 <div className="flex items-center justify-between gap-2">
                   <p className="text-[13.5px] font-semibold text-ink-900">{plan.name}</p>
-                  {plan.current ? <Badge tone="brand" size="sm">Current</Badge> : null}
+                  {current ? <Badge tone="brand" size="sm">Current</Badge> : null}
                 </div>
                 <p className="mt-2 text-2xl font-semibold text-ink-900">{plan.price}</p>
                 <p className="text-[12px] text-ink-500">per month, demo pricing</p>
                 <p className="mt-2 text-[12.5px] text-ink-600">{plan.detail}</p>
-              </div>
-            ))}
+                </div>
+              );
+            })}
           </CardContent>
           <CardContent className="border-t border-ink-200">
             <div className="flex flex-wrap items-center gap-3">

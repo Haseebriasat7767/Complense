@@ -13,7 +13,7 @@ export type EvidenceAnalysisStatus = 'analyzed' | 'analyzing' | 'needs_review' |
 
 export type EvidenceSource = 'demo' | 'upload';
 
-export type PlanTier = 'starter' | 'growth' | 'business';
+export type PlanTier = 'free' | 'starter' | 'growth' | 'business';
 
 export type UserRole = 'owner' | 'admin' | 'member';
 
@@ -328,4 +328,79 @@ export type AuditEvent = {
   action: string;
   target: string;
   at: string;
+};
+
+/* ------------------------------------------------------------------ */
+/* Reusable questionnaire library.                                     */
+/*                                                                     */
+/* A canonical question is a stable, seeded question (see              */
+/* domain/questionnaire-catalog.ts). An answer is written once per     */
+/* organisation and reused across questionnaires only when a human     */
+/* explicitly confirms the reuse — nothing is silently copied.         */
+/* ------------------------------------------------------------------ */
+
+export type QuestionnaireFramework = 'soc2' | 'iso27001' | 'generic';
+
+export type CanonicalQuestion = {
+  slug: string;
+  framework: QuestionnaireFramework;
+  category: string;
+  question: string;
+  guidance: string;
+  /** Control codes from the ComplyLens control library this answers. */
+  relatedControls: string[];
+};
+
+export type ReusableAnswerStatus = 'draft' | 'approved';
+
+export type ReusableAnswer = {
+  id: string;
+  organizationId: string;
+  workspaceId: string;
+  questionSlug: string;
+  framework: QuestionnaireFramework;
+  question: string;
+  answer: string;
+  status: ReusableAnswerStatus;
+  /** Evidence documents the answer is grounded in, when any. */
+  sourceEvidenceIds: string[];
+  updatedBy: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type QuestionnaireStatus = 'draft' | 'in_progress' | 'completed';
+
+export type Questionnaire = {
+  id: string;
+  organizationId: string;
+  workspaceId: string;
+  title: string;
+  requester: string;
+  status: QuestionnaireStatus;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type QuestionnaireItemStatus = 'unanswered' | 'answered' | 'needs_review';
+
+export type QuestionnaireItem = {
+  id: string;
+  questionnaireId: string;
+  organizationId: string;
+  /** Canonical question slug, when the item comes from the catalog. */
+  questionSlug?: string;
+  /** Free-text question, when the item is custom (not from the catalog). */
+  customQuestion?: string;
+  framework: QuestionnaireFramework;
+  category: string;
+  question: string;
+  answer?: string;
+  answerSource: 'none' | 'library' | 'custom';
+  /** True only after a human explicitly confirmed reusing a library answer. */
+  reuseConfirmed: boolean;
+  libraryAnswerId?: string;
+  status: QuestionnaireItemStatus;
+  createdAt: string;
+  updatedAt: string;
 };

@@ -2,7 +2,7 @@
  * Storage abstraction. Supabase is the persistent production store; MemoryStore
  * is only for local demo/test use when explicitly configured.
  */
-import type { AuditEvent, EvidenceInput, EvidenceRecord, Organization, RemediationEvent, RemediationRecord, ReportRecord, User, Workspace } from '../domain/types.js';
+import type { AuditEvent, EvidenceInput, EvidenceRecord, Organization, Questionnaire, QuestionnaireItem, RemediationEvent, RemediationRecord, ReportRecord, ReusableAnswer, User, Workspace } from '../domain/types.js';
 
 export type StoreKind = 'memory' | 'supabase';
 export type NewAccount = { organization: Organization; workspace: Workspace; user: User };
@@ -40,5 +40,24 @@ export interface Store {
   recordRemediationEvent(event: RemediationEvent): Promise<void>;
   listAuditEvents(organizationId: string, limit: number): Promise<AuditEvent[]>;
   recordAuditEvent(event: Omit<AuditEvent, 'id'>): Promise<void>;
+  // --- Reusable questionnaire library ---------------------------------
+  listReusableAnswers(organizationId: string): Promise<ReusableAnswer[]>;
+  getReusableAnswer(id: string, organizationId: string): Promise<ReusableAnswer | null>;
+  getReusableAnswerBySlug(organizationId: string, questionSlug: string): Promise<ReusableAnswer | null>;
+  createReusableAnswer(answer: ReusableAnswer): Promise<ReusableAnswer>;
+  updateReusableAnswer(id: string, organizationId: string, patch: Partial<ReusableAnswer>): Promise<ReusableAnswer | null>;
+  deleteReusableAnswer(id: string, organizationId: string): Promise<boolean>;
+  countReusableAnswers(organizationId: string): Promise<number>;
+  listQuestionnaires(organizationId: string): Promise<Questionnaire[]>;
+  getQuestionnaire(id: string, organizationId: string): Promise<Questionnaire | null>;
+  createQuestionnaire(questionnaire: Questionnaire): Promise<Questionnaire>;
+  updateQuestionnaire(id: string, organizationId: string, patch: Partial<Questionnaire>): Promise<Questionnaire | null>;
+  deleteQuestionnaire(id: string, organizationId: string): Promise<boolean>;
+  countQuestionnaires(organizationId: string): Promise<number>;
+  listQuestionnaireItems(questionnaireId: string, organizationId: string): Promise<QuestionnaireItem[]>;
+  getQuestionnaireItem(id: string, organizationId: string): Promise<QuestionnaireItem | null>;
+  createQuestionnaireItem(item: QuestionnaireItem): Promise<QuestionnaireItem>;
+  updateQuestionnaireItem(id: string, organizationId: string, patch: Partial<QuestionnaireItem>): Promise<QuestionnaireItem | null>;
+  deleteQuestionnaireItem(id: string, organizationId: string): Promise<boolean>;
   close(): Promise<void>;
 }

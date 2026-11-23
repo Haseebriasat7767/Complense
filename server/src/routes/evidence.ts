@@ -10,6 +10,7 @@ import { Router } from 'express';
 import multer from 'multer';
 import { requireAuth, sessionOf } from '../auth/middleware.js';
 import { config } from '../config.js';
+import { assertWithinLimit } from '../billing/entitlements.js';
 import { analyzeEvidence, modeLabel } from '../ai/index.js';
 import { categoriesForFramework } from '../domain/controls.js';
 import { CONTROL_LIBRARY } from '../domain/controls.js';
@@ -254,6 +255,12 @@ evidenceRouter.post(
 
     const file = req.file;
     if (!file) throw ApiError.badRequest('A file is required (multipart field name: "file").');
+
+    // Plan document limit is enforced before extraction/analysis runs, so a
+    // full plan fails fast instead of burning analysis work.
+    const organization = await store.getOrganization(session.org);
+    if (!organization) throw ApiError.forbidden('Organisation not found.');
+    await assertWithinLimit(organization, 'documents');
 
     const body = (req.body ?? {}) as Record<string, unknown>;
     const frameworks = parseFrameworks(body.frameworks);

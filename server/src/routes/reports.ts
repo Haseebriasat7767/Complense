@@ -6,6 +6,7 @@
 import crypto from 'node:crypto';
 import { Router } from 'express';
 import { requireAuth, sessionOf } from '../auth/middleware.js';
+import { assertWithinLimit } from '../billing/entitlements.js';
 import { writeNarrative, modeLabel } from '../ai/index.js';
 import { FRAMEWORKS, isFrameworkKey } from '../domain/frameworks.js';
 import { controlsForFramework } from '../domain/controls.js';
@@ -140,6 +141,10 @@ reportsRouter.post(
       typeof body.workspaceId === 'string' ? body.workspaceId : undefined,
     );
     const frameworkKey = optionalEnum(body.frameworkKey, 'frameworkKey', ['soc2', 'iso27001'] as const) ?? 'soc2';
+
+    const organization = await getStore().getOrganization(session.org);
+    if (!organization) throw ApiError.notFound('Organisation not found.');
+    await assertWithinLimit(organization, 'reports');
 
     const report = await generateReport({
       organizationId: session.org,
